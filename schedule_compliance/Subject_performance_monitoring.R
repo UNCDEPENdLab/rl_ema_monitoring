@@ -47,8 +47,8 @@ figure_1 <- ggplot(data=objective_accuracy_by_block, aes(x=block, y=mean*100, gr
 trials_1$relative_stim1=rep(NaN, nrow(trials_1))
 trials_1$relative_stim2=rep(NaN, nrow(trials_1))
 for (i in 2:nrow(trials_1)){
-   trials_1$relative_stim1[i]=mean(trials_1$outcome[which(trials_1$stim1==trials_1$stim1[i]&trials_1$choice==0&trials_1$feedback==1&(trials_1$trial<trials_1$trial[i]|trials_1$block<trials_1$block[i])|trials_1$stim2==trials_1$stim1[i]&trials_1$choice==1&trials_1$feedback==1&(trials_1$trial<trials_1$trial[i]|trials_1$block<trials_1$block[i]))]) 
-   trials_1$relative_stim2[i]=mean(trials_1$outcome[which(trials_1$stim1==trials_1$stim2[i]&trials_1$choice==0&trials_1$feedback==1&(trials_1$trial<trials_1$trial[i]|trials_1$block<trials_1$block[i])|trials_1$stim2==trials_1$stim2[i]&trials_1$choice==1&trials_1$feedback==1&(trials_1$trial<trials_1$trial[i]|trials_1$block<trials_1$block[i]))])  
+  trials_1$relative_stim1[i]=mean(trials_1$outcome[which(trials_1$stim1==trials_1$stim1[i]&trials_1$choice==0&trials_1$feedback==1&((trials_1$trial<trials_1$trial[i]&trials_1$block==trials_1$block[i])|trials_1$block<trials_1$block[i])|trials_1$stim2==trials_1$stim1[i]&trials_1$choice==1&trials_1$feedback==1&((trials_1$trial<trials_1$trial[i]&trials_1$block==trials_1$block[i])|trials_1$block<trials_1$block[i]))]) 
+  trials_1$relative_stim2[i]=mean(trials_1$outcome[which(trials_1$stim1==trials_1$stim2[i]&trials_1$choice==0&trials_1$feedback==1&((trials_1$trial<trials_1$trial[i]&trials_1$block==trials_1$block[i])|trials_1$block<trials_1$block[i])|trials_1$stim2==trials_1$stim2[i]&trials_1$choice==1&trials_1$feedback==1&((trials_1$trial<trials_1$trial[i]&trials_1$block==trials_1$block[i])|trials_1$block<trials_1$block[i]))])
 }
 trials_1$relative_accuracy=NA
 index=which(!is.nan(trials_1$relative_stim1)&!is.nan(trials_1$relative_stim2))
