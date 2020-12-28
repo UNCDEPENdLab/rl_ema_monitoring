@@ -1,6 +1,6 @@
 /dashboard_shiny_demo/client_secrets.json
 /dashboard_shiny_demo/subject_status.json
-/dashboard_shiny_demo/Subjects/*
+/dashboard_shiny_demo/Subjects/
 /dashboard_shiny_demo/debug
 .Rhistory
 _pycache_
