@@ -1,4 +1,4 @@
-function [Ntotal, Ngood, epoch_data]=EEGanalysis_test(name)
+function [Ntotal, Ngood, epoch_data]=EEGanalysis_test(name, first_block, last_block)
     
     %% read modeled prediction errors
     %DATA = readtable(fullfile(fileparts(fileparts(pwd)),'Data_Processed',['subject_' name],['PE2_Heir_' name '.csv']));    
@@ -11,14 +11,14 @@ function [Ntotal, Ngood, epoch_data]=EEGanalysis_test(name)
     filename = fullfile(pwd,'Data_Raw',['subject_' name],[name '_schedule.db']);
     db = sqlite(filename);
     
-    temp = cell2mat(fetch(db, 'SELECT feedback_time, feedback FROM trials WHERE choice_time IS NOT NULL AND stim1>=0 AND stim2>=0 ORDER BY choice_time ASC'));
+    temp = cell2mat(fetch(db, 'SELECT feedback_time, feedback, block FROM trials WHERE choice_time IS NOT NULL AND stim1>=0 AND stim2>=0 ORDER BY choice_time ASC'));
     %temp = cell2mat(fetch(db, 'SELECT feedback_time, feedback FROM trials WHERE choice_time IS NOT NULL AND stim1>17 AND stim2>17 AND stim1<150 AND stim2<150'));
-    Trial.feedback = temp(:,2);
-    Trial.feedbackTimes = temp(:,1);
+    Trial.feedback = temp(find((first_block<=temp(:,3)&(last_block>=temp(:,3)))),2);
+    Trial.feedbackTimes = temp(find((first_block<=temp(:,3)&(last_block>=temp(:,3)))),1);
     db.close;
     
     %% read EEG and remove trials with NaN
-    [EEG, sampling_rate] = readEEG(name);
+    [EEG, sampling_rate] = readEEG(name, first_block, last_block);
     epoch_data_2 = Utilities.epoch(EEG.times, EEG.data, Trial.feedbackTimes, 500, 1500, sampling_rate);
     ind_na = any(any(isnan(epoch_data_2),2),3);
     epoch_data_2 = epoch_data_2(~ind_na,:,:);

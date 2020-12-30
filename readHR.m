@@ -1,5 +1,5 @@
- function HR = readHR(name, resetFlag)   
-    if nargin<2 || isempty(resetFlag); resetFlag = 0; end
+ function HR = readHR(name, first_block, last_block, resetFlag)   
+    if nargin<4 || isempty(resetFlag); resetFlag = 0; end
     HRstep = 10;
     
     filename = fullfile(pwd,'Data_Processed',['subject_' name],[name '_HR.mat']);
@@ -15,6 +15,10 @@
         catch
             DATA = fetch(db, 'SELECT time_ms, rr_intervals, heartrate FROM Polar_heartrate ORDER BY time_ms ASC');        
         end
+        
+        %keep data only between first and last blocks
+        DATA=reducing_data(name, DATA, first_block, last_block);
+        
         db.close();
         HR.times = cell2mat(DATA(:,1));
         HR.hr = cell2mat(DATA(:,3));
@@ -66,7 +70,7 @@
     ilast = cat(1,find(difftimes~=0),length(HR.times));
     csumint = cumsum(HR.intervals);
     deviations = diff(double(HR.times(ilast)-HR.times(1))-csumint(ilast));
-    isplit = find(abs(deviations)>1000) + 1;
+    isplit = find(abs(deviations)>1700) + 1;
     isplit = ilast(isplit);
     minseg = 10;
     while ~isempty(isplit) && isplit(1) < minseg

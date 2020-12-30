@@ -1,15 +1,15 @@
-function [HRoutcome, stats, HR] = getHRperOutcome(name, resetFlag)   
-    if nargin<2 || isempty(resetFlag); resetFlag = 0; end
+function [HRoutcome, stats, HR] = getHRperOutcome(name, first_block, last_block, resetFlag)   
+    if nargin<4 || isempty(resetFlag); resetFlag = 0; end
 
     %% get HR data
-    HR = readHR(name, resetFlag);
+    HR = readHR(name, first_block, last_block, resetFlag);
     
     %% read trial data
     filename = fullfile(pwd,'Data_Raw',['subject_' name],[name '_schedule.db']);
     db = sqlite(filename);   
-    temp = cell2mat(fetch(db, 'SELECT feedback_time, feedback FROM trials WHERE choice_time IS NOT NULL ORDER BY choice_time ASC'));
-    Trial.feedback = temp(:,2);
-    Trial.feedbackTimes = temp(:,1);
+    temp = cell2mat(fetch(db, 'SELECT feedback_time, feedback, block FROM trials WHERE choice_time IS NOT NULL ORDER BY choice_time ASC'));
+    Trial.feedback = temp(find((first_block<=temp(:,3)&(last_block>=temp(:,3)))),2);
+    Trial.feedbackTimes = temp(find((first_block<=temp(:,3)&(last_block>=temp(:,3)))),1);
     db.close;
     
     %% get HR for each outcome

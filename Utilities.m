@@ -109,6 +109,7 @@ classdef Utilities < handle
                 newdb = sqlite(fullfile(path, files(f).name), 'connect');
                 tables = fetch(newdb,'SELECT name FROM sqlite_master WHERE type==''table''');
                 tables(strcmp(tables, 'android_metadata')) = [];
+                
                 for t = 1:length(tables)
                     str = fetch(newdb,['SELECT sql FROM sqlite_master WHERE tbl_name = ''' tables{t} ''' AND type = ''table''']);
                     str = regexprep(str, 'CREATE TABLE', 'CREATE TABLE IF NOT EXISTS');
