@@ -1,5 +1,5 @@
-function [EEG, sampling_rate] = readEEG(name, refine_sampling_rate)   
-    if nargin<2 || isempty(refine_sampling_rate); refine_sampling_rate = false; end
+function [EEG, sampling_rate] = readEEG(name, first_block, last_block, refine_sampling_rate)   
+    if nargin<4 || isempty(refine_sampling_rate); refine_sampling_rate = false; end
 
     filename = fullfile(pwd,'Data_Processed',['subject_' name],[name '_EEG.mat']);
     if exist(filename, 'file') 
@@ -7,9 +7,12 @@ function [EEG, sampling_rate] = readEEG(name, refine_sampling_rate)
     else
         %% read from sqlite database
         dbname = fullfile(pwd,'Data_Raw',['subject_' name],[name '_physio.db']);
-        
         db = sqlite(dbname);
+        
         DATA = fetch(db, 'SELECT recording_time,EEG1,EEG2,EEG3,EEG4 FROM EEG_muse ORDER BY recording_time ASC');
+        %keep data only between first and last blocks
+        DATA=reducing_data(name, DATA, first_block, last_block);
+       
         db.close();
         if any(ischar(DATA{1,1})); EEG.times = cellfun(@str2double,DATA(:,1));
         else EEG.times = cellfun(@double,DATA(:,1));
@@ -21,7 +24,8 @@ function [EEG, sampling_rate] = readEEG(name, refine_sampling_rate)
         clear DATA
 
         db = sqlite(dbname);
-        DATA = fetch(db, 'SELECT ISGOOD1,ISGOOD2,ISGOOD3,ISGOOD4 FROM EEG_muse ORDER BY recording_time ASC');
+        DATA = fetch(db, 'SELECT recording_time ISGOOD1,ISGOOD2,ISGOOD3,ISGOOD4 FROM EEG_muse ORDER BY recording_time ASC');
+        DATA=reducing_data(name, DATA, first_block, last_block);
         db.close();
         EEG.isgood(:,1) = cellfun(@str2double,DATA(:,1));
         EEG.isgood(:,2) = cellfun(@str2double,DATA(:,2));
