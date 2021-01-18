@@ -167,7 +167,7 @@ function [timings, wiggleroom] = correctTimings(times, intervals)
         end
         newintervals = intervals;
         timings(1) = times(1); for i = 2:length(newintervals); timings(i,1) = timings(i-1,1) + newintervals(i); end
-        todelete = find(timings(1:end-1) == timings(2:end));
+        todelete = find(timings(1:end-1) == timings(2:end))+1;
         while ~isempty(todelete)
             timings(todelete) = []; times(todelete) = [];
             todelete = find(timings(1:end-1) == timings(2:end));
