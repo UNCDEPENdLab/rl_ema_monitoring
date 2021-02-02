@@ -102,9 +102,10 @@ def get_pull_files(id, path, drive):
     #print(video_gdrive)
     # Initialize variables that are the sets of files to be pulled
     schedule_pull = None
-    # See if the schedule file needs download
-    if schedule_local == None:
-        schedule_pull = schedule_gdrive
+    # See if the schedule file needs downloaded
+    #if schedule_local == None:
+    # Assumes schedule file always needs downloaded
+    schedule_pull = schedule_gdrive
     # Remove physio files that do not need pulled
     physio_pull = list()
     for physio_file in physio_gdrive:
@@ -130,7 +131,7 @@ def download_files(id, path, drive, fileDict, scheduleLatest):
     print('Downloading the updated schedule file from GDrive:')
     # Move old schedule file to archive if it exists
     if scheduleLatest != None and os.path.isfile(path + '/' + '/Subjects/' + id + '/schedule/' + scheduleLatest):
-        shutil.move(path + '/' + '/Subjects/' + id + '/schedule/' + scheduleLatest, path + '/' + '/Subjects/' + id + '/schedule/archive' + scheduleLatest)
+        shutil.move(path + '/Subjects/' + id + '/schedule/' + scheduleLatest, path + '/' + '/Subjects/' + id + '/schedule/archive/' + scheduleLatest)
     # Download the updated schedule file and add a time stamp and add a time-stamp
     now = datetime.now()
     timestamp = datetime.timestamp(now)
@@ -150,14 +151,32 @@ def download_files(id, path, drive, fileDict, scheduleLatest):
         print('Downloading {} from GDrive ({}/{})'.format(file['title'], i, video_len))
         file.GetContentFile(path + '/Subjects/' + id + '/video/' + file['title'].replace('/', '_'))
 
-def update_json(id, path, fileDict):
+def update_json(id, path, fileDict, scheduleLatest):
     '''
     Method for updating a subject's json file.
     '''
-    # Have the files pulled, get the files from before pull
-    with open(path + '/Subjects/' + id + '/subject.json') as f:
-        json_dict = json.load(f)
-	    # 
+    # variable that will get the new dict to be printed to the json file
+    new_json_dict = None
+    # Have the files pulled in fileDict, get the files from before pull and combine them
+    with open(path + '/Subjects/' + id + '/subject.json', 'r') as json_file: 
+        # dict of the old data
+        old_json_dict = json.load(json_file)
+        # use the new schedule file
+        old_json_dict["subject"]["files"]["schedule"] = scheduleLatest
+        # get a list of the titles of the physio files
+        physioList = [x['title'] for x in fileDict["physio"]]
+        # update the physio files
+        old_json_dict["subject"]["files"]["physio"].extend(physioList)
+        # get a list of the titles of the physio files
+        videoList = [x['title'].replace('/', '_') for x in fileDict["video"]]
+        # update the video files
+        old_json_dict["subject"]["files"]["video"].extend(videoList)
+        # set the variable out of this scope to feed in for writing
+        new_json_dict = old_json_dict
+
+    with open(path + '/Subjects/' + id + '/subject.json', 'w') as json_file:
+        # overwite the file with the new files recorded
+        json.dump(new_json_dict, json_file, indent=4)
 
 def get_schedule_name(id, path):
     '''
@@ -170,7 +189,19 @@ def get_schedule_name(id, path):
     schedule_name = json_dict["subject"]["files"]["schedule"]
     # Return the name of the schedule file
     return schedule_name
-    
+
+def get_schedule_name_system(id, path):
+    '''
+    Method to get the most recent schedule file on the local system
+    '''
+    # get all db files in the schedule directory
+    db_files = [f for f in os.listdir(path + '/' + '/Subjects/' + id + '/schedule/') if f.endswith('_' + id + '_schedule.db')]
+    # raise an error if there is more than one db file
+    if len(db_files) > 1:
+        raise Exception("Error: there are more than 1 db files in this directory. Purge the extra files and rerun.")
+    # otherwise, return the file name
+    return db_files[0]
+
 def pull_files(id, path):
     '''
     Method for pulling data from the given Google Drive and updates the subjects json file.
@@ -182,10 +213,14 @@ def pull_files(id, path):
     #print(files2pull)
     # Get the name of the current schedule file
     current_schedule = get_schedule_name(id=id, path=path)
-    # Pull the files
-    download_files(id=id, path=path, drive=drive, fileDict=files2pull, scheduleLatest=current_schedule)
-    # Update the subject's json file
-    #update_json(id=id, path=path, fileDict=files2pull)
+    # if there are files to be download
+    if files2pull != None:
+        # Pull the files
+        download_files(id=id, path=path, drive=drive, fileDict=files2pull, scheduleLatest=current_schedule)
+        # Update the name of the current schedule file
+        current_schedule = get_schedule_name_system(id=id, path=path)
+        # Update the subject's json file
+        update_json(id=id, path=path, fileDict=files2pull, scheduleLatest=current_schedule)
 
 def main():
     '''
