@@ -73,7 +73,7 @@ def add_subject_by_status(id, status):
                 print("Subject " + id + " has been set to active.")
     # Overwrite the json file with the new dict
     with open(path + '/subject_status.json', 'w') as json_file:
-        json.dump(data, json_file)
+        json.dump(data, json_file, indent=4)
 
 def main():
     '''
