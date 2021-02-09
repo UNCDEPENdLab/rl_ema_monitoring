@@ -10,6 +10,7 @@ library("plyr")
 library("dplyr")
 library("ggplot2")
 library("zoo")
+library("sqldf")
 
 # finds the given root directory for a file hierarchy
 findRoot <- function(root_dir) {
@@ -56,7 +57,8 @@ getSubjectPath <- function(subject) {
 }
 
 # returns the  for a subject, takes subject and data item to retrieve as inputs
-getSchedDataItem <- function(subjID, item) {
+# will return the entire table unless sql if cols is left as NA, also allows for multiple selections at once.
+getSchedDataItem <- function(subjID, item, cols=NA) {
   # get the path to the subject
   pathSubjSched <- paste0(getSubjectPath(subjID), "/schedule")
   # pattern string for the db file
@@ -74,6 +76,22 @@ getSchedDataItem <- function(subjID, item) {
   sqlStr <- paste("SELECT * FROM ", item)
   # select the data item from the db
   chosenItem = dbGetQuery(data, sqlStr)
+  if (is.na(cols) != TRUE) {
+    # first half of the sql string
+    subStr1 = "SELECT "
+    # second half of the sql string
+    subStr2 = " FROM "
+    # generate the sql string for column selection
+    for (c in cols) {
+      subStr1 <- paste0(subStr1, c, ", ")
+    }
+    # remove the ending ', '
+    subStr1 <- substr(subStr1,1,nchar(subStr1)-2)
+    # finalize the sql query string
+    subStr1 <- paste0(subStr1, subStr2, "chosenItem")
+    # run the sql query on the dataframe
+    chosenItem <- sqldf(subStr1)
+  }
   # return the data item from the db
   return(chosenItem)
 }
