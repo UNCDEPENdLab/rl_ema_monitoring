@@ -59,7 +59,7 @@ getSubjectPath <- function(subject) {
 
 # returns the  for a subject, takes subject and data item to retrieve as inputs
 # will return the entire table unless sql if cols is left as NA, also allows for multiple selections at once.
-getSchedDataItem <- function(subjID, item, cols=NA) {
+getSchedDataItem <- function(subjID, item=NA, cols=NA) {
   # get the path to the subject
   pathSubjSched <- paste0(getSubjectPath(subjID), "/schedule")
   # pattern string for the db file
@@ -70,6 +70,10 @@ getSchedDataItem <- function(subjID, item, cols=NA) {
   if (length(fileList) > 1) {
     errorMessage <- paste("Error: there is more than 1 schedule.db file at ", pathSubjSched)
     stop(errorMessage)
+  }
+  # if item is NA, return the entire subject db
+  if (is.na(cols) != TRUE) {
+    return(dbConnect(SQLite(), paste0(pathSubjSched, '/', fileList)))
   }
   # load the schedule.db file
   data = dbConnect(SQLite(), paste0(pathSubjSched, '/', fileList))
