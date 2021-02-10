@@ -37,8 +37,9 @@ findRoot <- function(root_dir) {
         break()
       }
     }
+    j = i - 1
     # cut the string off after "root_dir"
-    split_str <- split_str[1:i]
+    split_str <- split_str[1:j]
   } # else, do nothing
   # recombine the vector into a path string
   pathStr <- paste0(split_str, collapse = '/')
