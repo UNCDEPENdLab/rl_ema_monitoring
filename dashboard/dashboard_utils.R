@@ -11,6 +11,7 @@ library("dplyr")
 library("ggplot2")
 library("zoo")
 library("sqldf")
+library("rjson")
 
 # finds the given root directory for a file hierarchy
 findRoot <- function(root_dir) {
@@ -47,12 +48,25 @@ findRoot <- function(root_dir) {
   return(pathStr)
 }
 
-# uses findRoot("rl_ema_monitoring")
+# sets the datetime that a caching was run
+setCacheTime() <- function() {
+  
+}
+
+# loads the dashboard config file from a predefined dashboard path
+loadDashConfig <- function() {
+  # check if in dirs dashboard/, study_management/, etc...
+  
+}
+
+# uses findRoot("rl_ema_monitoring") -> updates to use config file
 getSubjectPath <- function(subject) {
+  # load the json file: dashboard_config.json
+  
   # findRoot function call
-  pathStr <- findRoot("rl_ema_monitoring")
+  pathStr <- findRoot() # "rl_ema_monitoring"
   # append "/data/Subjects" to the "rl_ema_monitoring" path
-  pathStr <- paste0(pathStr, "/data/Subjects/", subject)
+  pathStr <- paste0(pathStr, , subject) # "/data/Subjects/"
   # return the path
   return(pathStr)
 }
@@ -116,4 +130,3 @@ getSchedDataItem <- function(subjID, item=NA, cols=NA) {
   # return the data item from the db
   return(chosenItem)
 }
-
