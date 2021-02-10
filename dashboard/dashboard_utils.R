@@ -61,6 +61,7 @@ getSubjectPath <- function(subject) {
 # will return the entire table unless sql if cols is left as NA, also allows for multiple selections at once.
 # note: cols should be given as a list
 getSchedDataItem <- function(subjID, item=NA, cols=NA) {
+  # TODO: add a list of lists option for input to select specific tables and specific columns simultaneously
   # get the path to the subject
   pathSubjSched <- paste0(getSubjectPath(subjID), "/schedule")
   # pattern string for the db file
