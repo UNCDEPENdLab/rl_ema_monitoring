@@ -59,6 +59,7 @@ getSubjectPath <- function(subject) {
 
 # returns the  for a subject, takes subject and data item to retrieve as inputs
 # will return the entire table unless sql if cols is left as NA, also allows for multiple selections at once.
+# note: cols should be given as a list
 getSchedDataItem <- function(subjID, item=NA, cols=NA) {
   # get the path to the subject
   pathSubjSched <- paste0(getSubjectPath(subjID), "/schedule")
@@ -71,14 +72,28 @@ getSchedDataItem <- function(subjID, item=NA, cols=NA) {
     errorMessage <- paste("Error: there is more than 1 schedule.db file at ", pathSubjSched)
     stop(errorMessage)
   }
-  # if item is NA, return the entire subject db
-  if (is.na(cols) != TRUE) {
-    return(dbConnect(SQLite(), paste0(pathSubjSched, '/', fileList)))
-  }
   # load the schedule.db file
   data = dbConnect(SQLite(), paste0(pathSubjSched, '/', fileList))
+  # if item is NA, return the entire subject db
+  if (is.na(item)) {
+    # get the list of tables in the DB
+    namesDB <- dbListTables(data)
+    # create an empty list to hold each table as an element
+    tables <- list()
+    # loop through the list of tables and append the dfs to the list
+    k = 1
+    for (dfName in namesDB) {
+      # set the sql string
+      sqlStr <- paste0("SELECT * FROM ", dfName[1])
+      # get the current dataframe
+      curr_df <- dbGetQuery(data, sqlStr)
+      # append the table to the list
+      tables <- append(tables,list(curr_df),0)
+    }
+    return(tables)
+  }
   # SQL selection string
-  sqlStr <- paste("SELECT * FROM ", item)
+  sqlStr <- paste0("SELECT * FROM ", item)
   # select the data item from the db
   chosenItem = dbGetQuery(data, sqlStr)
   if (is.na(cols) != TRUE) {
