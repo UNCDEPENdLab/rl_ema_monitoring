@@ -1,0 +1,19 @@
+name: "RL EMA QA Dashboard"
+output_dir: "rendered_site"
+exclude: [ "report_generators", "study_management", "*.txt" ]
+navbar:
+  title: "RL EMA QA Dashboard"
+  left:
+    - text: "Home"
+      href: index.html
+    - text: "Behavior"
+      href: index.html
+    - text: "EEG"
+      href: index.html
+    - text: "HR"
+      href: index.html
+output:
+  html_document:
+    theme: spacelab
+    highlight: textmate
+    code_folding: hide

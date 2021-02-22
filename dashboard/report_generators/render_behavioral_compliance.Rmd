@@ -1,30 +1,35 @@
 ---
-title: "Task performance"
+title: "Task performance for `r params$id`"
 output: html_document
+params:
+  id:
+    label: "Subject ID"
+    value: 
+    input: text
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(kableExtra)
 library(knitr)
-```
-
-```{r, include=FALSE}
-rm(list = ls())
-graphics.off()
 library("RSQLite")
-library("plyr")
 library("dplyr")
 library("ggplot2")
 library("zoo")
 library("tidyverse")
-source("/Users/dp/Downloads/rl_ema_monitoring/dashboard/dashboard_utils.R") #Shane's dashboard functions
+```
+
+```{r, include=FALSE}
+#params <- list(id="Shane")
+if (is.null(params$id)) { stop("Cannot knit behavioral compliance report without id") }
+
+source("../dashboard_utils.R")
 
 #get schedule file elements we need
-stimuli <- getSchedDataItem("Abb","stimuli")
-answers <- getSchedDataItem("Abb","answers")
-trials_1 <- getSchedDataItem("Abb","trials")
-sessions <- getSchedDataItem("Abb","sessions")
+stimuli <- getSchedDataItem(params$id,"stimuli")
+answers <- getSchedDataItem(params$id,"answers")
+trials_1 <- getSchedDataItem(params$id,"trials")
+sessions <- getSchedDataItem(params$id,"sessions")
 
 
 ## remove blocks that have not been played yet 
@@ -43,17 +48,23 @@ for (i in 1:length(trials_1$block)){
 }
 
 #By block
-objective_accuracy_by_block=ddply(trials_1, .(block, feedback), summarize, mean=mean(accuracy, na.rm = T))
+objective_accuracy_by_block <- trials_1 %>%
+  group_by(block, feedback) %>%
+  dplyr::summarise(mean=mean(accuracy, na.rm=TRUE)) %>%
+  ungroup()
+  #ddply(trials_1, .(block, feedback), summarize, mean=mean(accuracy, na.rm = T))
+
 #Overall
 objective_accuracy_by_block$feedback=as.factor(objective_accuracy_by_block$feedback)
 
 ##Accuracy relative to probabilities that were experienced (constantly updating until an image switches to its no-feedback phase)
 
+#really need this to be more human-readable -- it's opaque
 trials_1$relative_stim1=rep(NaN, nrow(trials_1))
 trials_1$relative_stim2=rep(NaN, nrow(trials_1))
 for (i in 2:nrow(trials_1)){
   trials_1$relative_stim1[i]=mean(trials_1$outcome[which(trials_1$stim1==trials_1$stim1[i]&trials_1$choice==0&trials_1$feedback==1&((trials_1$trial<trials_1$trial[i]&trials_1$block==trials_1$block[i])|trials_1$block<trials_1$block[i])|trials_1$stim2==trials_1$stim1[i]&trials_1$choice==1&trials_1$feedback==1&((trials_1$trial<trials_1$trial[i]&trials_1$block==trials_1$block[i])|trials_1$block<trials_1$block[i]))]) 
-  trials_1$relative_stim2[i]=mean(trials_1$outcome[which(trials_1$stim1==trials_1$stim2[i]&trials_1$choice==0&trials_1$feedback==1&((trials_1$trial<trials_1$trial[i]&trials_1$block==trials_1$block[i])|trials_1$block<trials_1$block[i])|trials_1$stim2==trials_1$stim2[i]&trials_1$choice==1&trials_1$feedback==1&((trials_1$trial<trials_1$trial[i]&trials_1$block==trials_1$block[i])|trials_1$block<trials_1$block[i]))])
+  trials_1$relative_stim2[i] = mean(trials_1$outcome[which(trials_1$stim1==trials_1$stim2[i] & trials_1$choice==0 & trials_1$feedback==1 &((trials_1$trial<trials_1$trial[i]&trials_1$block==trials_1$block[i])|trials_1$block<trials_1$block[i])|trials_1$stim2==trials_1$stim2[i]&trials_1$choice==1&trials_1$feedback==1&((trials_1$trial<trials_1$trial[i]&trials_1$block==trials_1$block[i])|trials_1$block<trials_1$block[i]))])
 }
 trials_1$relative_accuracy=NA
 index=which(!is.nan(trials_1$relative_stim1)&!is.nan(trials_1$relative_stim2))
@@ -65,36 +76,53 @@ for (i in index){
     trials_1$relative_accuracy[i]=NA
 }
 
-relative_accuracy_by_block=ddply(trials_1, .(block, feedback), summarize, mean=mean(relative_accuracy, na.rm = T))
+relative_accuracy_by_block=trials_1 %>%
+  group_by(block, feedback) %>%
+  dplyr::summarise(mean=mean(relative_accuracy, na.rm = T)) %>%
+  ungroup()
+
 relative_accuracy_by_block$feedback=as.factor(relative_accuracy_by_block$feedback)
 
 
 #test reaction time
 trials_1$RT=as.numeric(((trials_1$choice_time)-(trials_1$stim_time)))
-RT_by_block=ddply(trials_1, .(block, feedback), summarize, mean=mean(RT, na.rm = T))
+RT_by_block <- trials_1 %>%
+  group_by(block, feedback) %>%
+  dplyr::summarise(mean=mean(RT, na.rm = T)) %>%
+  ungroup()
+
 RT_by_block$feedback=as.factor(RT_by_block$feedback)
 
 #test side bias
-side_bias_by_block=ddply(trials_1, .(block), summarize, mean=mean(choice, na.rm = T))
+side_bias_by_block=trials_1 %>%
+  group_by(block) %>%
+  dplyr::summarise(mean=mean(choice, na.rm = T)) %>%
+  ungroup()
 
 #get sessions for each block
 dates <- str_extract(sessions$start_timestamp,"[[:alpha:]]{3}\\s\\d{1,2},\\s\\d{4}")
 sess <- data.frame(block=sessions$block,Date=dates)
 
 #make feedback trials their own column
-feed_oac <- subset(objective_accuracy_by_block,feedback==1) %>% rename(.,"Objective % correct (feed.)"=mean)
-nofeed_oac <- subset(objective_accuracy_by_block,feedback==0) %>% rename(.,"Objective % correct (no feed.)"=mean)
+feed_oac <- subset(objective_accuracy_by_block,feedback==1) %>% dplyr::rename(.,"Objective % correct (feed.)" = mean)
+nofeed_oac <- subset(objective_accuracy_by_block,feedback==0) %>% dplyr::rename(.,"Objective % correct (no feed.)" = mean)
 
-feed_rac <- subset(relative_accuracy_by_block,feedback==1) %>% rename(.,"Experienced % correct (feed.)"=mean)
-nofeed_rac <- subset(relative_accuracy_by_block,feedback==0) %>% rename(.,"Experienced % correct (no feed.)"=mean)
+feed_rac <- subset(relative_accuracy_by_block,feedback==1) %>% dplyr::rename(.,"Experienced % correct (feed.)" = mean)
+nofeed_rac <- subset(relative_accuracy_by_block,feedback==0) %>% dplyr::rename(.,"Experienced % correct (no feed.)" = mean)
 
-feed_RT <- subset(RT_by_block,feedback==1) %>% rename(.,"RT (feed.)"=mean)
-nofeed_RT <- subset(RT_by_block,feedback==0) %>% rename(.,"RT (no feed.)"=mean)
+feed_RT <- subset(RT_by_block,feedback==1) %>% dplyr::rename(.,"RT (feed.)"=mean)
+nofeed_RT <- subset(RT_by_block,feedback==0) %>% dplyr::rename(.,"RT (no feed.)"=mean)
 
 side_bias_by_block <- rename(side_bias_by_block,"Left %"=mean)
 
 #combine all to create initial df for task performance
-report <- left_join(sess,feed_oac,by="block") %>% left_join(.,feed_rac,by="block") %>% left_join(.,side_bias_by_block, by="block") %>% left_join(.,feed_RT, by="block") %>% left_join(.,nofeed_RT, by="block") %>% left_join(.,nofeed_rac, by="block") %>% left_join(.,nofeed_oac, by="block")
+report <- left_join(sess,feed_oac,by="block") %>% 
+  left_join(.,feed_rac,by="block") %>% 
+  left_join(.,side_bias_by_block, by="block") %>% 
+  left_join(.,feed_RT, by="block") %>% 
+  left_join(.,nofeed_RT, by="block") %>% 
+  left_join(.,nofeed_rac, by="block") %>% 
+  left_join(.,nofeed_oac, by="block")
 
 report<- report[dim(report)[1]:1,] #flip report so most recent date comes first
 
@@ -111,7 +139,10 @@ report$Date[blank_indices] <- ""
 report <- report[,-c(3,5,8,10,12,14)]
 
 #switch column order
-columns <- c("Date","block","Objective % correct (feed.)", "Objective % correct (no feed.)","Experienced % correct (feed.)","Experienced % correct (no feed.)","RT (feed.)","RT (no feed.)", "Left %")
+columns <- c("Date","block","Objective % correct (feed.)", 
+             "Objective % correct (no feed.)","Experienced % correct (feed.)",
+             "Experienced % correct (no feed.)",
+             "RT (feed.)", "RT (no feed.)", "Left %")
 report <- report[,columns]
 
 rownames(report) <- NULL

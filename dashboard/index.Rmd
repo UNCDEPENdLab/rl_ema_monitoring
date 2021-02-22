@@ -1,0 +1,28 @@
+---
+title: "RL EMA QA Dashboard"
+---
+
+Welcome to the RL EMA Dashboard!
+
+```{r setup, include=FALSE, echo=FALSE}
+source("dashboard_utils.R")
+source("render_utils.R")
+library(pacman)
+p_load(DT, dplyr, htmltools)
+```
+
+# Active participants
+```{r}
+sdf <- getSubjPageList(getwd())
+
+#Shane: ideally, we'd keep the 'Rendering Error' as a link and when the user goes to the page, it provides a log file of what went wrong.
+
+DT::datatable(sdf, class = 'compact', escape = FALSE, selection='none')
+```
+
+
+# Inactive participants
+
+```{r}
+#datatable(sdf$inactive)
+```

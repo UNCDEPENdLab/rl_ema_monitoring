@@ -3,15 +3,6 @@
 # of this repo.
 # Note: these functions should be location agnostic to be called anywhere within 
 # the rl_ema_moitoring directory
-rm(list = ls())
-graphics.off()
-library("RSQLite")
-library("plyr")
-library("dplyr")
-library("ggplot2")
-library("zoo")
-library("sqldf")
-library("rjson")
 
 # finds the given root directory for a file hierarchy
 findRoot <- function(root_dir) {
@@ -48,8 +39,74 @@ findRoot <- function(root_dir) {
   return(pathStr)
 }
 
+# simple function to return a structured list of subjects currently cached in the data/Subjects directory
+getSubjList <- function(data_dir) { 
+  #Shane: not sure if we should be passing in some sort of config object
+  #Shane: not sure if we should be accessing a json that has caching details like when a subject was last refreshed
+  #Shane: we need a mechanism for determining if a subject is still active in data collection
+  checkmate::assert_directory_exists(data_dir)
+  
+  subjects_dir <- file.path(data_dir, "Subjects")
+  checkmate::assert_directory_exists(subjects_dir)
+  
+  sdirs <- list.dirs(subjects_dir, recursive = FALSE, full.names = TRUE)
+  
+  slist <- list()
+  for (ss in sdirs) {
+    this_subj <- list()
+    expect_json <- file.path(ss, "subject.json")
+    if (!checkmate::test_file_exists(expect_json)) {
+      stop("Cannot find subject.json file for: ", ss)
+    } else {
+      meta <- jsonlite::read_json(expect_json)  #not entirely sure what to expect in here
+      this_subj$id <- meta$subject$id
+      #would be great for json to have some sort of date information about time last cached.
+    }
+    
+    #schedule
+    expect_sched <- Sys.glob(file.path(ss, "schedule", "*.db"))
+    if (length(expect_sched) > 1L) {
+      print(expect_sched)
+      stop("Found multiple schedule files. I'm confused.")
+    } else if (length(expect_sched) == 0L) {
+      stop("Cannot find a schedule file in: ", file.path(ss, "schedule"))
+    } else {
+      this_subj$sched_file <- expect_sched[1L]
+      this_subj$sched_date <- file.info(expect_sched[1L])$mtime
+    }
+    
+    #physio
+    expect_physio <- Sys.glob(file.path(ss, "physio", "*.db"))
+    if (length(expect_physio) == 0L) {
+      warning("Cannot find any physio db files in: ", file.path(ss, "physio"))
+    } else {
+      this_subj$physio_files <- expect_physio
+    }
+    
+    #video -- not sure if it will always be mp4 or m4v or others
+    expect_video <- Sys.glob(file.path(ss, "video", "*.mp4"))
+    if (length(expect_video) == 0L) {
+      warning("Cannot find any video mp4 files in: ", file.path(ss, "video"))
+    } else {
+      this_subj$video_files <- expect_video
+    }
+    
+    slist[[ this_subj$id ]] <- this_subj
+  }
+  
+  return(slist)
+}
+
+getSubjPageList <- function(dashboard_dir=getwd()) {
+  site_pages <- get_report_cache(dashboard_dir)$page_summary
+  #convert links
+  site_pages <- site_pages %>% mutate_at(vars(ends_with("_page")), ~convert_to_link(href=., detect=TRUE))
+  
+  return(site_pages)
+}
+
 # sets the datetime that a caching was run
-setCacheTime() <- function() {
+setCacheTime <- function() {
   
 }
 
@@ -64,9 +121,9 @@ getSubjectPath <- function(subject) {
   # load the json file: dashboard_config.json
   
   # findRoot function call
-  pathStr <- findRoot() # "rl_ema_monitoring"
+  pathStr <- findRoot("dashboard") # "rl_ema_monitoring"
   # append "/data/Subjects" to the "rl_ema_monitoring" path
-  pathStr <- paste0(pathStr, , subject) # "/data/Subjects/"
+  pathStr <- file.path(pathStr, "data", "Subjects", subject) # "/data/Subjects/"
   # return the path
   return(pathStr)
 }
@@ -80,12 +137,14 @@ getSchedDataItem <- function(subjID, item=NA, cols=NA) {
   pathSubjSched <- paste0(getSubjectPath(subjID), "/schedule")
   # pattern string for the db file
   pat <- paste0("*_", subjID, "_schedule.db")
-  # get a list of subject's schedue files
+  # get a list of subject's schedule files
   fileList <- list.files(pathSubjSched, pattern = pat)
   # ensure there is only one schedule.db file located here (remainder should be archived in the archive directory)
   if (length(fileList) > 1) {
     errorMessage <- paste("Error: there is more than 1 schedule.db file at ", pathSubjSched)
     stop(errorMessage)
+  } else if (length(fileList) == 0L) {
+    stop("Cannot locate schedule db file in folder: ", pathSubjSched)
   }
   # load the schedule.db file
   data = dbConnect(SQLite(), paste0(pathSubjSched, '/', fileList))
@@ -105,6 +164,9 @@ getSchedDataItem <- function(subjID, item=NA, cols=NA) {
       # append the table to the list
       tables <- append(tables,list(curr_df),0)
     }
+    
+    #close connection before return
+    dbDisconnect(data)
     return(tables)
   }
   # SQL selection string
@@ -128,5 +190,7 @@ getSchedDataItem <- function(subjID, item=NA, cols=NA) {
     chosenItem <- sqldf(subStr1)
   }
   # return the data item from the db
+  
+  dbDisconnect(data)
   return(chosenItem)
 }
