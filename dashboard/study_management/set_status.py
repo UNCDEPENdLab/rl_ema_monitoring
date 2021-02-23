@@ -1,7 +1,4 @@
 import argparse
-import json
-import os
-import sys
 from set_status_func import add_subject_by_status
 '''
 Allows for the setting of a subject as active or inactive in the study.
@@ -41,7 +38,7 @@ def main():
         raise Exception("Error: a status must be given.")
         exit()
     # Ensure the status given in 'active' or 'inactive'
-    elif (status == 'active') | (status == 'inactive'):
+    if (status == 'active') | (status == 'inactive'):
 	    pass
     # Exit if an incorrect status is given
     else:

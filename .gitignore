@@ -3,6 +3,7 @@
 /data/Subjects/*
 /dashboard/client_secrets.json
 /dashboard/subject_status.json
+/dash/data/*
 .Rhistory
 __pycache__
 debug.log

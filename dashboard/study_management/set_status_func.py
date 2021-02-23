@@ -14,7 +14,7 @@ def add_subject_by_status(id, status, path=None):
         # then use the current working directory by default
         path = os.getcwd()
     # Open the json file and convert it to a dict
-    with open(path + '/subject_status.json') as f:
+    with open(path + '/data/subject_status.json') as f:
         data = json.load(f)
         # Add the subject in the approriate place and remove if needed
         # Subject to be set as inactive

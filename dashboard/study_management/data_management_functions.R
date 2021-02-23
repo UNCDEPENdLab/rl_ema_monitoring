@@ -1,13 +1,13 @@
 library('reticulate')
 
 # add the set_status functions
-source_python('set_status_func.py')
+source_python('set_status_func.py') # function used for cli is: add_subject_by_status(id, status)
 
 # add the add_subject functions
-source_python('add_subject_func.py')
+source_python('add_subject_func.py') # function used for cli is: add_subject(id, gmail, path)
 
 # add the momentum_pull functions
-source_python('momentum_pull_func.py')
+source_python('momentum_pull_func.py') # function used for cli is: pull_files(id, path)
 
 # finds the given root directory for a file hierarchy
 findRoot <- function(root_dir) {

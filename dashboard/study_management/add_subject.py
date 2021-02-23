@@ -20,7 +20,7 @@ def create_arg_parser():
     # gmail argument
     parser.add_argument('--gmail', help='the gmail associated with the subjects phone and google drive', default = None, required=True)
     # status argument
-    parser.add_argument('--status', help='status to set the subject to (should be active or inactive)', default = None, required=True)
+    parser.add_argument('--status', help='status to set the subject to (should be active or inactive)', default = 'active', required=True)
     # path argument: path to the data folder
     parser.add_argument('--dataPath', help='path to the folder containing the subject data, this folder should have a "Subjects/" directory as an immediate child'), default = None, required=False)
     # return the parser object
@@ -46,8 +46,17 @@ def main():
     if gmail is None:
         raise Exception("Error: gmail must be given.")
         exit()
+    # The subject's associated gmail
+    status = parsed_args.status
+    # Ensure a status was given
+    if status is None:
+        raise Exception("Error: status must be given.")
+        exit()
+    elif (status != 'active') | (status != 'inactive'):
+        raise Exception("Error: status must be 'active' or 'inactive', not " + status + ".")
+        exit()
     # Add the subject
-    add_subject(id=id, gmail=gmail, path=parsed_args.dataPath)
+    add_subject(id=id, gmail=gmail, status=status path=parsed_args.dataPath)
     
 # Execution of main method
 if __name__ == '__main__':

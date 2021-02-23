@@ -22,6 +22,30 @@ def make_json(id, gmail, path):
     # Export to a new json file in the subject's directory
     with open(path + '/Subjects/' + id + '/subject.json', 'w') as json_file:
         json.dump(data, json_file, indent=4)
+
+def make_sqlite_files():
+    '''
+    Method to create the sqlite files for the subject.
+    Should include:
+        dash_index.db -> single row table with info to be collaborated into a dataframe for the index page
+        dash_HR.db -> 
+        dash_EEG.db -> 
+        dash_BEHAV.db -> 
+        dash_FINANCIAL.db -> 
+    '''
+    # Initialize an empty data object
+    data = None
+    # Open the json file and convert it to a dict
+    with open(path + '/' + 'subjects_skeleton.json') as f:
+        data = json.load(f)
+        #print(data)
+    # Set the id
+    data["subject"]["id"] = id
+    # Set the gmail
+    data["subject"]["gmail"] = gmail
+    # Export to a new json file in the subject's directory
+    with open(path + '/Subjects/' + id + '/subject.json', 'w') as json_file:
+        json.dump(data, json_file, indent=4)
     
 def google_auth(id, path):
     # String to the credentials file
@@ -46,7 +70,7 @@ def google_auth(id, path):
     #print("here")
     gauth.SaveCredentialsFile(credPath)
 
-def add_subject(id, gmail, path=None):
+def add_subject(id, gmail, status='active', path=None):
     '''
     Method to do everything for adding the subject.
         Updates json files, creates file hierarchy, authenticates with Google.
@@ -95,4 +119,4 @@ def add_subject(id, gmail, path=None):
     google_auth(id=id, path=currDir)
     #print("here 3")
     # Set the status of the subject
-    add_subject_by_status(id=id, status="active")
+    add_subject_by_status(id=id, status=status)
