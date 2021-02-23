@@ -11,17 +11,17 @@ findRoot <- function(root_dir) {
   # split the directory path into a list of 
   split_str <- strsplit(currDir,'/')[[1]]
   # check if you are already at "root_dir"
-  if (tail(split_str, n=1) != "root_dir") {
+  if (tail(split_str, n=1) != root_dir) {
     # check to make sure that the "root_dir" is in the file path or raise an error
     if ((root_dir %in% split_str) == FALSE) {
       errorMessage <- paste("Error: The root directory given for this file hierarchy ", root_dir, " was not found.")
       stop(errorMessage)
     }
     # iterate through the path list until the "root_dir" dir is found
-    i = -1
+    i = 0
     for (item in split_str) {
       # if "root_dir" is found, then done
-      if (item != "root_dir") {
+      if (item != root_dir) {
         i = i + 1
       }
       # else, inrement i
@@ -29,9 +29,9 @@ findRoot <- function(root_dir) {
         break()
       }
     }
-    j = i - 1
+    #j = i - 1
     # cut the string off after "root_dir"
-    split_str <- split_str[1:j]
+    split_str <- split_str[1:i] #j
   } # else, do nothing
   # recombine the vector into a path string
   pathStr <- paste0(split_str, collapse = '/')
