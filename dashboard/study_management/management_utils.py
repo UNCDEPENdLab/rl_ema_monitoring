@@ -22,7 +22,7 @@ def importFromDashUtils(funcName):
     # select a mirror for R packages
     utils.chooseCRANmirror(ind=1) # select the first mirror in the list
     # R package names, copied from dashboard/dashboard_utils.R
-    packnames = ("RSQLite", "plyr", "dplyr", "ggplot2", "zoo", "sqldf")
+    packnames = ("RSQLite", "plyr", "dplyr", "ggplot2", "zoo", "sqldf", "rjson", "reticulate")
     # Selectively install what needs to be install.
     names_to_install = [x for x in packnames if not rpackages.isinstalled(x)]
     if len(names_to_install) > 0:

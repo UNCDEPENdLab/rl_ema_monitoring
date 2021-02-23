@@ -1,0 +1,19 @@
+{
+  "dashboard": {
+    "proj_root_name": null,
+	"proj_root_path": null,
+	"proj_data_paths": {
+	  "raw_data": null,
+	  "bids_data": null
+	}
+	"last_update": null
+	"collaborators": {
+	}
+  };
+  "subjects": {
+    "active": [
+    ],
+    "inactive": [
+    ]
+  }
+}

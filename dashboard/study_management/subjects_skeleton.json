@@ -2,6 +2,12 @@
   "subject": {
     "gmail": null,
 	"id": null,
+	"status": null,
+	"site": null,
+	"start_date": null,
+	"projected_end_date": null,
+	"day": null,
+	"ra": null,
 	"files": {
 	  "schedule": null,
       "physio": [
