@@ -139,6 +139,10 @@ def update_json(id, path, fileDict, scheduleLatest):
     '''
     Method for updating a subject's json file.
     '''
+    # get the pull datetime
+    now = datetime.now()
+    # convert datetime object to a string
+    now = strftime("%m/%d/%Y, %H:%M:%S")
     # variable that will get the new dict to be printed to the json file
     new_json_dict = None
     # Have the files pulled in fileDict, get the files from before pull and combine them
@@ -146,13 +150,13 @@ def update_json(id, path, fileDict, scheduleLatest):
         # dict of the old data
         old_json_dict = json.load(json_file)
         # use the new schedule file
-        old_json_dict["subject"]["files"]["schedule"] = scheduleLatest
+        old_json_dict["subject"]["files"]["schedule"] = {scheduleLatest, now}
         # get a list of the titles of the physio files
-        physioList = [x['title'] for x in fileDict["physio"]]
+        physioList = [{x['title'], now} for x in fileDict["physio"]]
         # update the physio files
         old_json_dict["subject"]["files"]["physio"].extend(physioList)
-        # get a list of the titles of the physio files
-        videoList = [x['title'].replace('/', '_') for x in fileDict["video"]]
+        # get a list of the titles of the video files
+        videoList = [{x['title'].replace('/', '_'), now} for x in fileDict["video"]]
         # update the video files
         old_json_dict["subject"]["files"]["video"].extend(videoList)
         # set the variable out of this scope to feed in for writing

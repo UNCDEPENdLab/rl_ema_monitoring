@@ -46,13 +46,20 @@ def google_auth(id, path):
     #print("here")
     gauth.SaveCredentialsFile(credPath)
 
-def add_subject(id, gmail):
+def add_subject(id, gmail, path=None):
     '''
     Method to do everything for adding the subject.
         Updates json files, creates file hierarchy, authenticates with Google.
     '''
     # Get the current working directory.as a global variable within main
-    currDir = os.getcwd()
+    # if the path variable is None
+    if path == None:
+        # then use the current working directory by default
+        currDir = os.getcwd()
+    # otherwise
+    else:
+        # use the path given
+        currDir = path
     # Make independent to giving the '@gmail.com' suffix
     if gmail.endswith('@gmail.com') == False:
         gmail = gmail + '@gmail.com'

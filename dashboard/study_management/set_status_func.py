@@ -2,14 +2,17 @@ import json
 import os
 import sys
 
-def add_subject_by_status(id, status):
+def add_subject_by_status(id, status, path=None):
     '''
     Method for adding a subject to a status
     '''
     # Initialize an empty data object
     data = None
     # Get the current working directory
-    path = os.getcwd()
+    # if the path variable is None
+    if path == None:
+        # then use the current working directory by default
+        path = os.getcwd()
     # Open the json file and convert it to a dict
     with open(path + '/subject_status.json') as f:
         data = json.load(f)

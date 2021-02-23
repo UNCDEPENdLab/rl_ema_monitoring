@@ -10,7 +10,7 @@ def create_arg_parser():
     # id argument
     parser.add_argument('--id', help='the subject id', default = None, required=True)
     # id argument
-    parser.add_argument('--path', help='path the subject data directory', default = None, required=False)
+    parser.add_argument('--path', help='path to the subject data directory', default = None, required=False)
     # gmail argument
     #parser.add_argument('--gmail', help='the gmail associated with the subjects phone and google drive', default = None, required=True)
     # return the parser object
