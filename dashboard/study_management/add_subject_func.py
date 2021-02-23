@@ -1,7 +1,7 @@
 import json
 import os
 import sys
-from set_status import add_subject_by_status
+from set_status_func import add_subject_by_status
 from pydrive.auth import GoogleAuth
 from pydrive.drive import GoogleDrive
 
