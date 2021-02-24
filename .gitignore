@@ -1,7 +1,7 @@
 /dashboard_shiny_demo/*
 /dashboard_shiny_demo
 /data/Subjects/*
-/dashboard/client_secrets.json
+/dashboard/study_management/client_secrets.json
 /dashboard/subject_status.json
 /dash/data/*
 .Rhistory

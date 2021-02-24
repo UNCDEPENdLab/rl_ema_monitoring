@@ -11,8 +11,24 @@ def make_json(id, gmail, path):
     '''
     # Initialize an empty data object
     data = None
+    # save the path given and note with variable it is a path to the data
+    dataPath = path
+    # Path given should be path to data, modify path to go to 'subjects_skeleton.json'
+    # splits the path string into lists around '/'
+    pathList = path.split('/')
+    # removes the last element 'data'
+    pathList.pop()
+    # reforms the string
+    skeletonPath = ''
+    for item in pathList:
+        skeletonPath = skeletonPath + '/' + item
+    # follows the standard file hierarchy that 'data/' and 'dashboard/' should have the same parent
+    skeletonPath = skeletonPath + '/dashboard/study_management'
+    # handle for running on a windows operaing system (removes leading '/')
+    if sys.platform == "win32":
+        skeletonPath = skeletonPath[1:]
     # Open the json file and convert it to a dict
-    with open(path + '/' + 'subjects_skeleton.json') as f:
+    with open(skeletonPath + '/' + 'subjects_skeleton.json', ) as f:
         data = json.load(f)
         #print(data)
     # Set the id
@@ -20,7 +36,7 @@ def make_json(id, gmail, path):
     # Set the gmail
     data["subject"]["gmail"] = gmail
     # Export to a new json file in the subject's directory
-    with open(path + '/Subjects/' + id + '/subject.json', 'w') as json_file:
+    with open(dataPath + '/Subjects/' + id + '/subject.json', 'w+') as json_file:
         json.dump(data, json_file, indent=4)
 
 def make_sqlite_files():
@@ -55,7 +71,7 @@ def google_auth(id, path):
     # Try to load saved client credentials
     gauth.LoadCredentialsFile(credPath)
     # If this credential does not exist
-    print("gauth.credentials")
+    #print("gauth.credentials")
     if gauth.credentials is None:
         # Authenticate if they're not there
         gauth.LocalWebserverAuth()
@@ -119,4 +135,4 @@ def add_subject(id, gmail, status='active', path=None):
     google_auth(id=id, path=currDir)
     #print("here 3")
     # Set the status of the subject
-    add_subject_by_status(id=id, status=status)
+    add_subject_by_status(id=id, status=status, path=currDir)

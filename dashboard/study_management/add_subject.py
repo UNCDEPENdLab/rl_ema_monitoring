@@ -22,7 +22,7 @@ def create_arg_parser():
     # status argument
     parser.add_argument('--status', help='status to set the subject to (should be active or inactive)', default = 'active', required=True)
     # path argument: path to the data folder
-    parser.add_argument('--dataPath', help='path to the folder containing the subject data, this folder should have a "Subjects/" directory as an immediate child'), default = None, required=False)
+    parser.add_argument('--dataPath', help='path to the folder containing the subject data, this folder should have a "Subjects/" directory as an immediate child', default = None, required=False)
     # return the parser object
     return parser
 
@@ -52,11 +52,11 @@ def main():
     if status is None:
         raise Exception("Error: status must be given.")
         exit()
-    elif (status != 'active') | (status != 'inactive'):
+    elif (status != 'active') & (status != 'inactive'):
         raise Exception("Error: status must be 'active' or 'inactive', not " + status + ".")
         exit()
     # Add the subject
-    add_subject(id=id, gmail=gmail, status=status path=parsed_args.dataPath)
+    add_subject(id=id, gmail=gmail, status=status, path=parsed_args.dataPath)
     
 # Execution of main method
 if __name__ == '__main__':

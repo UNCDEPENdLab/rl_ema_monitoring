@@ -4,7 +4,7 @@ library('reticulate')
 source_python('set_status_func.py') # function used for cli is: add_subject_by_status(id, status)
 
 # add the add_subject functions
-source_python('add_subject_func.py') # function used for cli is: add_subject(id, gmail, path)
+source_python('add_subject_func.py') # function used for cli is: add_subject(id, gmail, status, path)
 
 # add the momentum_pull functions
 source_python('momentum_pull_func.py') # function used for cli is: pull_files(id, path)

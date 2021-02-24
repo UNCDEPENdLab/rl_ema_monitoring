@@ -1,1 +1,9 @@
-{"subjects": {"active": ["Bea"], "inactive": []}}
+{
+    "subjects": {
+        "active": [
+            "Bea",
+            "Shane"
+        ],
+        "inactive": []
+    }
+}
