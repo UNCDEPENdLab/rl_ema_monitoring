@@ -44,13 +44,14 @@ findRoot <- function(root_dir) {
 sourceFromRoot <- function(root_dir, from_root, sourced_file, python=FALSE) {
   # creates the sourced paths from the inputs given
   source_path = paste0(findRoot(root_dir),'/',root_dir,'/', from_root, '/', sourced_file)
+  print(source_path)
   # by default, assume sourcing an R script
   if (python == FALSE) {
     source(source_path)
   }
   # otherwise, source a python script
   else {
-    source_python(source_path)
+    source_python(source_path, envir = globalenv())
   }
 }
 
