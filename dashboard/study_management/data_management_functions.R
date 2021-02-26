@@ -1,14 +1,5 @@
 library('reticulate')
 
-# add the set_status functions
-source_python('set_status_func.py') # function used for cli is: add_subject_by_status(id, status)
-
-# add the add_subject functions
-source_python('add_subject_func.py') # function used for cli is: add_subject(id, gmail, status, path)
-
-# add the momentum_pull functions
-source_python('momentum_pull_func.py') # function used for cli is: pull_files(id, path)
-
 # finds the given root directory for a file hierarchy
 findRoot <- function(root_dir) {
   # get the current directory
@@ -29,20 +20,48 @@ findRoot <- function(root_dir) {
       if (item != root_dir) {
         i = i + 1
       }
-      # else, inrement i
+      # else, increment i
       else {
         break()
       }
     }
-    #j = i - 1
+    #j = length(split_str) - i
     # cut the string off after "root_dir"
     split_str <- split_str[1:i] #j
-  } # else, do nothing
+  } 
+  # otherwise, remove the last root from the root path
+  else {
+    split_str <- head(split_str, -1)
+  }
   # recombine the vector into a path string
   pathStr <- paste0(split_str, collapse = '/')
-  # return the path string
+  # return the path string\
+  #print(pathStr)
   return(pathStr)
 }
+
+# function that finds the root directory, follows a given path, and sources an R script by default or a python script if specified
+sourceFromRoot <- function(root_dir, from_root, sourced_file, python=FALSE) {
+  # creates the sourced paths from the inputs given
+  source_path = paste0(findRoot(root_dir),'/',root_dir,'/', from_root, '/', sourced_file)
+  # by default, assume sourcing an R script
+  if (python == FALSE) {
+    source(source_path)
+  }
+  # otherwise, source a python script
+  else {
+    source_python(source_path)
+  }
+}
+
+# add the set_status functions
+sourceFromRoot('rl_ema_monitoring', 'dashboard/study_management','set_status_func.py', python=TRUE) # function used for cli is: add_subject_by_status(id, status)
+
+# add the add_subject functions
+sourceFromRoot('rl_ema_monitoring', 'dashboard/study_management','add_subject_func.py', python=TRUE) # function used for cli is: add_subject(id, gmail, status, path)
+
+# add the momentum_pull functions
+sourceFromRoot('rl_ema_monitoring', 'dashboard/study_management','momentum_pull_func.py', python=TRUE) # function used for cli is: pull_files(id, path)
 
 # simple function to return a structured list of subjects currently cached in the data/Subjects directory
 getSubjList <- function(data_dir) { 
