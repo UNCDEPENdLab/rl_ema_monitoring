@@ -1,5 +1,5 @@
 library('reticulate')
-library('rjson')
+#library('rjson')
 library('tinsel')
 
 # finds the given root directory for a file hierarchy
@@ -66,7 +66,9 @@ reset_cfg <- function(root_dir) {
   # set the working dir to be the designated root
   setwd(root_path)
   # run the reset cfg script on the system
-  system(paste0("python rebuild_config.py --root_name ", root_dir))
+  #system(paste0("python rebuild_config.py --root_name ", root_dir))
+  # since the rebuild function should always be in root...just use reticulate to import
+  
   # reset the working directory
   setwd(curr_dir)
 }
