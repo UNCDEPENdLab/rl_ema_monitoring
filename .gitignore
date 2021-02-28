@@ -7,3 +7,4 @@
 .Rhistory
 __pycache__
 debug.log
+cfg.json

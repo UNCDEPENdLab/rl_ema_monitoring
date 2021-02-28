@@ -1,4 +1,6 @@
 library('reticulate')
+library('rjson')
+library('tinsel')
 
 # finds the given root directory for a file hierarchy
 findRoot <- function(root_dir) {
@@ -44,7 +46,7 @@ findRoot <- function(root_dir) {
 sourceFromRoot <- function(root_dir, from_root, sourced_file, python=FALSE) {
   # creates the sourced paths from the inputs given
   source_path = paste0(findRoot(root_dir),'/',root_dir,'/', from_root, '/', sourced_file)
-  print(source_path)
+  #print(source_path)
   # by default, assume sourcing an R script
   if (python == FALSE) {
     source(source_path)
@@ -55,14 +57,61 @@ sourceFromRoot <- function(root_dir, from_root, sourced_file, python=FALSE) {
   }
 }
 
+# function to reset the config file by running the python script directly on the system at the project root directory
+reset_cfg <- function(root_dir) {
+  # get the root directory path
+  root_path <- paste0(findRoot(root_dir), '/', root_dir)
+  # save the current working directory
+  curr_dir <- getwd()
+  # set the working dir to be the designated root
+  setwd(root_path)
+  # run the reset cfg script on the system
+  system(paste0("python rebuild_config.py --root_name ", root_dir))
+  # reset the working directory
+  setwd(curr_dir)
+}
+
+# function that goes to the root and gets the path from the cfg.json file as a dataframe
+# this function should effectively replace sourceFromRoot()
+sourceFromCfg <- function(root_dir, sourced_file) {
+  # get the root directory path
+  root_path <- findRoot(root_dir)
+  # get the whole path to cfg.json
+  cfg_path <- paste0(root_path, '/', root_dir, '/cfg.json')
+  # import json from python
+  json <- import("json")
+  # import python built-ins
+  py <- import_builtins()
+  # variable to assign the path to
+  file_path <- NA
+  # open the cfg.json file
+  with(py$open(cfg_path, "r") %as% file, {
+    s <- file$read()
+    d <- r_to_py(json$loads(s))
+    #print(d['subject']['gmail'])
+    file_path <- py_to_r(d[sourced_file])
+  })
+  # THE ABOVE LINE WORK, LEAVE IT ALONE
+  # combines the name and path to get the full destination string
+  source_path = paste0(file_path, '/', sourced_file)
+  # by default, assume sourcing an R script
+  if (endsWith(sourced_file, '.R')) {
+    source(source_path)
+  }
+  # otherwise, source a python script
+  else if (endsWith(sourced_file, '.py')) {
+    source_python(source_path, envir = globalenv())
+  }
+}
+
 # add the set_status functions
-sourceFromRoot('rl_ema_monitoring', 'dashboard/study_management','set_status_func.py', python=TRUE) # function used for cli is: add_subject_by_status(id, status)
+sourceFromCfg('rl_ema_monitoring','set_status_func.py') # function used for cli is: add_subject_by_status(id, status)
 
 # add the add_subject functions
-sourceFromRoot('rl_ema_monitoring', 'dashboard/study_management','add_subject_func.py', python=TRUE) # function used for cli is: add_subject(id, gmail, status, path)
+sourceFromCfg('rl_ema_monitoring', 'add_subject_func.py') # function used for cli is: add_subject(id, gmail, status, path)
 
 # add the momentum_pull functions
-sourceFromRoot('rl_ema_monitoring', 'dashboard/study_management','momentum_pull_func.py', python=TRUE) # function used for cli is: pull_files(id, path)
+sourceFromCfg('rl_ema_monitoring', 'momentum_pull_func.py') # function used for cli is: pull_files(id, path)
 
 # simple function to return a structured list of subjects currently cached in the data/Subjects directory
 getSubjList <- function(data_dir) { 
