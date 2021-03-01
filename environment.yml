@@ -1,4 +1,4 @@
-name: C:\Users\tshan\conda_env
+name: conda_env
 channels:
   - defaults
   - conda-forge
@@ -194,4 +194,4 @@ dependencies:
     - tzlocal==2.1
     - uritemplate==3.0.1
     - urllib3==1.26.3
-prefix: C:\Users\tshan\conda_env
+prefix: conda_env

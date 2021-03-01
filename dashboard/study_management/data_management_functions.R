@@ -102,6 +102,11 @@ sourceFromCfg <- function(root_dir, sourced_file) {
   }
   # otherwise, source a python script
   else if (endsWith(sourced_file, '.py')) {
+    # conda_env path
+    conda_path <- paste0(root_path, '/', root_dir, '/conda_env')
+    # specify the conda environment
+    use_condaenv(conda_path)
+    # source the python function
     source_python(source_path, envir = globalenv())
   }
 }

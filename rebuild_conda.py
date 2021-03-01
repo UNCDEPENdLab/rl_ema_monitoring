@@ -1,21 +1,16 @@
 import os
 
 def rebuild_from_yaml():
-    os.system("conda env create -n conda-env -f /path/to/environment.yml")
-'''
-def main():
-    '''
-    #Main method for this program.
-    '''
-    # Create the argparser
-    arg_parser = create_arg_parser()
-    # Parse the args from terminal input
-    parsed_args = arg_parser.parse_args(sys.argv[1:])
-    # run the build_config function
-    build_config(root_name=parsed_args.root_name)
-'''
+    # if the conda environment does not exist
+    if os.path.isdir(os.getcwd() + '/conda_env') == False:
+        # create the conda environment
+        os.system("conda env create --prefix conda-env -f environment.yml")
+    # if the conda environment already exists
+    else:
+        # then update the environment
+        os.system("conda env update --prefix conda_env -f environment.yml")  
 
 # Execution of main method
 if __name__ == '__main__':
     #main()
-    def rebuild_from_yaml()
+    rebuild_from_yaml()
