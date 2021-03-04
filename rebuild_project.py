@@ -2,7 +2,7 @@ import argparse
 import os
 import sys
 import json
-from rebuild_conda import rebuild_from_yaml
+from rebuild_conda import build_reticulate_conda
 from rebuild_config import build_config
 
 def create_arg_parser():
@@ -24,7 +24,7 @@ def main():
     # Parse the args from terminal input
     parsed_args = arg_parser.parse_args(sys.argv[1:])
     # rebuild the conda_env
-    rebuild_from_yaml()
+    build_reticulate_conda('pip.txt')
     # run the build_config function
     build_config(root_name=parsed_args.root_name)
 

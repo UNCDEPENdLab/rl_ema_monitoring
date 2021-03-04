@@ -1,6 +1,7 @@
 library('reticulate')
 #library('rjson')
 library('tinsel')
+library('RSQLite')
 
 # finds the given root directory for a file hierarchy
 findRoot <- function(root_dir) {
@@ -104,6 +105,7 @@ sourceFromCfg <- function(root_dir, sourced_file) {
   else if (endsWith(sourced_file, '.py')) {
     # conda_env path
     conda_path <- paste0(root_path, '/', root_dir, '/conda_env')
+    print(conda_path)
     # specify the conda environment
     use_condaenv(conda_path)
     # source the python function
@@ -197,9 +199,9 @@ getSubjectPath <- function(subject) {
   # load the json file: dashboard_config.json
   
   # findRoot function call
-  pathStr <- findRoot("dashboard") # "rl_ema_monitoring"
+  pathStr <- findRoot("rl_ema_monitoring") # "rl_ema_monitoring"
   # append "/data/Subjects" to the "rl_ema_monitoring" path
-  pathStr <- file.path(pathStr, "data", "Subjects", subject) # "/data/Subjects/"
+  pathStr <- file.path(pathStr, "rl_ema_monitoring", "data", "Subjects", subject) # "/data/Subjects/"
   # return the path
   return(pathStr)
 }
@@ -212,7 +214,7 @@ getSchedDataItem <- function(subjID, item=NA, cols=NA) {
   # get the path to the subject
   pathSubjSched <- paste0(getSubjectPath(subjID), "/schedule")
   # pattern string for the db file
-  pat <- paste0("*_", subjID, "_schedule.db")
+  pat <- paste0(subjID, "_schedule.db") # "*_", 
   # get a list of subject's schedule files
   fileList <- list.files(pathSubjSched, pattern = pat)
   # ensure there is only one schedule.db file located here (remainder should be archived in the archive directory)
