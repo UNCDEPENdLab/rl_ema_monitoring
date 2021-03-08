@@ -1,3 +1,4 @@
+library('assertthat')
 library('reticulate')
 #library('rjson')
 library('tinsel')
@@ -67,14 +68,99 @@ reset_cfg <- function(root_dir) {
   # set the working dir to be the designated root
   setwd(root_path)
   # run the reset cfg script on the system
-  #system(paste0("python rebuild_config.py --root_name ", root_dir))
-  # since the rebuild function should always be in root...just use reticulate to import
-  
+  system(paste0("python rebuild_config.py --root_name ", root_dir))
   # reset the working directory
   setwd(curr_dir)
 }
 
-# function that goes to the root and gets the path from the cfg.json file as a dataframe
+# function that goes to the root and gets the path from the cfg.json and loads .db file
+getPathFromCfg <- function(root_dir, sourced_file, keywords=NA, exclusion=NA, pattern=FALSE) {
+  # get the root directory path
+  root_path <- findRoot(root_dir)
+  # get the whole path to cfg.json
+  cfg_path <- paste0(root_path, '/', root_dir, '/cfg.json')
+  # import json from python
+  json <- import("json")
+  # import python built-ins
+  py <- import_builtins()
+  # variable to assign the path to
+  file_path <- NA
+  # open the cfg.json file
+  with(py$open(cfg_path, "r") %as% file, {
+    # read in the file
+    s <- file$read()
+    # convert to a python object
+    d <- r_to_py(json$loads(s))
+    # initialize variable for file path
+    f_path <- NA
+    # if the file name is not a pattern (should be used as the file name)
+    if (pattern == FALSE) {
+      # get the item the python dict and convert back to r
+      f_path <- py_to_r(d[sourced_file])
+    # if the string is a pattern
+    } else if (pattern == TRUE) {
+      # get the list of keys from the json file
+      keys <- names(json$loads(s))
+      # convert the list of keys to a wide 1D dataframe
+      keys <- data.frame(as.list(keys))
+      # reduce the list of keys that contain the sourced_file argument as a substring
+      keys <- keys[,grepl(paste0("*", sourced_file, "*"),names(keys))]
+      # initialize the final result of this inner method
+      f_path <- character()
+      # use the remaining keys to select the paths from the json,iterate through the keys
+      for (key in keys) {
+        # append the key to the character string
+        f_path <- append(f_path, py_to_r(d[key]))
+      }
+    }
+    # if the file_path returned is a single string
+    if (is.string(f_path) == TRUE) {
+      #print('string')
+      # set the file_path to this single returned string
+      file_path <- f_path
+    # if the file_path returned is a list
+    } else if (is.character(f_path) == TRUE) {
+      #print('list')
+      # create a wide 1D dataframe with the list of paths
+      f_path <- data.frame(as.list(f_path))
+      # if there are keyword selectors
+      if (is.na(keywords) != TRUE) {
+        # iterate through the keywords given
+        for (kword in keywords) {
+          # drop the paths that do not contain the keyword
+          f_path <- f_path[,grepl(paste0("*", kword, "*"),names(f_path))]
+          # break if you have reduced the number of paths to 1
+          if (length(f_path) == 1) {
+            break
+          }
+        }
+      }
+      # if there are exclusion substrings
+      if ((is.na(exclusion) != TRUE) && length(f_path) > 1) {
+        # iterate through the keywords given
+        for (exclude in exclusion) {
+          # drop the paths that do not contain the keyword
+          f_path <- f_path[,!grepl(paste0("*", exclude, "*"),names(f_path))]
+          # break if you have reduced the number of paths to 1
+          if (length(f_path) == 1) {
+            break
+          }
+        }
+      }
+      # ensure there is only a string returned
+      if ((is.string(f_path) != TRUE) || (is.na(f_path) != FALSE)) {
+        print("Error: From the filename given, keywords selected, and exclusion substrings; either no paths or multiple paths were returned.")
+        return(NA)
+      }
+      # set the file_path to this single returned string
+      file_path <- f_path
+    }
+  })
+  # return the resultant file path
+  return(file_path)
+}
+
+# function that goes to the root and gets the path from the cfg.json and loads a python or r script
 # this function should effectively replace sourceFromRoot()
 sourceFromCfg <- function(root_dir, sourced_file) {
   # get the root directory path
@@ -89,25 +175,22 @@ sourceFromCfg <- function(root_dir, sourced_file) {
   file_path <- NA
   # open the cfg.json file
   with(py$open(cfg_path, "r") %as% file, {
+    # read in the file
     s <- file$read()
+    # convert to a python object
     d <- r_to_py(json$loads(s))
-    #print(d['subject']['gmail'])
+    # get the item the python dict and convert back to r
     file_path <- py_to_r(d[sourced_file])
   })
-  # THE ABOVE LINE WORK, LEAVE IT ALONE
   # combines the name and path to get the full destination string
   source_path = paste0(file_path, '/', sourced_file)
   # by default, assume sourcing an R script
   if (endsWith(sourced_file, '.R')) {
+    # base r sourcing
     source(source_path)
   }
   # otherwise, source a python script
   else if (endsWith(sourced_file, '.py')) {
-    # conda_env path
-    conda_path <- paste0(root_path, '/', root_dir, '/conda_env')
-    print(conda_path)
-    # specify the conda environment
-    use_condaenv(conda_path)
     # source the python function
     source_python(source_path, envir = globalenv())
   }
@@ -188,35 +271,18 @@ getSubjPageList <- function(dashboard_dir=getwd()) {
   return(site_pages)
 }
 
-# loads the dashboard config file from a predefined dashboard path
-loadDashConfig <- function() {
-  # check if in dirs dashboard/, study_management/, etc...
-  
-}
-
-# uses findRoot("rl_ema_monitoring") -> updates to use config file
-getSubjectPath <- function(subject) {
-  # load the json file: dashboard_config.json
-  
-  # findRoot function call
-  pathStr <- findRoot("rl_ema_monitoring") # "rl_ema_monitoring"
-  # append "/data/Subjects" to the "rl_ema_monitoring" path
-  pathStr <- file.path(pathStr, "rl_ema_monitoring", "data", "Subjects", subject) # "/data/Subjects/"
-  # return the path
-  return(pathStr)
-}
-
 # returns the  for a subject, takes subject and data item to retrieve as inputs
 # will return the entire table unless sql if cols is left as NA, also allows for multiple selections at once.
 # note: cols should be given as a list
 getSchedDataItem <- function(subjID, item=NA, cols=NA) {
   # TODO: add a list of lists option for input to select specific tables and specific columns simultaneously
   # get the path to the subject
-  pathSubjSched <- paste0(getSubjectPath(subjID), "/schedule")
+  pathSubjSched <- getPathFromCfg('rl_ema_monitoring', '_schedule.db', subjID, 'archive', pattern=TRUE) 
   # pattern string for the db file
   pat <- paste0(subjID, "_schedule.db") # "*_", 
   # get a list of subject's schedule files
   fileList <- list.files(pathSubjSched, pattern = pat)
+  #print(paste0(pathSubjSched, '/', fileList))
   # ensure there is only one schedule.db file located here (remainder should be archived in the archive directory)
   if (length(fileList) > 1) {
     errorMessage <- paste("Error: there is more than 1 schedule.db file at ", pathSubjSched)
@@ -267,9 +333,9 @@ getSchedDataItem <- function(subjID, item=NA, cols=NA) {
     # run the sql query on the dataframe
     chosenItem <- sqldf(subStr1)
   }
-  # return the data item from the db
-  
+  # disconnect from the db file
   dbDisconnect(data)
+  # return the data item from the db
   return(chosenItem)
 }
 

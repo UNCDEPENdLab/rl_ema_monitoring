@@ -8,6 +8,11 @@ def splitPathName(path, exclude_str=None, list_out=False):
     '''
     Method used to split a path. It will remove the "exclude_str" argument 
     '''
+    # initialize pathList variable
+    pathList = None
+    # windows system hanlde
+    if sys.platform == "win32":
+        path = path.replace('\\','/')
     # split the path by '/'
     pathList = path.split('/')
     # pop the last element, it will be the file/folder since it is the last item
@@ -42,6 +47,36 @@ def splitPathName(path, exclude_str=None, list_out=False):
         result.append(pathStr)
         # return a list
         return result
+
+# method that adds a path to the json file
+def add_path_to_json(json_dict, file_name, file_path):
+    '''
+    Adds a single variable if no variable already exists.
+    If a filename already exists, creates a list of all paths that contain a file with that name.
+    '''
+    print(json_dict.keys())
+    # if the json_dict does not contain that file_name
+    if file_name not in json_dict.keys():
+        os.system('echo here 0')
+        # set the filename as an element of the json with the value being the path
+        json_dict[file_name] = file_path
+    # if the json_dict already contains that file_name
+    else:
+        os.system('echo here 1')
+        # if the element is a string
+        if isinstance(json_dict[file_name], str):
+            os.system('echo here a')
+            # create a list with the old element and new element
+            init_list = [json_dict[file_name], file_path]
+            # replace the single element with the two-item list
+            json_dict[file_name] = init_list
+        # if the element is a list
+        elif isinstance(json_dict[file_name], list):
+            os.system('echo here b')
+            # append to the list
+            json_dict[file_name].append(file_path)
+    # return the new json dict
+    return json_dict
 
 # method that builds a config file
 def build_config(root_name=None):
@@ -105,12 +140,11 @@ def build_config(root_name=None):
                 if sys.platform == "win32":
                     # replce the '\\' with '/'
                     path = dirpath.replace('\\','/').replace('//','/')
-                    # add that file to the json_data dict
-                    json_data[fname] = dirpath
-                # otherwise, the dirpath is already fine
+                # otherwise the path is fine
                 else:
-                    # add that file to the json_data dict
-                    json_data[fname] = dirpath
+                    path = dirpath
+                # add that file to the json_data dict
+                json_data = add_path_to_json(json_data, fname, path)
     # open and dump the json_data dict into the new cfg.json file
     with open('cfg.json', 'w') as json_file:
         json.dump(json_data, json_file, indent=4)
