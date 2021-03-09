@@ -75,13 +75,13 @@ def add_subject_by_status(id, status, path=None):
             # variable for the individula subject data
             subjectData = None
             # now that this is set at the project level, set the subject as inactive locally
-            with open(path + '/' + id + '/subject.json') as s:
+            with open(path + '/Subjects/' + id + '/subject.json') as s:
                 # load the subject json file
                 subjectData = json.load(s)
                 # set the local status element as active
                 subjectData['subject']['status'] = 'active'
             # reopen the json file in write mode
-            with open(path + '/' + id + '/subject.json', 'w') as subject_json:
+            with open(path + '/Subjects/' + id + '/subject.json', 'w') as subject_json:
                 # dump the modified data to the json file
                 json.dump(subjectData, subject_json, indent=4)
     # Overwrite the json file with the new dict

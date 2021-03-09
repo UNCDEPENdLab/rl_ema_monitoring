@@ -51,11 +51,29 @@ def get_pull_files(id, path, drive):
     with open(path + '/Subjects/' + id + '/subject.json') as f:
         json_dict = json.load(f)
     file_dict = json_dict["subject"]["files"]
-    #print(file_dict)
+    # initialize our local varibales for the three data modalities
+    schedule_local = None
+    physio_local = None
+    video_local = None
     # Split the schedule, physio, and video files into sets
-    schedule_local = file_dict["schedule"]
-    physio_local = set(file_dict["physio"])
-    video_local = set(file_dict["video"])
+    # try the instance where a schedule file would already exist
+    try:
+        schedule_local = file_dict["schedule"]["file_name"]
+    # try the instance where a schedule file does not exist
+    except:
+        schedule_local = file_dict["schedule"]
+    # try the instance where a physio file does not exist
+    try:
+        physio_local = set(file_dict["physio"])
+    # try the instance where a physio file would already exist
+    except:
+        physio_local = set(physio_dict["file_name"] for physio_dict in file_dict["physio"])
+    # try the instance where a video file would does not exist
+    try:
+        video_local = set(file_dict["video"])
+    # try the instance where a video file would already exist
+    except:
+        video_local = set(video_dict["file_name"] for video_dict in file_dict["video"])
     # Get the PyDrive formatted list of files from 'root'
     drive_list = drive.ListFile({'q': "'root' in parents and trashed=false"}).GetList()
     #Get the subject's Google Drive directory id from the subject id
@@ -106,11 +124,13 @@ def get_pull_files(id, path, drive):
     pull_dict = {"schedule":schedule_pull, "physio":physio_pull, "video":video_pull}
     # Return the list of files to pull
     return pull_dict
-    
+
 def download_files(id, path, drive, fileDict, scheduleLatest):
     '''
     Method for downloading the files.
     '''
+    # initialize the dictionary of logged results for each file
+    logDict = dict()
     # Attempt to Download the schedule file NOTE: this may need updated => is the schedule file constantly appended to?
     print('Downloading the updated schedule file from GDrive:')
     # Move old schedule file to archive if it exists
@@ -119,7 +139,18 @@ def download_files(id, path, drive, fileDict, scheduleLatest):
     # Download the updated schedule file and add a time stamp and add a time-stamp
     now = datetime.now()
     timestamp = datetime.timestamp(now)
-    fileDict["schedule"].GetContentFile(path + '/' + '/Subjects/' + id + '/schedule/' + str(timestamp) + '_' + fileDict["schedule"]["title"])
+    # attempt to download the file
+    try:
+        # attempt the download
+        fileDict["schedule"].GetContentFile(path + '/' + '/Subjects/' + id + '/schedule/' + str(timestamp) + '_' + fileDict["schedule"]["title"])
+        # log that the download occured successfully
+        logDict.update({fileDict["schedule"]["title"]: "Download Successful"})
+    # if the attempt failed
+    except:
+        # print to console that the download attempt failed
+        print("Warning: download of " + fileDict["schedule"]["title"] + " was unsuccessfull!")
+        # log that the download occured unsuccessfully
+        logDict.update({fileDict["schedule"]["title"]: "Download Failed"})
     print('Downloading {} from GDrive'.format(fileDict["schedule"]['title']))
     # Variables for logging the download
     physio_len = len(fileDict["physio"])
@@ -128,35 +159,61 @@ def download_files(id, path, drive, fileDict, scheduleLatest):
     print('Downloading the new physio files from GDrive:')
     for i, file in enumerate(fileDict["physio"], start=1):
         print('Downloading {} from GDrive ({}/{})'.format(file['title'], i, physio_len))
-        file.GetContentFile(path + '/Subjects/' + id + '/physio/' + file['title'])
+        # attempt to download the file
+        try:
+            # attempt the download
+            file.GetContentFile(path + '/Subjects/' + id + '/physio/' + file['title'])
+            # log that the download occured successfully
+            logDict.update({file['title']: "Download Successful"})
+        # if the attempt failed
+        except:
+            # print to console that the download attempt failed
+            print("Warning: download of " + file['title'] + " was unsuccessfull!")
+            # log that the download occured unsuccessfully
+            logDict.update({file['title']: "Download Failed"})
     # Attempting to Download the video files
     print('Downloading the new video files from GDrive:')
     for i, file in enumerate(fileDict["video"], start=1):
         print('Downloading {} from GDrive ({}/{})'.format(file['title'], i, video_len))
-        file.GetContentFile(path + '/Subjects/' + id + '/video/' + file['title'].replace('/', '_'))
+        # attempt to download the file
+        try:
+            # attempt the download
+            file.GetContentFile(path + '/Subjects/' + id + '/video/' + file['title'].replace('/', '_'))
+            # log that the download occured successfully
+            logDict.update({file['title'].replace('/', '_'): "Download Successful"})
+        # if the attempt failed
+        except:
+            # print to console that the download attempt failed
+            print("Warning: download of " + file['title'].replace('/', '_') + " was unsuccessfull!")
+            # log that the download occured unsuccessfully
+            logDict.update({file['title'].replace('/', '_'): "Download Failed"})
+    # return the dictionary of logs
+    return logDict
 
-def update_json(id, path, fileDict, scheduleLatest):
+def update_json(id, path, fileDict, scheduleLatest, logDict):
     '''
     Method for updating a subject's json file.
     '''
     # get the pull datetime
     now = datetime.now()
     # convert datetime object to a string
-    now = strftime("%m/%d/%Y, %H:%M:%S")
+    now = now.strftime("%m/%d/%Y, %H:%M:%S")
     # variable that will get the new dict to be printed to the json file
     new_json_dict = None
     # Have the files pulled in fileDict, get the files from before pull and combine them
     with open(path + '/Subjects/' + id + '/subject.json', 'r') as json_file: 
         # dict of the old data
         old_json_dict = json.load(json_file)
+        # get the name of the schedule.db file without the time-stamp
+        sched_name = scheduleLatest.split('_')[1] + '_' + scheduleLatest.split('_')[2]
         # use the new schedule file
-        old_json_dict["subject"]["files"]["schedule"] = {scheduleLatest, now}
+        old_json_dict["subject"]["files"]["schedule"] = {"file_name": scheduleLatest, "datetime_of_pull": now, "pull_log": logDict[sched_name]}
         # get a list of the titles of the physio files
-        physioList = [{x['title'], now} for x in fileDict["physio"]]
+        physioList = [{"file_name": x['title'], "datetime_of_pull": now, "pull_log": logDict[x['title']]} for x in fileDict["physio"]]
         # update the physio files
         old_json_dict["subject"]["files"]["physio"].extend(physioList)
         # get a list of the titles of the video files
-        videoList = [{x['title'].replace('/', '_'), now} for x in fileDict["video"]]
+        videoList = [{"file_name": x['title'].replace('/', '_'), "datetime_of_pull": now, "pull_log": logDict[x['title'].replace('/', '_')]} for x in fileDict["video"]]
         # update the video files
         old_json_dict["subject"]["files"]["video"].extend(videoList)
         # set the variable out of this scope to feed in for writing
@@ -174,8 +231,14 @@ def get_schedule_name(id, path):
     schedule_name = None
     with open(path + '/Subjects/' + id + '/subject.json') as f:
         json_dict = json.load(f)
-    schedule_name = json_dict["subject"]["files"]["schedule"]
-    # Return the name of the schedule file
+    # try to get the schedule name
+    try:
+        # path down the json file where the file name would exist if the file exists
+        schedule_name = json_dict["subject"]["files"]["schedule"]["file_name"]
+    # otherwise, just move on
+    except:
+        pass
+    # Return the name of the schedule file (will return None if there was no file)
     return schedule_name
 
 def get_schedule_name_system(id, path):
@@ -201,11 +264,12 @@ def pull_files(id, path):
     #print(files2pull)
     # Get the name of the current schedule file
     current_schedule = get_schedule_name(id=id, path=path)
+    print(current_schedule)
     # if there are files to be download
     if files2pull != None:
         # Pull the files
-        download_files(id=id, path=path, drive=drive, fileDict=files2pull, scheduleLatest=current_schedule)
+        logs = download_files(id=id, path=path, drive=drive, fileDict=files2pull, scheduleLatest=current_schedule)
         # Update the name of the current schedule file
         current_schedule = get_schedule_name_system(id=id, path=path)
         # Update the subject's json file
-        update_json(id=id, path=path, fileDict=files2pull, scheduleLatest=current_schedule)
+        update_json(id=id, path=path, fileDict=files2pull, scheduleLatest=current_schedule, logDict=logs)
