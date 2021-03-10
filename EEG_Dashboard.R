@@ -5,6 +5,7 @@
 load_EEG <- function(subject_name,sample_rate=256.03, sd_times=10){
   
   library("RSQLite")
+  library("dplyr")
   
   subject_schedule <- paste0(subject_name,"_schedule.db")
   subject_physio <- paste0(subject_name,"_physio.db")
@@ -147,6 +148,8 @@ get_epochs_around_feedback <- function(EEG_data,pre=500,post=1500,sample_rate){
 
 get_good_EEG <- function(blocks,a2f){
 
+  library("dplyr")
+  
   blocks <- trials$block
   nbl <- unique(blocks)
   
