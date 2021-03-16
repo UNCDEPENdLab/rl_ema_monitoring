@@ -106,12 +106,14 @@ proc_schedule_single <- function(raw_single,tz="EST") {
 
   ##Performance data:
   px <- data.frame(block=unique(ix$block),
+                   date=unique(as.Date(ix$feedback_time)),
                    side_bias=mean(ix$choice,na.rm = T),
                    mean_rt = mean(ix$rt,na.rm = T),
                    abs_accurate_feed = mean(as.numeric(ix[which(ix$feedback==1),]$accuracy),na.rm = T),
                    relative_accuracy_feed = mean(as.numeric(ix[which(ix$feedback==1),]$relative_accuracy),na.rm = T),
                    abs_accurate_nofeed = mean(as.numeric(ix[which(ix$feedback==0),]$accuracy),na.rm = T),
                    relative_accuracy_nofeed = mean(as.numeric(ix[which(ix$feedback==0),]$relative_accuracy),na.rm = T),
+
                    stringsAsFactors = F)
 
 
