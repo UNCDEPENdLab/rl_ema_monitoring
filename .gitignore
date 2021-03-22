@@ -4,6 +4,7 @@
 /dashboard/study_management/client_secrets.json
 /dashboard/subject_status.json
 /dash/data/*
+subject_status.json
 .Rhistory
 __pycache__
 debug.log
