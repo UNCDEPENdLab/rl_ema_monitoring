@@ -1,8 +1,9 @@
 library('assertthat')
 library('reticulate')
-#library('rjson')
+library('rjson')
 library('tinsel')
 library('RSQLite')
+library('tidyverse')
 
 # finds the given root directory for a file hierarchy
 findRoot <- function(root_dir) {
@@ -544,37 +545,158 @@ getSchedDataItem <- function(subjID,abs_path=NULL,item=NA, cols=NA) {
 }
 
 get_schedule_info <- function(sid, data_dir=NULL) {
+  # ensure that input sid is a string
   checkmate::assert_string(sid)
-
-  expect_dir <- file.path(data_dir, sid, "schedule")
-  checkmate::assert_directory_exists(expect_dir)
-
-  sched_info <- file.info(file.path(expect_dir, "subject_schedule_naming.db")) #not sure how date and ID get into name
-
+  # get the path to the subject's current schedule file
+  #expect_dir <- file.path(data_dir, sid, "schedule")
+  schedule_path <- getPathFromCfg('rl_ema_monitoring', "_schedule.db", keywords=c(sid), exclusion=c('archive'), pattern=TRUE)
+  #print(schedule_path)
+  # ensure that the directory exists
+  checkmate::assert_directory_exists(schedule_path)
+  # get the specific name of the file
+  # pattern string for the db file
+  pat <- paste0(sid, "_schedule.db") # "*_",
+  # get a list of subject's schedule files
+  fileList <- list.files(schedule_path, pattern = pat)
+  #print(paste0(pathSubjSched, '/', fileList))
+  # ensure there is only one schedule.db file located here (remainder should be archived in the archive directory)
+  if (length(fileList) > 1) {
+    errorMessage <- paste("Error: there is more than 1 schedule.db file at ", schedule_path)
+    stop(errorMessage)
+  } else if (length(fileList) == 0L) {
+    stop("Cannot locate schedule db file in folder: ", schedule_path)
+  }
+  # extract some information from the system
+  sched_info <- file.info(file.path(schedule_path, fileList)) #not sure how date and ID get into name
+  # get the path to the subject.json file, should be schedule_path with '/schedule' removed
+  json_path <- gsub('/schedule', '', schedule_path)
+  # load in the json file
+  json_file <- fromJSON(file = paste0(json_path, "/subject.json"))
+  # get specific json information
+  file_name = json_file$subject$files$schedule$file_name
+  pull_time = json_file$subject$files$schedule$datetime_of_pull
+  pull_log = json_file$subject$files$schedule$pull_log
+  status = json_file$subject$status
   #and whatever other columns and info are derived from file system and json
-  return(data.frame(subject_id=sid, last_cached=format(sched_info["mtime"], "%d%b%Y-%H%M%S")))
+  sched_df <- data.frame(subject_id=sid, last_cached=format(sched_info["mtime"], "%d%b%Y-%H%M%S"), file_name=file_name, pull_time=pull_time, pull_log=pull_log, status=status)
+  rownames(sched_df) <- 1:nrow(sched_df)
+  return(sched_df)
 }
 
 get_physio_info <- function(sid, data_dir=NULL) {
+  # ensure input sid is a string
   checkmate::assert_string(sid)
-
-  expect_dir <- file.path(data_dir, sid, "physio")
-  checkmate::assert_directory_exists(expect_dir)
-
-  #look up physio details from files and jsons here
-  #return a data.frame with one row per physio file for this subject
-  return(data.frame(subject_id=sid, last_cached=format(physio_info["mtime"], "%d%b%Y-%H%M%S")))
+  #expect_dir <- file.path(data_dir, sid, "physio")
+  # get the path to all of the physio files
+  # get the path to the subject's current schedule file (used as an anchor)
+  schedule_path <- getPathFromCfg('rl_ema_monitoring', "_schedule.db", keywords=c(sid), exclusion=c('archive'), pattern=TRUE)
+  # ensure this path exists
+  checkmate::assert_directory_exists(schedule_path)
+  # get the path to the subject.json file, should be schedule_path with '/schedule' removed
+  json_path <- gsub('/schedule', '', schedule_path)
+  # get the physio path 
+  physio_path <- paste0(json_path, '/physio')
+  # ensure this path exists
+  checkmate::assert_directory_exists(physio_path)
+  # setup for creating the physio dataframe output
+  files <- list.files(path=physio_path, pattern="*.db", full.names=TRUE, recursive=FALSE)
+  # initialize the physio df with the first file in the list
+  first_file <- files[1]
+  # extract some information from the system
+  physio_info <- file.info(file.path(physio_path, first_file)) #not sure how date and ID get into name
+  # load in the json file
+  json_file <- fromJSON(file = paste0(json_path, "/subject.json"))
+  # get specific json information
+  file_name = json_file$subject$files$physio[[1]]$file_name
+  pull_time = json_file$subject$files$physio[[1]]$datetime_of_pull
+  pull_log = json_file$subject$files$physio[[1]]$pull_log
+  status = json_file$subject$status
+  # create a 1 row dataframe
+  physio_df <- data.frame(subject_id=sid, last_cached=format(physio_info["mtime"], "%d%b%Y-%H%M%S"), file_name=file_name, pull_time=pull_time, pull_log=pull_log, status=status)
+  # rownames to numbers
+  rownames(physio_df) <- 1:nrow(physio_df)
+  files <- files[- 1]
+  # if more than 1 file exists
+  if (length(files) > 0){
+    # initialize a count, start at 2 because we already got the information for the first file
+    count <- 2
+    # iterate through the remaining physio files and build the physio file dataframe
+    for (physio_file in files) {
+      # get specific json information
+      file_name = json_file$subject$files$physio[[count]]$file_name
+      pull_time = json_file$subject$files$physio[[count]]$datetime_of_pull
+      pull_log = json_file$subject$files$physio[[count]]$pull_log
+      status = json_file$subject$status
+      # create a 1 row dataframe
+      physio_df_temp <- data.frame(subject_id=sid, last_cached=format(physio_info["mtime"], "%d%b%Y-%H%M%S"), file_name=file_name, pull_time=pull_time, pull_log=pull_log, status=status)
+      # rownames to numbers
+      rownames(physio_df_temp) <- 1:nrow(physio_df_temp)
+      # merge the new row into the whole dataframe
+      physio_df <- rbind(physio_df, physio_df_temp)
+      # iterate the counter
+      count <- count + 1
+    }
+  }
+  #return the physio file data frame
+  return(physio_df)
 }
 
 get_video_info <- function(sid, data_dir=NULL) {
+  # ensure input sid is a string
   checkmate::assert_string(sid)
-
-  expect_dir <- file.path(data_dir, sid, "video")
-  checkmate::assert_directory_exists(expect_dir)
-
-  #look up video details from files and jsons here
-  #return a data.frame with one row per video file for this subject
-  return(data.frame(subject_id=sid, last_cached=format(physio_info["mtime"], "%d%b%Y-%H%M%S")))
+  #expect_dir <- file.path(data_dir, sid, "video")
+  # get the path to all of the video files
+  # get the path to the subject's current schedule file (used as an anchor)
+  schedule_path <- getPathFromCfg('rl_ema_monitoring', "_schedule.db", keywords=c(sid), exclusion=c('archive'), pattern=TRUE)
+  # ensure this path exists
+  checkmate::assert_directory_exists(schedule_path)
+  # get the path to the subject.json file, should be schedule_path with '/schedule' removed
+  json_path <- gsub('/schedule', '', schedule_path)
+  # get the video path 
+  video_path <- paste0(json_path, '/video')
+  # ensure this path exists
+  checkmate::assert_directory_exists(video_path)
+  # setup for creating the video dataframe output
+  files <- list.files(path=video_path, pattern="*.db", full.names=TRUE, recursive=FALSE)
+  # initialize the physio df with the first file in the list
+  first_file <- files[1]
+  # extract some information from the system
+  video_info <- file.info(file.path(video_path, first_file)) #not sure how date and ID get into name
+  # load in the json file
+  json_file <- fromJSON(file = paste0(json_path, "/subject.json"))
+  # get specific json information
+  file_name = json_file$subject$files$video[[1]]$file_name
+  pull_time = json_file$subject$files$video[[1]]$datetime_of_pull
+  pull_log = json_file$subject$files$video[[1]]$pull_log
+  status = json_file$subject$status
+  # create a 1 row dataframe
+  video_df <- data.frame(subject_id=sid, last_cached=format(video_info["mtime"], "%d%b%Y-%H%M%S"), file_name=file_name, pull_time=pull_time, pull_log=pull_log, status=status)
+  # rownames to numbers
+  rownames(video_df) <- 1:nrow(video_df)
+  files <- files[- 1]
+  # if more than 1 file exists
+  if (length(files) > 0){
+    # initialize a count, start at 2 because we already got the information for the first file
+    count <- 2
+    # iterate through the remaining video files and build the video file dataframe
+    for (video_file in files) {
+      # get specific json information
+      file_name = json_file$subject$files$video[[count]]$file_name
+      pull_time = json_file$subject$files$video[[count]]$datetime_of_pull
+      pull_log = json_file$subject$files$video[[count]]$pull_log
+      status = json_file$subject$status
+      # create a 1 row dataframe
+      video_df_temp <- data.frame(subject_id=sid, last_cached=format(video_info["mtime"], "%d%b%Y-%H%M%S"), file_name=file_name, pull_time=pull_time, pull_log=pull_log, status=status)
+      # rownames to numbers
+      rownames(video_df_temp) <- 1:nrow(video_df_temp)
+      # merge the new row into the whole dataframe
+      video_df <- rbind(video_df, video_df_temp)
+      # iterate the counter
+      count <- count + 1
+    }
+  }
+  #return the video file data frame
+  return(video_df)
 }
 
 # Function to provide list of currently cached subject schedule files
