@@ -11,3 +11,4 @@ debug.log
 cfg.json
 conda-env
 .Rproj.user
+.DS_Store
