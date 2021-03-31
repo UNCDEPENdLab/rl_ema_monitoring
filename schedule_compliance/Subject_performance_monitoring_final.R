@@ -7,7 +7,7 @@ library("ggplot2")
 library("zoo")
 library("tidyverse")
 setwd("C:/Users/alone/Google Drive/Lab/reward_punishment_analysis") #directory where the schedule file is located
-data = dbConnect(SQLite(), "B101_schedule.db")
+data = dbConnect(SQLite(), "247_schedule.db")
 stimuli = dbGetQuery(data, "SELECT * FROM stimuli")
 answers = dbGetQuery(data, "SELECT * FROM answers")
 trials_1 = dbGetQuery(data, "SELECT * FROM trials")
@@ -102,6 +102,14 @@ if (nrow(test_learning)!=0){
   figure_3
 }
 
+#test reaction time
+trials_1$RT=as.numeric(((trials_1$choice_time)-(trials_1$stim_time)))
+RT_by_block=ddply(trials_1, .(block, feedback), summarize, mean=mean(RT, na.rm = T))
+RT_by_block$feedback=as.factor(RT_by_block$feedback)
+
+#test side bias
+side_bias_by_block=ddply(trials_1, .(block), summarize, mean=mean(choice, na.rm = T))
+
 #test what percentage in the last ten blocks have relative accuracy of less than 70% (with feedback)
 #this will only run after 5 sessions were played (in addition to the 6 practice blocks)
 if (max(trials_1$block)>14){
@@ -111,10 +119,7 @@ if (max(trials_1$block)>14){
     mean_RT_low_performance=mean(RT_by_block$mean[which(RT_by_block$block %in% relative_accuracy_by_block$block[which(relative_accuracy_by_block$block>5&relative_accuracy_by_block$feedback==1&relative_accuracy_by_block$mean<0.7)]&RT_by_block$feedback==1&RT_by_block$block>max(relative_accuracy_by_block$block)-10)])
     mean_side_bias_low_performance=mean(side_bias_by_block$mean[which(side_bias_by_block$block %in% relative_accuracy_by_block$block[which(relative_accuracy_by_block$block>5&relative_accuracy_by_block$feedback==1&relative_accuracy_by_block$mean<0.7)]&side_bias_by_block$block>max(relative_accuracy_by_block$block)-10)])}}
 
-#test reaction time
-trials_1$RT=as.numeric(((trials_1$choice_time)-(trials_1$stim_time)))
-RT_by_block=ddply(trials_1, .(block, feedback), summarize, mean=mean(RT, na.rm = T))
-RT_by_block$feedback=as.factor(RT_by_block$feedback)
+#figure RT
 figure_4 <- ggplot(data=RT_by_block, aes(x=block, y=mean, group=feedback, colour=feedback)) +
   geom_line() +
   geom_hline(yintercept=1400, linetype="dashed", color = "firebrick2")+
@@ -126,8 +131,7 @@ figure_4 <- ggplot(data=RT_by_block, aes(x=block, y=mean, group=feedback, colour
 if (exists("blocks_with_poor_performance")&&nrow(blocks_with_poor_performance)>0){
   figure_4=figure_4+geom_point(data=blocks_with_poor_performance, aes(x=poor_blocks, y=1400), color="darkorchid1", size=2.2, inherit.aes = F)}
 
-#test side bias
-side_bias_by_block=ddply(trials_1, .(block), summarize, mean=mean(choice, na.rm = T))
+#figure side bias
 figure_5 <- ggplot(data=side_bias_by_block, aes(x=block, y=mean)) +
   geom_line() +
   ylab("side bias")+
