@@ -200,8 +200,14 @@ proc_physio <- function(physio_df = NULL, sample_rate=256.03, sd_times=10, pre=5
 }
 
 
+aggreate_eeg <- function() {
 
+}
 
+behav_egg_match <- function() {
+  ##start time / completed time
+
+}
 
 
 

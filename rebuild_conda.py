@@ -20,13 +20,19 @@ def findReticulatePath():
             retPath = item
             # break from the for loop
             break
-    # clean up the string to remove special characters
-    retPath = retPath.split('\\r\\n')[0]
-    retPath = retPath.strip()
     # handle for windows
     if sys.platform == "win32":
+        # clean up the string to remove special characters
+        retPath = retPath.split('\\r\\n')[0]
+        retPath = retPath.strip()
         # clean up the '\\' to be '/'
         retPath = retPath.replace('\\', '/').replace('//','/')
+    # handle for mac
+    if sys.platform == "darwin":
+        # clean up the string to remove special characters
+        retPath = retPath.split('\\n')[0]
+        retPath = retPath.strip()
+    
     # return the path to the reticulate conda environment
     return retPath
 
@@ -77,7 +83,7 @@ def build_reticulate_conda(dependListFile):
 # Main method for the function
 def main():
     # run the build function
-    build_reticulate_conda()
+    build_reticulate_conda(dependListFile='pip.txt')
 		
 # Execution of main method
 if __name__ == '__main__':

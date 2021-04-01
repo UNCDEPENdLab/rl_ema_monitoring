@@ -214,7 +214,7 @@ sourceFromCfg('rl_ema_monitoring', 'add_subject_func.py') # function used for cl
 # add the momentum_pull functions
 sourceFromCfg('rl_ema_monitoring', 'momentum_pull_func.py') # function used for cli is: pull_files(id, path)
 
-load_EEG <- function(subject_name,physio_file,sample_rate=256.03, sd_times=10){
+load_EEG <- function(subject_name,physio_file,abs_path=NULL,sample_rate=256.03, sd_times=10){
 
   subject_schedule <- paste0(subject_name,"_schedule.db")
   #subject_physio <- paste0(subject_name,"_physio.db")
@@ -309,12 +309,12 @@ load_EEG <- function(subject_name,physio_file,sample_rate=256.03, sd_times=10){
 
   EEG_data <- dplyr::tibble(rrt,Ch1,Ch2,Ch3,Ch4)
 
-  return(EEG_data)
+  return(list(EEG_data=EEG_data,behavior=trials))
 
 }
 
 # get epochs around feedback +/- 500ms
-get_epochs_around_feedback <- function(EEG_data,pre=500,post=1500,sample_rate){
+get_epochs_around_feedback <- function(EEG_data,pre=500,post=1500,sample_rate,fbt){
   step <- 1000/sample_rate
   pre <- round(pre/step,0)
   post <- round(post/step,0)
