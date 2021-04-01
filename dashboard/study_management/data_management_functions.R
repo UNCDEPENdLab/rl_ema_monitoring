@@ -1,4 +1,5 @@
 library('assertthat')
+library('av')
 library('reticulate')
 library('rjson')
 library('tinsel')
@@ -192,8 +193,15 @@ sourceFromCfg <- function(root_dir, sourced_file) {
   }
   # otherwise, source a python script
   else if (endsWith(sourced_file, '.py')) {
+    # save the current working directory
+    currDir = getwd()
+    # set working directory to the path of the python script so that
+    # it can hanlde its own module loading
+    setwd(file_path)
     # source the python function
     source_python(source_path, envir = globalenv())
+    # reset the working directory
+    setwd(currDir)
   }
 }
 
@@ -657,11 +665,11 @@ get_video_info <- function(sid, data_dir=NULL) {
   # ensure this path exists
   checkmate::assert_directory_exists(video_path)
   # setup for creating the video dataframe output
-  files <- list.files(path=video_path, pattern="*.db", full.names=TRUE, recursive=FALSE)
+  files <- list.files(path=video_path, pattern="*.mp4", full.names=TRUE, recursive=FALSE)
   # initialize the physio df with the first file in the list
   first_file <- files[1]
   # extract some information from the system
-  video_info <- file.info(file.path(video_path, first_file)) #not sure how date and ID get into name
+  video_info <- file.info(first_file) #not sure how date and ID get into name
   # load in the json file
   json_file <- fromJSON(file = paste0(json_path, "/subject.json"))
   # get specific json information
@@ -669,8 +677,16 @@ get_video_info <- function(sid, data_dir=NULL) {
   pull_time = json_file$subject$files$video[[1]]$datetime_of_pull
   pull_log = json_file$subject$files$video[[1]]$pull_log
   status = json_file$subject$status
+  # initialize the mtime variable
+  #print(video_info)
+  mtime = video_info["mtime"]
+  # if the mtime is na
+  #if (is.na(mtime)) {
+  #  # then set the mtime to ctime
+  #  mtime <- video_info["ctime"]
+  #}
   # create a 1 row dataframe
-  video_df <- data.frame(subject_id=sid, last_cached=format(video_info["mtime"], "%d%b%Y-%H%M%S"), file_name=file_name, pull_time=pull_time, pull_log=pull_log, status=status)
+  video_df <- data.frame(subject_id=sid, last_cached=format(mtime, "%d%b%Y-%H%M%S"), file_name=file_name, pull_time=pull_time, pull_log=pull_log, status=status)
   # rownames to numbers
   rownames(video_df) <- 1:nrow(video_df)
   files <- files[- 1]
@@ -686,7 +702,7 @@ get_video_info <- function(sid, data_dir=NULL) {
       pull_log = json_file$subject$files$video[[count]]$pull_log
       status = json_file$subject$status
       # create a 1 row dataframe
-      video_df_temp <- data.frame(subject_id=sid, last_cached=format(video_info["mtime"], "%d%b%Y-%H%M%S"), file_name=file_name, pull_time=pull_time, pull_log=pull_log, status=status)
+      video_df_temp <- data.frame(subject_id=sid, last_cached=format(mtime, "%d%b%Y-%H%M%S"), file_name=file_name, pull_time=pull_time, pull_log=pull_log, status=status)
       # rownames to numbers
       rownames(video_df_temp) <- 1:nrow(video_df_temp)
       # merge the new row into the whole dataframe
