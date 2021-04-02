@@ -1,5 +1,5 @@
 library('assertthat')
-library('av')
+#library('av')
 library('reticulate')
 library('rjson')
 library('tinsel')
@@ -410,8 +410,43 @@ get_good_EEG <- function(blocks,a2f){
 
 }
 
-# simple function to return a structured list of subjects currently cached in the data/Subjects directory
-getSubjList <- function(data_dir) {
+# function to pull the list of active subjects 
+getActiveList <- function(root_dir=NULL) {
+  # get the root directory path
+  root_path <- findRoot(root_dir)
+  # get the whole path to cfg.json
+  cfg_path <- paste0(root_path, '/', root_dir, '/cfg.json')
+  # import json from python
+  json <- import("json")
+  # import python built-ins
+  py <- import_builtins()
+  # variable to assign the path to
+  file_path <- NA
+  # open the cfg.json file
+  with(py$open(cfg_path, "r") %as% file, {
+    # read in the file
+    s <- file$read()
+    # convert to a python object
+    d <- r_to_py(json$loads(s))
+    # get the item the python dict and convert back to r
+    file_path <- py_to_r(d['subject_status.json'])
+  })
+  active_subjs <- NA
+  # get the active subjects from the json file
+  with(py$open(paste0(file_path, '/', 'subject_status.json'), "r") %as% file, {
+    # read in the file
+    s <- file$read()
+    # convert to a python object
+    d <- r_to_py(json$loads(s))
+    # get the item the python dict and convert back to r
+    active_subjs <- py_to_r(d$subjects$active)
+  })
+  active_list <- as.list(active_subjs)
+  return(active_list)
+}
+
+# simple function to return a structured list of subjects currently cached in the data/Subjects directory (from system)
+getSubjListSys <- function(active_sids=NULL, data_dir=NULL) {
   #Shane: not sure if we should be passing in some sort of config object
   #Shane: not sure if we should be accessing a json that has caching details like when a subject was last refreshed
   #Shane: we need a mechanism for determining if a subject is still active in data collection
@@ -466,6 +501,11 @@ getSubjList <- function(data_dir) {
   }
 
   return(slist)
+}
+
+# gets a list of subjects from the json files
+getSubjListJson <- function(root_path) {
+  
 }
 
 getSubjPageList <- function(dashboard_dir=getwd()) {
@@ -575,9 +615,10 @@ get_schedule_info <- function(sid, data_dir=NULL) {
     stop("Cannot locate schedule db file in folder: ", schedule_path)
   }
   # extract some information from the system
-  sched_info <- file.info(file.path(schedule_path, fileList)) #not sure how date and ID get into name
+  #sched_info <- file.info(file.path(schedule_path, fileList)) #not sure how date and ID get into name
   # get the path to the subject.json file, should be schedule_path with '/schedule' removed
   json_path <- gsub('/schedule', '', schedule_path)
+  #print(json_path)
   # load in the json file
   json_file <- fromJSON(file = paste0(json_path, "/subject.json"))
   # get specific json information
@@ -585,8 +626,9 @@ get_schedule_info <- function(sid, data_dir=NULL) {
   pull_time = json_file$subject$files$schedule$datetime_of_pull
   pull_log = json_file$subject$files$schedule$pull_log
   status = json_file$subject$status
+  cache_log = file.exists(paste0(schedule_path, '/', file_name))
   #and whatever other columns and info are derived from file system and json
-  sched_df <- data.frame(subject_id=sid, last_cached=format(sched_info["mtime"], "%d%b%Y-%H%M%S"), file_name=file_name, pull_time=pull_time, pull_log=pull_log, status=status)
+  sched_df <- data.frame(subject_id=sid, file_name=file_name, file_path=schedule_path, pull_time=pull_time, pull_log=pull_log, status=status, cache_log=cache_log) # , last_cached=format(sched_info["mtime"], "%d%b%Y-%H%M%S")
   rownames(sched_df) <- 1:nrow(sched_df)
   return(sched_df)
 }
@@ -611,7 +653,7 @@ get_physio_info <- function(sid, data_dir=NULL) {
   # initialize the physio df with the first file in the list
   first_file <- files[1]
   # extract some information from the system
-  physio_info <- file.info(file.path(physio_path, first_file)) #not sure how date and ID get into name
+  #physio_info <- file.info(file.path(physio_path, first_file)) #not sure how date and ID get into name
   # load in the json file
   json_file <- fromJSON(file = paste0(json_path, "/subject.json"))
   # get specific json information
@@ -619,8 +661,9 @@ get_physio_info <- function(sid, data_dir=NULL) {
   pull_time = json_file$subject$files$physio[[1]]$datetime_of_pull
   pull_log = json_file$subject$files$physio[[1]]$pull_log
   status = json_file$subject$status
+  cache_log = file.exists(paste0(physio_path, '/', file_name))
   # create a 1 row dataframe
-  physio_df <- data.frame(subject_id=sid, last_cached=format(physio_info["mtime"], "%d%b%Y-%H%M%S"), file_name=file_name, pull_time=pull_time, pull_log=pull_log, status=status)
+  physio_df <- data.frame(subject_id=sid, file_name=file_name, file_path=physio_path, pull_time=pull_time, pull_log=pull_log, status=status, cache_log=cache_log) #  last_cached=format(physio_info["mtime"], "%d%b%Y-%H%M%S"),
   # rownames to numbers
   rownames(physio_df) <- 1:nrow(physio_df)
   files <- files[- 1]
@@ -635,8 +678,9 @@ get_physio_info <- function(sid, data_dir=NULL) {
       pull_time = json_file$subject$files$physio[[count]]$datetime_of_pull
       pull_log = json_file$subject$files$physio[[count]]$pull_log
       status = json_file$subject$status
+      cache_log = file.exists(paste0(physio_path, '/', file_name))
       # create a 1 row dataframe
-      physio_df_temp <- data.frame(subject_id=sid, last_cached=format(physio_info["mtime"], "%d%b%Y-%H%M%S"), file_name=file_name, pull_time=pull_time, pull_log=pull_log, status=status)
+      physio_df_temp <- data.frame(subject_id=sid, file_name=file_name, file_path=physio_path, pull_time=pull_time, pull_log=pull_log, status=status, cache_log=cache_log) # , last_cached=format(physio_info["mtime"], "%d%b%Y-%H%M%S")
       # rownames to numbers
       rownames(physio_df_temp) <- 1:nrow(physio_df_temp)
       # merge the new row into the whole dataframe
@@ -669,7 +713,7 @@ get_video_info <- function(sid, data_dir=NULL) {
   # initialize the physio df with the first file in the list
   first_file <- files[1]
   # extract some information from the system
-  video_info <- file.info(first_file) #not sure how date and ID get into name
+  #video_info <- file.info(first_file) #not sure how date and ID get into name
   # load in the json file
   json_file <- fromJSON(file = paste0(json_path, "/subject.json"))
   # get specific json information
@@ -677,16 +721,17 @@ get_video_info <- function(sid, data_dir=NULL) {
   pull_time = json_file$subject$files$video[[1]]$datetime_of_pull
   pull_log = json_file$subject$files$video[[1]]$pull_log
   status = json_file$subject$status
+  cache_log = file.exists(paste0(video_path, '/', file_name))
   # initialize the mtime variable
   #print(video_info)
-  mtime = video_info["mtime"]
+  #mtime = video_info["mtime"]
   # if the mtime is na
   #if (is.na(mtime)) {
   #  # then set the mtime to ctime
   #  mtime <- video_info["ctime"]
   #}
   # create a 1 row dataframe
-  video_df <- data.frame(subject_id=sid, last_cached=format(mtime, "%d%b%Y-%H%M%S"), file_name=file_name, pull_time=pull_time, pull_log=pull_log, status=status)
+  video_df <- data.frame(subject_id=sid, file_name=file_name, file_path=video_path, pull_time=pull_time, pull_log=pull_log, status=status, cache_log=cache_log) # , last_cached=format(mtime, "%d%b%Y-%H%M%S")
   # rownames to numbers
   rownames(video_df) <- 1:nrow(video_df)
   files <- files[- 1]
@@ -701,8 +746,9 @@ get_video_info <- function(sid, data_dir=NULL) {
       pull_time = json_file$subject$files$video[[count]]$datetime_of_pull
       pull_log = json_file$subject$files$video[[count]]$pull_log
       status = json_file$subject$status
+      cache_log = file.exists(paste0(video_path, '/', file_name))
       # create a 1 row dataframe
-      video_df_temp <- data.frame(subject_id=sid, last_cached=format(mtime, "%d%b%Y-%H%M%S"), file_name=file_name, pull_time=pull_time, pull_log=pull_log, status=status)
+      video_df_temp <- data.frame(subject_id=sid, file_name=file_name, file_path=video_path, pull_time=pull_time, pull_log=pull_log, status=status, cache_log=cache_log) #, last_cached=format(mtime, "%d%b%Y-%H%M%S")
       # rownames to numbers
       rownames(video_df_temp) <- 1:nrow(video_df_temp)
       # merge the new row into the whole dataframe
@@ -721,24 +767,30 @@ get_video_info <- function(sid, data_dir=NULL) {
 # @importFrom checkmate assert_directory exists
 # @importFrom dplyr bind_rows
 # @return A three-element list containing cache info for
-get_ema_subject_metadata <- function(data_dir=NULL, trigger_refresh=FALSE) {
-  checkmate::assert_directory_exists(data_dir)
+get_ema_subject_metadata <- function(root_dir=NULL, data_dir=NULL, trigger_refresh=FALSE) {
+  #checkmate::assert_directory_exists(data_dir)
   checkmate::assert_logical(trigger_refresh)
 
   if (isTRUE(trigger_refresh)) { refresh_ema_cache(data_dir) }
 
-  folders <- list.dirs(path=data_dir, full.names=TRUE, recursive=FALSE)
+  #folders <- list.dirs(path=data_dir, full.names=TRUE, recursive=FALSE)
+  
   #something along the lines of ...
   sched_list <- list()
   physio_list <- list()
   video_list <- list()
 
-  for (ff in folders) {
-    sid <- basename(ff)
+  # get a list of all participants
+  subject_list <- getActiveList(root_dir=root_dir)
+  
+  #for (ff in folders) {
+  for (sid in subject_list) {
+    #print(sid)
+    #sid <- basename(ff)
     #figure out schedule stuff
-    sched_list[[sid]] <- get_schedule_info(sid, data_dir) #return a one-row data.frame summarizing status of schedule
-    physio_list[[sid]] <- get_physio_info(sid, data_dir) #return multi-row data.frame, one row per subject physio file
-    video_list[[sid]] <- get_video_info(sid, data_dir) #return multi-row data.frame, one row per subject video file
+    sched_list[[sid]] <- get_schedule_info(sid) #return a one-row data.frame summarizing status of schedule # , data_dir
+    physio_list[[sid]] <- get_physio_info(sid) #return multi-row data.frame, one row per subject physio file # , data_dir
+    video_list[[sid]] <- get_video_info(sid) #return multi-row data.frame, one row per subject video file # , data_dir
   }
 
   sched_df <- bind_rows(sched_list)
@@ -778,7 +830,12 @@ refresh_ema_cache <- function(
   log_file=file.path(data_dir, sprintf("cache_transfer_%s.txt", format(Sys.time(), "%d%b%Y-%H%M")))
 ) {
   checkmate::assert_directory_exists(data_dir)
-
+  # get a list of all subject
+  
+  # repull all subject data
+  
+  # 
+  
   #fire off whatever python scripts are needed to update all cached data from Google Drive
   #log_result <- system("python something here", intern=TRUE)
   #cat(log_result, file=log_file, sep="\n") #something along these lines
