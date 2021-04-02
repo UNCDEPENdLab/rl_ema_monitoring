@@ -3,15 +3,30 @@ source("./dashboard/study_management/data_management_functions.R")
 ###Dependent functions:
 require(lubridate)
 if (FALSE) {
- ###Use metadata function for paths
- path_info<-get_ema_subject_metadata(data_dir = "./data/Subjects/")
- ###But...shane is not done with that yet, use his output design to manulaly put out a path_info object for now...
- path_info<-list(schedule=data.frame(subject_id="shane",schedule_path=list.files("data/Subjects/Shane/schedule",pattern = "*.db",full.names = T,recursive = F,include.dirs = F),stringsAsFactors = F),
-                 physio=data.frame(subject_id="shane",physio_path=list.files("data/Subjects/Shane/physio/",full.names = T),schedule_path=list.files("data/Subjects/Shane/schedule",pattern = "*.db",full.names = T,recursive = F,include.dirs = F),stringsAsFactors = F),
-                 video=data.frame(subject_id="shane",video_path=list.files("data/Subjects/Shane/video/",full.names = T),stringsAsFactors = F))
+ ###!!!!!!Use this to get path_info if you have standardized data folder including .json for each subject and .db files!!!!!!######
+ path_info<-get_ema_subject_metadata(root_dir = "rl_ema_monitoring")
+ ###Otherwise use this chunk (9-27) to get the data to get path_info
+ root_dir = "./data/Subjects"
+ path_info<-lapply(c("schedule","physio","video"),function(dj){
+   list_id <- list.dirs(path = root_dir,recursive = F,full.names = F)
+   if(dj == "video") {
+     pat = ".*.mp4"
+   } else {
+     pat = ".db"
+   }
+   do.call(rbind,lapply(list_id,function(idx){
+     db_files<-list.files(file.path(root_dir,idx,dj),pattern = pat,full.names = T,recursive = F,include.dirs = F)
+     if(length(db_files)>0){
+       dx<-data.frame(subject_id=idx,file_path=db_files,stringsAsFactors = F)
+       return(dx)
+     } else {
+       return(NULL)
+     }
+   }))
+ })
+ names(path_info) <- c("schedule","physio","video")
+  #########END########
 
-
- expect_df <- data.frame(type=c("schedule","physio","video"),expected=c(4,42,4))
  #example for proc_schedule:
  output<-proc_schedule(schedule_df = path_info$schedule)
  ##Output a list of :
@@ -23,11 +38,13 @@ if (FALSE) {
 }
 
 
+
+
 #####Functions:
 proc_schedule <- function(schedule_df = NULL, expect_df = NULL,tz="EST") {
  #load in data using shane's function
  raw_data <- lapply(1:nrow(schedule_df),function(i){
-  db_raw <- getSchedDataItem(subjID = schedule_df$subject_id[[i]],abs_path = schedule_df$schedule_path[[i]])
+  db_raw <- getSchedDataItem(subjID = schedule_df$subject_id[[i]],abs_path = schedule_df$file_path[[i]])
   db_raw$ID <- schedule_df$subject_id[[i]]
   return(db_raw)
  })
@@ -200,7 +217,12 @@ proc_physio <- function(physio_df = NULL, sample_rate=256.03, sd_times=10, pre=5
 }
 
 
-aggreate_eeg <- function() {
+behavior_df<-output$proc_data[[1]]$raw_data$trials
+
+aggreate_physio_single <- function() {
+  all_dt <- lapply(allpaths_sub,full_load_db)
+  eeg_aggregate <- do.call(rbind,lapply(all_dt,`[[`,"EEG_muse"))
+  eeg_aggregate <- eeg_aggregate[order(eeg_aggregate$recording_time),]
 
 }
 
@@ -208,6 +230,21 @@ behav_egg_match <- function() {
   ##start time / completed time
 
 }
+
+full_load_db <- function(pathx) {
+  data = dbConnect(SQLite(), pathx)
+  namesDB <- dbListTables(data)
+  tables<-lapply(namesDB,function(dfName){
+    dbGetQuery(data, paste0("SELECT * FROM ", dfName))
+  })
+  names(tables) <- namesDB
+  #close connection before return
+  dbDisconnect(data)
+  return(tables)
+}
+
+
+
 
 
 
