@@ -42,6 +42,65 @@ def subjectID2driveID(id, drive_list):
     # Return the drive id
     return folder_id
 
+# method to convert original app naming convention to new naming convention
+def updatePhysioName(old_name=None):
+    # initialize variable 
+    old_string = old_name
+    #print(old_string)
+    # get the appropriate file name
+    if (',' in old_string):
+        # remove comma and odd-character replacement and split by white space
+        old_string = old_string.replace(',', '').replace('\uf03a', ' ').replace(':', '_').split(' ')
+        # remove a front chunk of the data
+        front = old_string.pop(0)
+        # split front by '_'
+        front = front.split('_')
+        # move the converted month into the old string list
+        old_string.insert(2, front.pop(2))
+        # remove '.db' from the PM or AM string
+        old_string.append(old_string.pop(-1)[0:2])
+        # collapes back to a string
+        old_string = '_'.join(old_string)
+        # convert this string to a datetime
+        old_string = datetime.strptime(old_string, '%d_%Y_%b_%I_%M_%S_%p')
+        # convert back to a string
+        old_string = old_string.strftime('%Y%m%d%H%M%S') # '%Y_%m_%d_%H_%M_%S'
+        # rejoin the front peices
+        front = '_'.join(front)
+        # rebuild the string
+        new_string = front + '_' + old_string + '.db'
+        # return the new string
+        return new_string
+    # otherwise
+    else:
+        # use the original file name
+        return old_string
+
+# method to convert original app naming convention to new naming convention
+def updateVideoName(old_name=None):
+    # initialize variable 
+    old_string = old_name
+    # get the appropriate file name
+    if ('/' in old_string):
+        # replace '/' with '_', split by '_', and 
+        old_string = old_string.replace('/', '_').split('_')
+        # save the first element at the subject id
+        id = old_string[0]
+        # take the last element and remove '.db'
+        old_string = old_string[-1] #.replace('.db', '')
+        # convert milliseconds to a datetime object
+        #old_string = datetime.fromtimestamp(int(old_video)/1000.0)
+        # convert date time into a string
+        #old_string = old_video.strftime('%Y%m%d%H%M%S')
+        # rebuild the string
+        new_string = id + '_video_' + old_string
+        # return the new string
+        return new_string
+    # otherwise
+    else:
+        # use the original file name
+        return old_string
+    
 def get_pull_files(id, path, drive):
     '''
     Method for determining the files to pull from the given Google Drive.
@@ -111,12 +170,14 @@ def get_pull_files(id, path, drive):
     # Remove physio files that do not need pulled
     physio_pull = list()
     for physio_file in physio_gdrive:
-        if physio_file['title'] not in physio_local:
+        #print(updatePhysioName(old_name=physio_file['title']))
+        #print('')
+        if updatePhysioName(old_name=physio_file['title']) not in physio_local:
             physio_pull.append(physio_file)
     # Remove video files that do not need pulled
     video_pull = list()
     for video_file in video_gdrive:
-        if video_file['title'].replace('/', '_') not in video_local:
+        if updateVideoName(old_name=video_file['title']) not in video_local:
             video_pull.append(video_file)
     #physio_pull = physio_gdrive - physio_local
     #video_pull = video_gdrive - video_local
@@ -128,7 +189,7 @@ def get_pull_files(id, path, drive):
 def download_files(id, path, drive, fileDict, scheduleLatest):
     '''
     Method for downloading the files.
-    '''
+    '''    
     # initialize the dictionary of logged results for each file
     logDict = dict()
     # Attempt to Download the schedule file NOTE: this may need updated => is the schedule file constantly appended to?
@@ -136,6 +197,9 @@ def download_files(id, path, drive, fileDict, scheduleLatest):
     # Move old schedule file to archive if it exists
     if scheduleLatest != None and os.path.isfile(path + '/' + '/Subjects/' + id + '/schedule/' + scheduleLatest):
         shutil.move(path + '/Subjects/' + id + '/schedule/' + scheduleLatest, path + '/' + '/Subjects/' + id + '/schedule/archive/' + scheduleLatest)
+    # Move any other residual files in the schedule folder to the schedule file archive
+    for file in [x for x in os.listdir(path + '/' + '/Subjects/' + id + '/schedule/') if os.path.isfile(path + '/' + '/Subjects/' + id + '/schedule/' + x) == True]:
+        shutil.move(path + '/Subjects/' + id + '/schedule/' + file, path + '/' + '/Subjects/' + id + '/schedule/archive/' + file)
     # Download the updated schedule file and add a time stamp and add a time-stamp
     now = datetime.now()
     timestamp = datetime.timestamp(now)
@@ -160,33 +224,37 @@ def download_files(id, path, drive, fileDict, scheduleLatest):
     for i, file in enumerate(fileDict["physio"], start=1):
         print('Downloading {} from GDrive ({}/{})'.format(file['title'], i, physio_len))
         # attempt to download the file
+        # initialize a file title varibale
+        physio_title = updatePhysioName(old_name=file['title'])
         try:
             # attempt the download
-            file.GetContentFile(path + '/Subjects/' + id + '/physio/' + file['title'])
+            file.GetContentFile(path + '/Subjects/' + id + '/physio/' + physio_title)
             # log that the download occured successfully
-            logDict.update({file['title']: "Download Successful"})
+            logDict.update({physio_title: "Download Successful"})
         # if the attempt failed
         except:
             # print to console that the download attempt failed
-            print("Warning: download of " + file['title'] + " was unsuccessfull!")
+            print("Warning: download of " + physio_title + " was unsuccessfull!")
             # log that the download occured unsuccessfully
-            logDict.update({file['title']: "Download Failed"})
+            logDict.update({physio_title: "Download Failed"})
     # Attempting to Download the video files
     print('Downloading the new video files from GDrive:')
     for i, file in enumerate(fileDict["video"], start=1):
         print('Downloading {} from GDrive ({}/{})'.format(file['title'], i, video_len))
+        # initialize a file title varibale
+        video_title = updateVideoName(old_name=file['title'])
         # attempt to download the file
         try:
             # attempt the download
-            file.GetContentFile(path + '/Subjects/' + id + '/video/' + file['title'].replace('/', '_'))
+            file.GetContentFile(path + '/Subjects/' + id + '/video/' + video_title)
             # log that the download occured successfully
-            logDict.update({file['title'].replace('/', '_'): "Download Successful"})
+            logDict.update({video_title: "Download Successful"})
         # if the attempt failed
         except:
             # print to console that the download attempt failed
-            print("Warning: download of " + file['title'].replace('/', '_') + " was unsuccessfull!")
+            print("Warning: download of " + video_title + " was unsuccessfull!")
             # log that the download occured unsuccessfully
-            logDict.update({file['title'].replace('/', '_'): "Download Failed"})
+            logDict.update({video_title: "Download Failed"})
     # return the dictionary of logs
     return logDict
 
@@ -209,11 +277,11 @@ def update_json(id, path, fileDict, scheduleLatest, logDict):
         # use the new schedule file
         old_json_dict["subject"]["files"]["schedule"] = {"file_name": scheduleLatest, "datetime_of_pull": now, "pull_log": logDict[sched_name]}
         # get a list of the titles of the physio files
-        physioList = [{"file_name": x['title'], "datetime_of_pull": now, "pull_log": logDict[x['title']]} for x in fileDict["physio"]]
+        physioList = [{"file_name": updatePhysioName(x['title']), "datetime_of_pull": now, "pull_log": logDict[updatePhysioName(x['title'])]} for x in fileDict["physio"]]
         # update the physio files
         old_json_dict["subject"]["files"]["physio"].extend(physioList)
         # get a list of the titles of the video files
-        videoList = [{"file_name": x['title'].replace('/', '_'), "datetime_of_pull": now, "pull_log": logDict[x['title'].replace('/', '_')]} for x in fileDict["video"]]
+        videoList = [{"file_name": updateVideoName(x['title']), "datetime_of_pull": now, "pull_log": logDict[updateVideoName(x['title'])]} for x in fileDict["video"]]
         # update the video files
         old_json_dict["subject"]["files"]["video"].extend(videoList)
         # set the variable out of this scope to feed in for writing
@@ -249,7 +317,15 @@ def get_schedule_name_system(id, path):
     db_files = [f for f in os.listdir(path + '/' + '/Subjects/' + id + '/schedule/') if f.endswith('_' + id + '_schedule.db')]
     # raise an error if there is more than one db file
     if len(db_files) > 1:
-        raise Exception("Error: there are more than 1 db files in this directory. Purge the extra files and rerun.")
+        #raise Exception("Error: there are more than 1 db files in this directory. Purge the extra files and rerun.")
+        # get a dictionary from datetime stamps to file names
+        time_stamps2files = {int(f.split('_')[0].split('.')[0]): f for f in db_files}
+        # get a list of the time stamps as ints
+        #time_stamps = [t for t in time_stamps2files.keys()]
+        # get the largest int (largest timestamp will be the newest file)
+        newest = max(time_stamps2files.keys()) #str(max(time_stamps.keys()))
+        # return the name of the newest file
+        return time_stamps2files[newest]
     # otherwise, return the file name
     return db_files[0]
 
@@ -264,7 +340,7 @@ def pull_files(id, path):
     #print(files2pull)
     # Get the name of the current schedule file
     current_schedule = get_schedule_name(id=id, path=path)
-    print(current_schedule)
+    #print(current_schedule)
     # if there are files to be download
     if files2pull != None:
         # Pull the files
