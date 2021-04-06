@@ -1,0 +1,86 @@
+---
+title: "Task performance"
+output: html_document
+params:
+  id: Abbegail
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = '~/Downloads/rl_ema_monitoring')
+library(kableExtra)
+library(dplyr)
+source("~/Downloads/rl_ema_monitoring/EEG_Dashboard.R")
+source("~/Downloads/rl_ema_monitoring/ECG_Dashboard.R")
+source("~/Downloads/rl_ema_monitoring/dashboard/study_management/data_management_functions.R")
+source("~/Downloads/rl_ema_monitoring/dashboard/study_management/dashboard_aggregate.R")
+
+```
+
+```{r one, include=FALSE}
+#commented out for now, since your data folder isn't structured properly
+path_info <- get_ema_subject_metadata(subject_list = "Abbegail") 
+
+#using this instead: 
+root_dir <- "./data/Subjects"
+  path_info<-lapply(c("schedule","physio","video"),function(dj){
+    list_id <- list.dirs(path = root_dir,recursive = F,full.names = F)
+    if(dj == "video") {
+      pat = ".*.mp4"
+    } else {
+      pat = ".db"
+    }
+    do.call(rbind,lapply(list_id,function(idx){
+      db_files<-list.files(file.path(root_dir,idx,dj),pattern = pat,full.names = T,recursive = F,include.dirs = F)
+      if(length(db_files)>0){
+        dx<-data.frame(subject_id=idx,file_path=db_files,stringsAsFactors = F)
+        return(dx)
+      } else {
+        return(NULL)
+      }
+    }))
+  })
+  names(path_info) <- c("schedule","physio","video")
+
+output <- proc_schedule(schedule_df = path_info$schedule)
+perf <- output$subj_performance 
+df1 <- filter(perf,!is.na(date)) #get rid of blocks not played
+df1$date <- lapply(df1$date,function(dt){
+  year <- str_extract(dt,"\\d{4}")
+  month <- str_extract(dt,"-\\d{2}-") %>% str_extract("\\d{2}")
+  day <- str_extract(dt,"\\d{2}$")
+  return(paste0(month,"/",day,"/",year))
+})
+
+#Prob want to add this to the proc_schedule function
+#A little reformatting...
+
+df2 <- arrange(df1, -row_number()) #flip df so that most recent dates are first
+df3 <- transmute(df2, "Date"=date, "Block"=block, "Objective % correct (feed.)"=abs_accurate_feed, "Experienced % correct (feed.)"=relative_accuracy_feed, "Objective % correct (no feed.)"=abs_accurate_nofeed, "Experienced % correct (no feed.)"=relative_accuracy_nofeed, "RT(ms)"=mean_rt, "Left %"=side_bias) #rename columns to be more descriptive
+#convert decimals to percentages
+df3$"Objective % correct (feed.)" <- df3$"Objective % correct (feed.)"*100
+df3$"Experienced % correct (feed.)" <- df3$"Experienced % correct (feed.)"*100
+df3$"Experienced % correct (no feed.)" <- df3$"Experienced % correct (no feed.)"*100
+df3$"Objective % correct (no feed.)" <- df3$"Objective % correct (no feed.)"*100
+df3$"Left %" <- df3$"Left %"*100
+df3$"RT(ms)" <- df3$"RT(ms)"*1000
+df3[,-c(1,2)] <- round(df3[,-c(1,2)]) #round percentages to nearest whole percent
+
+rownames(df3) <- NULL
+```
+
+
+```{r two, echo=FALSE}
+kbl(df3) %>%
+  kable_styling(fixed_thead = T) %>%
+  column_spec(1, bold = T) %>%
+  column_spec(2, bold = T) %>%
+  column_spec(3, background=case_when(df3[,3]>80 ~ "green",df3[,3]>70 & df3[,3]<=80 ~ "yellow", df3[,3]<70 ~ "red")) %>%
+  column_spec(4, background=case_when(df3[,4]>80 ~ "green",df3[,4]>70 & df3[,4]<=80 ~ "yellow", df3[,4]<70 ~ "red")) %>%
+  column_spec(5, color=ifelse(df3[,5] > 55 | is.na(df3[,5]), "#D8D8D8", "black")) %>%
+  column_spec(6, color=ifelse(df3[,6] > 55 | is.na(df3[,6]), "#D8D8D8","black")) %>%
+  column_spec(7, color=ifelse(df3[,7] > 1400, "#E6E6E6","black")) %>%
+  column_spec(8, color=ifelse(df3[,8] >= 67 | df3[,8] < 67, "#D8D8D8","black"))
+```
+
+

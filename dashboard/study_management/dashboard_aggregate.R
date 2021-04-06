@@ -1,9 +1,9 @@
 ####Souce dependent functions:
 root_dir = getwd()
 
-source(file.path(root_dir,"dashboard/study_management/data_management_functions.R"))
-source(file.path(root_dir,"EEG_Dashboard.R"))
-source(file.path(root_dir,"ECG_Dashboard.R"))
+# source(file.path(root_dir,"dashboard/study_management/data_management_functions.R"))
+# source(file.path(root_dir,"EEG_Dashboard.R"))
+# source(file.path(root_dir,"ECG_Dashboard.R"))
 ###Dependent functions:
 require(lubridate)
 if (FALSE) {

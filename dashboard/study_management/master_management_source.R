@@ -7,10 +7,13 @@ library('tinsel')
 library('RSQLite')
 library('tidyverse')
 
+source("~/Downloads/rl_ema_monitoring/EEG_Dashboard.R")
+source("~/Downloads/rl_ema_monitoring/ECG_Dashboard.R")
 # Source individiual scipts...
 
 # save the current working directory
 saved_dir <- getwd()
+
 # try to change the working and sorce the functions
 tryCatch({
   # get this script's location
