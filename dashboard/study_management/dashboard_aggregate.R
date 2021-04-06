@@ -61,9 +61,14 @@ if (FALSE) {
 
 #####Functions:
 load_db <- function(dbpath,table_names=NULL) {
+  all_table_names <- dbListTables(data)
   if(is.null(table_names)){
-    table_names <- dbListTables(data)
+    table_names<-all_table_names
+  } else if (any(!table_names %in% all_table_names)) {
+    table_names <- table_names[table_names %in% all_table_names]
+    message("No table(s) named: ",paste(table_names[!table_names %in% all_table_names],collapse = ", ")," in database file: \n",dbpath)
   }
+  if(length(table_names)<1){return(NULL)}
   dbdata = dbConnect(SQLite(), dbpath)
   tables<-lapply(table_names,function(dfName){
     dbGetQuery(dbdata, paste0("SELECT * FROM ", dfName))
