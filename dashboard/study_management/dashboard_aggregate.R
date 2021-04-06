@@ -68,7 +68,10 @@ load_db <- function(dbpath,table_names=NULL) {
     table_names <- table_names[table_names %in% all_table_names]
     message("No table(s) named: ",paste(table_names[!table_names %in% all_table_names],collapse = ", ")," in database file: \n",dbpath)
   }
-  if(length(table_names)<1){return(NULL)}
+  if(length(table_names)<1){
+    message("No tables to pull.")
+    return(NULL)
+  }
   dbdata = dbConnect(SQLite(), dbpath)
   tables<-lapply(table_names,function(dfName){
     dbGetQuery(dbdata, paste0("SELECT * FROM ", dfName))
