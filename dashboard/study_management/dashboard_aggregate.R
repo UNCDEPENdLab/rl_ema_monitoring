@@ -1,5 +1,9 @@
 ####Souce dependent functions:
-source("./dashboard/study_management/data_management_functions.R")
+root_dir = getwd()
+
+source(file.path(root_dir,"dashboard/study_management/data_management_functions.R"))
+source(file.path(root_dir,"EEG_Dashboard.R"))
+source(file.path(root_dir,"ECG_Dashboard.R"))
 ###Dependent functions:
 require(lubridate)
 if (FALSE) {
@@ -35,14 +39,46 @@ if (FALSE) {
   output$sample_info_df #is a dataframe wtih a row number equal to the number of subejcts, include sample level information on compliance .
   output$subj_performance # is a list with a length equal to the number of subjects, include subject information on performance
   output$sample_performance #is a dataframe wtih a row number equal to the number of subejcts, include subject level information on performance.
+
   #example for proc_physio:
   ##!!!!Must first proc the schedule data as physio uses the trial level data to generate percentage;
+  output_physio <- proc_physio(physio_df = path_info$physio,sch_pro_output=output, tz="EST",
+                               eeg_sample_rate=256.03, sd_times=10, eeg_pre=500,eeg_post=1500, #EEG options
+                               ecg_sample_rate = 100, HRstep = 10, ecg_pre=1000,ecg_post=10000 #ECG options
+                               )
+  names(output_physio)
+  #list: two data sets: EEG & ECG
+  ###within each data sets:
+  #####proc: list of proc'ed eeg raw data, length of subjects
+  #####fb: list of proc'ed eeg data, near the feedback times, length of subjects
+  #####*summary: list of summary data frame for each subject, used for dashboard table generation, length of subjects
+  #####*sample_summary: a data.frame of all subjects, used for dashboard overall table, nrow of subjects
+
 }
 
 #####Session number is dependent on scheduled time. Possible 1 game per day but with 2 sessions worth of data.
 
 
 #####Functions:
+load_db <- function(dbpath,table_names=NULL) {
+  if(is.null(table_names)){
+    table_names <- dbListTables(data)
+  }
+  dbdata = dbConnect(SQLite(), dbpath)
+  tables<-lapply(table_names,function(dfName){
+    dbGetQuery(dbdata, paste0("SELECT * FROM ", dfName))
+  })
+  names(tables) <- table_names
+  #close connection before return
+  dbDisconnect(dbdata)
+  return(tables)
+}
+
+ms_to_date = function(ms, t0="1970-01-01", timezone) {
+  sec = ms / 1000
+  as.POSIXct(sec, origin=t0, tz=timezone)
+}
+
 proc_schedule <- function(schedule_df = NULL,tz="EST") {
   #load in data using shane's function
   raw_data <- lapply(1:nrow(schedule_df),function(i){
@@ -51,7 +87,7 @@ proc_schedule <- function(schedule_df = NULL,tz="EST") {
     return(db_raw)
   })
   proc_data <- lapply(raw_data,proc_schedule_single,tz=tz)
-
+  names(proc_data) <- sapply(proc_data,`[[`,"sID")
   ####do more aggregation here:
   #####NEED MORE SUBJ DATA FOR AGGREGATION########
   sample_info <- do.call(rbind,lapply(proc_data,`[[`,"info_df"))
@@ -67,11 +103,6 @@ proc_schedule <- function(schedule_df = NULL,tz="EST") {
   return(list(proc_data=proc_data,
               subj_info = sp_info_sq,sample_info_df=overall_info,
               subj_performance = performance_info, sample_performance = pr_info_subjwise))
-}
-
-ms_to_date = function(ms, t0="1970-01-01", timezone) {
-  sec = ms / 1000
-  as.POSIXct(sec, origin=t0, tz=timezone)
 }
 
 proc_schedule_single <- function(raw_single,tz="EST") {
@@ -201,27 +232,71 @@ proc_schedule_single <- function(raw_single,tz="EST") {
   rownames(pr_info_by_block) <- NULL
   raw_single$trials <- trials_1
 
-
   return(list(raw_data=raw_single,info_df = info_df,performance_info=pr_info_by_block,performance_overall=px_overall,sID=raw_single$ID))
 }
 
-proc_physio <- function(physio_df = NULL, sample_rate=256.03, sd_times=10, pre=500,post=1500,expect_df = NULL,tz="EST") {
-  physio_list <- lapply(split(physio_df$file_path,physio_df$subject_id),load_physio_single)
-  behavior_df
-  schedule_df
-  lapply(1:nrow(physio_df),function(i) {
-    session_datetime <- gsub(".db","",gsub(".*_physio_","",basename(physio_df$physio_path[i])))
-    session_datetime <- gsub("[^0-9A-Za-z///' ]","" , session_datetime ,ignore.case = TRUE)
-    session_datetime<-lubridate::parse_date_time(session_datetime,"%b $d %Y %I%M%S %p",tz = tz)
-    EEG_data<-load_EEG(subject_name = physio_df$subject_id[i],abs_path = list(physio_path=physio_df$physio_path[i],schedule_path=physio_df$schedule_path[i]),sample_rate=sample_rate, sd_times=sd_times)
-    recorded_times<-ms_to_date(EEG_data$EEG_data$recorded_times,timezone = tz)
-    epochs_around_feedback<-get_epochs_around_feedback(EEG_data = EEG_data$EEG_data,pre = pre,post=post,sample_rate=sample_rate,fbt=EEG_data$behavior$feedback_time)
+proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST",
+                        eeg_sample_rate=256.03, sd_times=10, eeg_pre=500,eeg_post=1500, #EEG options
+                        ecg_sample_rate = 100, HRstep = 10, ecg_pre=1000,ecg_post=10000 #ECG options
+                        ) {
+
+  exp_out<-lapply(unique(physio_df$subject_id),function(IDx){
+    print(IDx)
+    #Load the physio data
+    physio_concat <- load_physio_single(physio_df$file_path[physio_df$subject_id==IDx])
+    #Get the matching behavioral data
+    behav_df <- output$proc_data[[IDx]]$raw_data$trials
+    behav_df <- behav_df[which(!is.na(behav_df$stim_time)),]
+    sess_map<-unique(behav_df[c("block","session_number")])
+
+    ###EEG
+    eeg_raw <- load_EEG(EEGd = physio_concat$eeg,sample_rate = eeg_sample_rate,sd_times = sd_times)
+    eeg_proc <- eeg_epochs_around_feedback(EEG_data = eeg_raw,
+                                           pre = eeg_pre,post = eeg_post,sample_rate = eeg_sample_rate,
+                                           fbt = as.numeric(behav_df$feedback_time)*1000)
+    eeg_rawsum <- get_good_EEG(blocks=behav_df$block,a2f=eeg_proc)
+    eeg_summary <- eeg_rawsum[1:4] / eeg_rawsum$ntrial
+    names(eeg_summary) <- paste("per_Ch",1:4,sep = "_")
+    eeg_summary$block <- eeg_rawsum$nbl
+    eeg_summary$per_worst <- apply(eeg_summary[1:4],1,min,na.rm=T)
+    eeg_summary$session_number<-sess_map$session_number[match(eeg_summary$block,sess_map$block)]
+    eeg_summary$ID <- IDx
+    eeg_summary <- eeg_summary[order(names(eeg_summary))]
+    eeg_ov <- data.frame(t(apply(eeg_summary[paste("per_Ch",1:4,sep = "_")],2,mean,na.rm=T)))
+    eeg_ov$avg_allCh <- apply(eeg_ov,1,mean,na.rm=T)
+    eeg_ov$worst_allCh_allblocks <- min(eeg_summary[,paste("per_Ch",1:4,sep = "_")])
+    eeg_ov$ID <- IDx
+
+    ###ECG
+    ecg_raw <- load_ECG(ECGd = physio_concat$ecg,HRstep = HRstep,sample_rate = ecg_sample_rate)
+    ecg_fb <- ecg_epochs_around_feedback(ECG_data = ecg_raw,fbt = as.numeric(behav_df$feedback_time)*1000,
+                                         pre = ecg_pre,post = ecg_post,sample_rate = ecg_sample_rate)
+    ecg_summary <- get_good_ECG(blocks = behav_df$block,a2f = ecg_fb)
+    ecg_summary$session_number<-sess_map$session_number[match(ecg_summary$block,sess_map$block)]
+    ecg_summary$ID <- IDx
+    ecg_summary <- ecg_summary[order(names(ecg_summary))]
+    ecg_ov <- aggregate(per_Good ~ ID,data = ecg_summary,FUN = mean,na.rm=T)
+    ecg_ov$worst_allblocks <- min(ecg_summary$per_Good)
+
+    return(list(eeg_proc = eeg_raw,eeg_fb = eeg_proc, eeg_summary = eeg_summary, eeg_ov = eeg_ov,
+           ecg_proc = ecg_raw,ecg_fb = ecg_fb, ecg_summary = ecg_summary, ecg_ov = ecg_ov))
   })
 
+  nax <- c("proc","fb","summary")
+  IDlist <- unique(physio_df$subject_id)
+  output_fin<-lapply(c("eeg","ecg"),function(ay){
+    output_ls<-lapply(nax,function(ax){
+      output <- lapply(exp_out,`[[`,paste(ay,ax,sep = "_"))
+      names(output) <- IDlist
+      return(output)
+    })
+    names(output_ls) <- nax
+    output_ls$sample_summary <- do.call(rbind, lapply(exp_out,`[[`,paste(ay,"ov",sep = "_")))
+    return(output_ls)
+  })
+  names(output_fin) <- c("eeg","ecg")
+  return(output_fin)
 }
-
-
-behavior_df<-output$proc_data[[1]]$raw_data$trials
 
 load_physio_single <- function(allpaths_sub) {
   all_dt <- lapply(allpaths_sub,load_db,table_names=c("EEG_muse","Polar_heartrate"))
@@ -232,23 +307,8 @@ load_physio_single <- function(allpaths_sub) {
   return(list(eeg=eeg_aggregate,ecg=ecg_aggregate))
 }
 
-behav_egg_match <- function() {
-  ##start time / completed time
 
-}
-load_db <- function(dbpath,table_names=NULL) {
-  if(is.null(table_names)){
-    table_names <- dbListTables(data)
-  }
-  dbdata = dbConnect(SQLite(), dbpath)
-  tables<-lapply(table_names,function(dfName){
-    dbGetQuery(dbdata, paste0("SELECT * FROM ", dfName))
-  })
-  names(tables) <- table_names
-  #close connection before return
-  dbDisconnect(dbdata)
-  return(tables)
-}
+
 
 
 

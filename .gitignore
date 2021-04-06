@@ -1,6 +1,7 @@
 /dashboard_shiny_demo/*
 /dashboard_shiny_demo
 /data/Subjects/*
+/data/*
 /dashboard/study_management/client_secrets.json
 /dashboard/subject_status.json
 /dash/data/*
@@ -12,3 +13,5 @@ cfg.json
 conda-env
 .Rproj.user
 .DS_Store
+.Rdata
+*.Rproj
