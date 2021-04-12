@@ -204,30 +204,31 @@ load_ECG <- function(ECGd = NULL, HRstep = 10, sample_rate = 100) {
     HRsplit <- matrix(list(),length(isplit)+1,2)
     HRsplit[[1,1]] <- hrt1[1:(isplit[1]-1)]
     HRsplit[[1,2]] <- intervals[1:(isplit[1]-1)]
-    
+    nosplit = FALSE
     for (i in 1:(length(isplit)-1)){
       HRsplit[[i+1,1]] <- hrt1[isplit[i]:(isplit[i+1]-1)]
       HRsplit[[i+1,2]] <- intervals[isplit[i]:(isplit[i+1]-1)]
     }
   } else {
-    HRsplit <- matrix(list(),length(hrt1),2)
+    t0 <- NULL
+    I0 <- NULL
     for (q in 1:length(intervals)){
-      HRsplit[[q,1]] <- hrt1[[q]]
-      HRsplit[[q,2]] <- intervals[[q]]
+      t0[q] <- hrt1[[q]]
+      I0[q] <- intervals[[q]]
+      nosplit = TRUE
     }
   }
   
   
-  
+    
   # merge sections
   wiggleroom <- NULL
   beattimes <- matrix(list(),nrow(HRsplit),1)
   times1 <- matrix(list(),nrow(HRsplit),1)
   intervals1 <- matrix(list(),nrow(HRsplit),1)
   rate1 <- matrix(list(),nrow(HRsplit),1)
-  iD = 0;
   for (i in 1:nrow(HRsplit)){
-    if (sum(HRsplit[[i,2]]>0)>=2){
+    if ((sum(HRsplit[[i,2]]>0)>=2) & !nosplit){
       timings <- correctTimings(HRsplit[[i,1]],HRsplit[[i,2]])
       beattimes[[i,1]] <- timings
       output <- timings2samples(timings,HRstep=10)
@@ -237,39 +238,66 @@ load_ECG <- function(ECGd = NULL, HRstep = 10, sample_rate = 100) {
       iD = iD+1;
     }
   }
-  if (iD==0){
-    for (q in 1:nrow(HRsplit)){
-      beattimes[[q,1]] <- HRsplit[[q,1]]
-      times1[[q,1]] <- HRsplit[[q,1]]
-      intervals1[[q,1]] <- HRsplit[[q,2]]
-      rate1[[q,1]] <- 60000/HRsplit[[q,2]]
-    }
+  if ((sum(I0>0)>=2) & nosplit){
+    beattimes <- matrix(list(),length(t0),1)
+    timings <- correctTimings(t0,I0)
+    beattimes <- timings
+    output <- timings2samples(timings,HRstep=10)
+    times1 <- output[,1]
+    intervals1 <- output[,2]
+    rate1 <- output[,3]
   }
   
   # check
   stopifnot(length(beattimes)==length(times1) | length(times1)==length(intervals1) | length(intervals1)==length(rate1))
   
   # merge data
-  times2 <- as.vector(times1[[1,1]])
-  intervals2 <- as.vector(intervals1[[1,1]])
-  rate2 <- as.vector(rate1[[1,1]])
-  beattimes2 <- as.vector(beattimes[[1,1]])
-  for (i in 2:length(beattimes)){
-    if (length(times1[[i,1]]) > 0){
-      nanHRsteps <- ((times1[[i,1]][1] - times2[length(times2)]) / HRstep) - 1
-      if (nanHRsteps > 0){
-        temp_times <- times2[length(times2)]+seq(from=HRstep,to=nanHRsteps*HRstep,by=HRstep)
-        times2[(length(times2)+1):(length(times2)+length(temp_times))] <- temp_times
+  if (!nosplit){
+    times2 <- as.vector(times1[[1,1]])
+    intervals2 <- as.vector(intervals1[[1,1]])
+    rate2 <- as.vector(rate1[[1,1]])
+    beattimes2 <- as.vector(beattimes[[1,1]])
+    for (i in 2:length(beattimes)){
+      if (length(times1[[i,1]]) > 0){
+        nanHRsteps <- ((times1[[i,1]][1] - times2[length(times2)]) / HRstep) - 1
+        if (nanHRsteps > 0){
+          temp_times <- times2[length(times2)]+seq(from=HRstep,to=nanHRsteps*HRstep,by=HRstep)
+          times2[(length(times2)+1):(length(times2)+length(temp_times))] <- temp_times
+        }
+        temp_intervals <- rep(NA,length(times2)-length(intervals2))
+        temp_rate <- rep(NA,length(times2)-length(rate2))
+        beattimes2[(length(beattimes2)+1):(length(beattimes2)+length(beattimes[[i,1]]))] <- beattimes[[i,1]]
+        times2[(length(times2)+1):(length(times2)+length(times1[[i,1]]))] <- times1[[i,1]]
+        temp_intervals[(length(temp_intervals)+1):(length(temp_intervals)+length(intervals1[[i,1]]))] <- intervals1[[i,1]]
+        intervals2[(length(intervals2)+1):(length(intervals2)+length(temp_intervals))] <- temp_intervals
+        temp_rate[(length(temp_rate)+1):(length(temp_rate)+length(rate1[[i,1]]))] <- rate1[[i,1]]
+        rate2[(length(rate2)+1):(length(rate2)+length(temp_rate))] <- temp_rate
       }
-      temp_intervals <- rep(NA,length(times2)-length(intervals2))
-      temp_rate <- rep(NA,length(times2)-length(rate2))
-      beattimes2[(length(beattimes2)+1):(length(beattimes2)+length(beattimes[[i,1]]))] <- beattimes[[i,1]]
-      times2[(length(times2)+1):(length(times2)+length(times1[[i,1]]))] <- times1[[i,1]]
-      temp_intervals[(length(temp_intervals)+1):(length(temp_intervals)+length(intervals1[[i,1]]))] <- intervals1[[i,1]]
-      intervals2[(length(intervals2)+1):(length(intervals2)+length(temp_intervals))] <- temp_intervals
-      temp_rate[(length(temp_rate)+1):(length(temp_rate)+length(rate1[[i,1]]))] <- rate1[[i,1]]
-      rate2[(length(rate2)+1):(length(rate2)+length(temp_rate))] <- temp_rate
     }
+  }
+  if (nosplit){
+    times2 <- times1
+    intervals2 <- intervals1
+    rate2 <- rate1
+    beattimes2 <- beattimes
+    for (i in 2:length(beattimes)){
+      if (length(times1)> 0){
+        nanHRsteps <- ((times1[1] - times2[length(times2)]) / HRstep) - 1
+        if (nanHRsteps > 0){
+          temp_times <- times2[length(times2)]+seq(from=HRstep,to=nanHRsteps*HRstep,by=HRstep)
+          times2[(length(times2)+1):(length(times2)+length(temp_times))] <- temp_times
+        }
+        temp_intervals <- rep(NA,length(times2)-length(intervals2))
+        temp_rate <- rep(NA,length(times2)-length(rate2))
+        beattimes2[(length(beattimes2)+1):(length(beattimes2)+length(beattimes[i]))] <- beattimes[i]
+        times2[(length(times2)+1):(length(times2)+length(times1[i]))] <- times1[i]
+        temp_intervals[(length(temp_intervals)+1):(length(temp_intervals)+length(intervals1[i]))] <- intervals1[i]
+        intervals2[(length(intervals2)+1):(length(intervals2)+length(temp_intervals))] <- temp_intervals
+        temp_rate[(length(temp_rate)+1):(length(temp_rate)+length(rate1[i]))] <- rate1[i]
+        rate2[(length(rate2)+1):(length(rate2)+length(temp_rate))] <- temp_rate
+      }
+    }
+    
   }
   
   ECG_data <- data.frame(times=times2,rate=rate2)
@@ -345,4 +373,6 @@ get_good_ECG <- function(blocks,a2f){
   Ngood_df <- dplyr::tibble(per_Good=perGood,block=nbl)
   return(Ngood_df)
 }
+
+
 
