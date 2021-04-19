@@ -1,9 +1,9 @@
 ####Souce dependent functions:
 root_dir = getwd()
 
-# source(file.path(root_dir,"dashboard/study_management/data_management_functions.R"))
-# source(file.path(root_dir,"EEG_Dashboard.R"))
-# source(file.path(root_dir,"ECG_Dashboard.R"))
+source(file.path(root_dir,"dashboard/study_management/data_management_functions.R"))
+source(file.path(root_dir,"EEG_Dashboard.R"))
+source(file.path(root_dir,"ECG_Dashboard.R"))
 ###Dependent functions:
 require(lubridate)
 if (FALSE) {
@@ -238,17 +238,32 @@ proc_schedule_single <- function(raw_single,tz="EST") {
   form_data <- form_data[form_data$answer!="",]
   form_data$answer_prog <- text_proc(form_data$answer)
   fdata_sp <- split(form_data,form_data$questionnaire_name)
-
-  lapply(fdata_sp,function(tkd){
-    print(unique(tkd$questionnaire_name))
+  #proc all the other first
+  form_proc <- lapply(fdata_sp[names(fdata_sp)!="Mood Questionnaire"],function(tkd){
+    #print(unique(tkd$questionnaire_name))
     tke<-do.call(rbind,lapply(tkd$answer_prog,as.data.frame,sep="_"))
     names(tke)<-gsub(".","_",names(tke),fixed = T)
     tkf <- cbind(tkd[c("questionnaire_name","questionnaire_type","answer_time","session_number")],tke)
+    tkf$ID <- raw_single$ID
     return(tkf)
   })
-
-
-
+  names(form_proc) <- names(fdata_sp)[names(fdata_sp)!="Mood Questionnaire"]
+  form_proc$`Mood Questionnaire` <- do.call(rbind,lapply(split(fdata_sp$`Mood Questionnaire`,fdata_sp$`Mood Questionnaire`$questionnaire_number),function(mda){
+    mdb<-do.call(cbind,lapply(mda$answer_prog[mda$question %in% c(0,1)],as.data.frame))
+    mdb$event_df <- list(event_df=do.call(rbind,lapply(mda$answer_prog[[which(mda$question=="2")]],as.data.frame)))
+    mdb$number_of_events <- nrow(mdb$event_df$event_df)
+    mdc <- cbind(mda[1,c("questionnaire_name","questionnaire_type","answer_time","session_number")],mdb)
+    mdc$ID <- raw_single$ID
+    return(mdc)
+  }))
+  form_proc$`Mood Questionnaire`$v_a_distance <- sqrt((as.numeric(form_proc$`Mood Questionnaire`$Valence)^2) + (as.numeric(form_proc$`Mood Questionnaire`$Arousal)^2) )
+  ##summary stats for how much they answered
+  q_sum <- data.frame(ID = raw_single$ID,val_arr_dis_avg = mean(form_proc$`Mood Questionnaire`$v_a_distance,na.rm = T))
+  e_sum <- data.frame(as.list(apply(form_proc$`Mood Questionnaire`[c("Anxious","Elated","Sad","Irritable","Energetic")],2,function(x){mean(as.numeric(x),na.rm = T)})))
+  names(e_sum) <- paste(names(e_sum),"avg",sep = "_")
+  q_sum <- cbind(q_sum,e_sum)
+  q_sum$emo_rate_avg <- mean(unlist(e_sum),na.rm = T)
+  q_sum$val_emo_cor <- cor(apply(form_proc$`Mood Questionnaire`[c("Anxious","Elated","Sad","Irritable","Energetic")],1,function(x){mean(as.numeric(x),na.rm = T)}),form_proc$`Mood Questionnaire`$v_a_distance)
   ###return proc_answer object###########
 
   #######Info session##########
@@ -263,7 +278,7 @@ proc_schedule_single <- function(raw_single,tz="EST") {
   return(list(raw_data=raw_single,
               info_df = info_df,
               performance_info=pr_info_by_block,performance_overall=px_overall,
-              form_df=NULL,form_summary=NULL,
+              form_dfs=form_proc,form_summary=q_sum,
               sID=raw_single$ID))
 }
 ####Proc physio
