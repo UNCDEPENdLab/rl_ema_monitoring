@@ -16,7 +16,7 @@ if (FALSE) {
     if(dj == "video") {
       pat = ".*.mp4"
     } else {
-      pat = ".db"
+      pat = "*.db"
     }
     do.call(rbind,lapply(list_id,function(idx){
       db_files<-list.files(file.path(root_dir,idx,dj),pattern = pat,full.names = T,recursive = F,include.dirs = F)
@@ -219,6 +219,9 @@ proc_schedule_single <- function(raw_single,tz="EST") {
       return(NA)
     }
   },USE.NAMES = F)
+
+
+
   session_info_df <- raw_single$questionnaires
   session_info_df <- session_info_df[order(session_info_df$scheduled_time),]
   session_info_df$duration<-difftime(session_info_df$completed_time,session_info_df$start_time,units = "mins")
@@ -230,8 +233,25 @@ proc_schedule_single <- function(raw_single,tz="EST") {
   raw_single$answers$session_number<-session_info_df$session_number[match(round(as.numeric(raw_single$answers$answer_time,0)),round(as.numeric(session_info_df$completed_time),0))]
   ##Part II: proc answer df:
   ##Proc questionnaire data here: not yet
-  #######SKIP########
+  #Find answer:
+  form_data <- raw_single$answers
+  form_data <- form_data[form_data$answer!="",]
+  form_data$answer_prog <- text_proc(form_data$answer)
+  fdata_sp <- split(form_data,form_data$questionnaire_name)
+
+  lapply(fdata_sp,function(tkd){
+    print(unique(tkd$questionnaire_name))
+    tke<-do.call(rbind,lapply(tkd$answer_prog,as.data.frame,sep="_"))
+    names(tke)<-gsub(".","_",names(tke),fixed = T)
+    tkf <- cbind(tkd[c("questionnaire_name","questionnaire_type","answer_time","session_number")],tke)
+    return(tkf)
+  })
+
+
+
   ###return proc_answer object###########
+
+  #######Info session##########
   info_df <- rbind(session_info_df,trial_info_df)
   info_df <- info_df[order(info_df$scheduled_time),]
   info_df$ID <- raw_single$ID
@@ -240,18 +260,26 @@ proc_schedule_single <- function(raw_single,tz="EST") {
   rownames(pr_info_by_block) <- NULL
   raw_single$trials <- trials_1
 
-  return(list(raw_data=raw_single,info_df = info_df,performance_info=pr_info_by_block,performance_overall=px_overall,sID=raw_single$ID))
+  return(list(raw_data=raw_single,
+              info_df = info_df,
+              performance_info=pr_info_by_block,performance_overall=px_overall,
+              form_df=NULL,form_summary=NULL,
+              sID=raw_single$ID))
 }
-
-proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST",
+####Proc physio
+proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4,
                         eeg_sample_rate=256.03, sd_times=10, eeg_pre=500,eeg_post=1500, #EEG options
                         ecg_sample_rate = 100, HRstep = 10, ecg_pre=1000,ecg_post=10000 #ECG options
                         ) {
-
+  if (.Platform$OS.type == "windows") {
+    message("Forking is not available on windows. Parallelization will be turned off.")
+    thread=1
+  }
+  par_cl <- parallel::makeCluster(spec = thread,type = "FORK")
   exp_out<-lapply(unique(physio_df$subject_id),function(IDx){
     print(IDx)
     #Load the physio data
-    physio_concat <- load_physio_single(physio_df$file_path[physio_df$subject_id==IDx])
+    physio_concat <- load_physio_single(physio_df$file_path[physio_df$subject_id==IDx],cl = par_cl)
     #Get the matching behavioral data
     behav_df <- output$proc_data[[IDx]]$raw_data$trials
     behav_df <- behav_df[which(!is.na(behav_df$stim_time)),]
@@ -289,7 +317,7 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST",
     return(list(eeg_proc = eeg_raw,eeg_fb = eeg_proc, eeg_summary = eeg_summary, eeg_ov = eeg_ov,
            ecg_proc = ecg_raw,ecg_fb = ecg_fb, ecg_summary = ecg_summary, ecg_ov = ecg_ov))
   })
-
+  parallel::stopCluster(par_cl)
   nax <- c("proc","fb","summary")
   IDlist <- unique(physio_df$subject_id)
   output_fin<-lapply(c("eeg","ecg"),function(ay){
@@ -306,8 +334,12 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST",
   return(output_fin)
 }
 
-load_physio_single <- function(allpaths_sub) {
-  all_dt <- lapply(allpaths_sub,load_db,table_names=c("EEG_muse","Polar_heartrate"))
+load_physio_single <- function(allpaths_sub,cl=NULL) {
+  if(is.null(cl)) {
+    all_dt <- lapply(allpaths_sub,load_db,table_names=c("EEG_muse","Polar_heartrate"))
+  } else {
+    all_dt <- parallel::parLapply(cl,allpaths_sub,load_db,table_names=c("EEG_muse","Polar_heartrate"))
+  }
   eeg_aggregate <- do.call(rbind,lapply(all_dt,`[[`,"EEG_muse"))
   eeg_aggregate <- eeg_aggregate[order(eeg_aggregate$recording_time),]
   ecg_aggregate <- do.call(rbind,lapply(all_dt,`[[`,"Polar_heartrate"))
@@ -315,9 +347,36 @@ load_physio_single <- function(allpaths_sub) {
   return(list(eeg=eeg_aggregate,ecg=ecg_aggregate))
 }
 
+###Proc questionnaire, just in case it gets complicated:
+text_proc <- function(input_text = NULL) {
+  type_indx <- rep(NA,length(input_text))
+  output_ls <- as.list(rep(NA,length(input_text)))
+  ###Get the video string:
+  ###It could be faster to not use index, however, some gsub might work differently
+  type_indx[grepl(".mp4",input_text,fixed = T)] <- "video"
+  type_indx[grepl("\t",input_text,fixed = T)] <- "tx1"
+  type_indx[grepl(", ",input_text,fixed = T)] <- "tx2"
+  type_indx[grepl("\n",input_text,fixed = T)] <- "ls1"
 
+  output_ls[type_indx=="video"]<-sapply(input_text[type_indx=="video"],list,USE.NAMES = F)
+  output_ls[type_indx=="tx1"]<-lapply(strsplit(input_text[type_indx=="tx1"],"\t"),split_n_name)
+  output_ls[type_indx=="tx2"]<-lapply(strsplit(input_text[type_indx=="tx2"],", "),split_n_name)
+  output_ls[type_indx=="ls1"]<-lapply(strsplit(input_text[type_indx=="ls1"],"\n"),function(x){
+    lapply(strsplit(x,"\t"),split_n_name)
+  })
+  if(any(is.na(type_indx))) {
+    message("Unsupported string input")
+  }
+  return(output_ls)
+}
 
-
+split_n_name <- function(x){
+  names(x) <- paste("V",1:length(x),sep = "_")
+  cp <- strsplit(x[grepl("=",x)],"=")
+  names(x)[grepl("=",x)]<-sapply(cp,`[[`,1)
+  x[grepl("=",x)]<-sapply(cp,`[[`,2)
+  return(as.list(x))
+}
 
 
 

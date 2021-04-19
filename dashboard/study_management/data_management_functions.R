@@ -5,6 +5,7 @@ library('rjson')
 library('tinsel')
 library('RSQLite')
 library('tidyverse')
+library("dplyr")
 
 # finds the given root directory for a file hierarchy
 findRoot <- function(root_dir) {
