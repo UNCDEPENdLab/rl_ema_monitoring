@@ -107,10 +107,12 @@ proc_schedule <- function(schedule_df = NULL,tz="EST") {
   overall_info$completed_session <- aggregate(session_number ~ ID,data = sample_info[!is.na(sample_info$completed_time),],FUN = max)$session_number
 
   pr_info_subjwise <-  do.call(rbind,lapply(proc_data,`[[`,"performance_overall"))
+  q_summary <-  do.call(rbind,lapply(proc_data,`[[`,"form_summary"))
 
   return(list(proc_data=proc_data,
               subj_info = sp_info_sq,sample_info_df=overall_info,
-              subj_performance = performance_info, sample_performance = pr_info_subjwise))
+              subj_performance = performance_info, sample_performance = pr_info_subjwise,
+              sample_form_summary = q_summary))
 }
 
 proc_schedule_single <- function(raw_single,tz="EST") {
