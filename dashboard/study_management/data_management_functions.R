@@ -207,13 +207,13 @@ sourceFromCfg <- function(root_dir, sourced_file) {
 }
 
 # add the set_status functions
-sourceFromCfg('rl_ema_monitoring','set_status_func.py') # function used for cli is: add_subject_by_status(id, status)
+#sourceFromCfg('rl_ema_monitoring','set_status_func.py') # function used for cli is: add_subject_by_status(id, status)
 
 # add the add_subject functions
-sourceFromCfg('rl_ema_monitoring', 'add_subject_func.py') # function used for cli is: add_subject(id, gmail, status, path)
+#sourceFromCfg('rl_ema_monitoring', 'add_subject_func.py') # function used for cli is: add_subject(id, gmail, status, path)
 
 # add the momentum_pull functions
-sourceFromCfg('rl_ema_monitoring', 'momentum_pull_func.py') # function used for cli is: pull_files(id, path)
+#sourceFromCfg('rl_ema_monitoring', 'momentum_pull_func.py') # function used for cli is: pull_files(id, path)
 
 # function to pull the list of active subjects
 getActiveList <- function(root_dir=NULL) {
@@ -567,12 +567,13 @@ get_video_info <- function(sid, data_dir=NULL) {
 }
 
 # Function to provide list of currently cached subject schedule files
-#
+# A vector of subject_ids can be passed in lieu of a root dir variable. This is 
+# especially useful when getting metadata for a specific subject.
 # @param data_dir Root of Subjects data directory
 # @importFrom checkmate assert_directory exists
 # @importFrom dplyr bind_rows
 # @return A three-element list containing cache info for
-get_ema_subject_metadata <- function(root_dir=NULL, data_dir=NULL, trigger_refresh=FALSE) {
+get_ema_subject_metadata <- function(root_dir=NULL, subject_list=NULL, data_dir=NULL, trigger_refresh=FALSE)  {
   #checkmate::assert_directory_exists(data_dir)
   checkmate::assert_logical(trigger_refresh)
 
@@ -586,8 +587,10 @@ get_ema_subject_metadata <- function(root_dir=NULL, data_dir=NULL, trigger_refre
   video_list <- list()
 
   # get a list of all participants
-  subject_list <- getActiveList(root_dir=root_dir)
-
+  if(is.null(subject_list)){
+     subject_list <- getActiveList(root_dir=root_dir)
+  }
+  
   #for (ff in folders) {
   for (sid in subject_list) {
     #print(sid)
