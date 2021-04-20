@@ -1,0 +1,33 @@
+---
+title: "RL EMA QA Dashboard"
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(comment = NA, tidy = FALSE, warning = FALSE, message = FALSE)
+#source("C:/Users/tshan/rl_ema_monitoring/dashboard/study_management/data_management_functions.R")
+#source("render_utils.R")
+library(pacman)
+p_load(DT, dplyr, htmltools, tidyr, ggplot2, plotly, widgetframe, readr)
+```
+
+```{r, echo=FALSE}
+cat(read_file('C:/Users/tshan/rl_ema_monitoring/site/data/test.json'))
+
+```
+
+# Active participants
+```{r, echo=FALSE}
+#sdf <- 
+
+#Shane: ideally, we'd keep the 'Rendering Error' as a link and when the user goes to the page, it provides a log file of what went wrong.
+
+#DT::datatable(sdf, class = 'compact', escape = FALSE, selection='none')
+```
+
+
+# Inactive participants
+
+```{r, echo=FALSE}
+#datatable(sdf$inactive)
+
+```
