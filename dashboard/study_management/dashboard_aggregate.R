@@ -223,7 +223,7 @@ proc_schedule_single <- function(raw_single,tz="EST") {
   },USE.NAMES = F)
 
 
-
+  #### Session information data frame ####
   session_info_df <- raw_single$questionnaires
   session_info_df <- session_info_df[order(session_info_df$scheduled_time),]
   session_info_df$duration<-difftime(session_info_df$completed_time,session_info_df$start_time,units = "mins")
@@ -231,6 +231,19 @@ proc_schedule_single <- function(raw_single,tz="EST") {
   session_info_df$spec <- unlist(apply(session_info_df[c("type","number","description")],1,list),recursive = F)
   session_info_df<-session_info_df[c("session_number","scheduled_time","start_time","completed_time","duration","delay","spec")]
   session_info_df$type <- "questionnaires"
+
+  #######Info session##########
+  info_df <- rbind(session_info_df,trial_info_df)
+  info_df <- info_df[order(info_df$scheduled_time),]
+  info_df$ID <- raw_single$ID
+  rownames(info_df) <- NULL
+  rownames(pr_info_by_block) <- NULL
+
+  #Get start date:
+  startdate <- as.Date(info_df$scheduled_time[1])
+  ##Set start date stuff to be session 0
+  info_df$session_number[as.Date(info_df$scheduled_time) == startdate] <- 0
+
   #update answer DF as well"
   raw_single$answers$session_number<-session_info_df$session_number[match(round(as.numeric(raw_single$answers$answer_time,0)),round(as.numeric(session_info_df$completed_time),0))]
   ##Part II: proc answer df:
@@ -251,8 +264,21 @@ proc_schedule_single <- function(raw_single,tz="EST") {
   })
   names(form_proc) <- names(fdata_sp)[names(fdata_sp)!="Mood Questionnaire"]
   form_proc$`Mood Questionnaire` <- do.call(rbind,lapply(split(fdata_sp$`Mood Questionnaire`,fdata_sp$`Mood Questionnaire`$questionnaire_number),function(mda){
+    #print(unique(mda$questionnaire_number))
     mdb<-do.call(cbind,lapply(mda$answer_prog[mda$question %in% c(0,1)],as.data.frame))
-    mdb$event_df <- list(event_df=do.call(rbind,lapply(mda$answer_prog[[which(mda$question=="2")]],as.data.frame)))
+    if(is.null(names(mda$answer_prog[[which(mda$question=="2")]]))) {
+      md_evt <- do.call(rbind,lapply(mda$answer_prog[[which(mda$question=="2")]],as.data.frame))
+    } else {
+      md_evt <- as.data.frame(mda$answer_prog[[which(mda$question=="2")]])
+    }
+
+    names(md_evt)[names(md_evt)=="V_1"] <- "description"
+    names(md_evt)[names(md_evt)=="V_2"] <- "time_ago"
+    if(is.null(md_evt$category)) {
+      md_evt$category <- "event/activity:unknown"
+    }
+    names(md_evt)<-gsub(".","_",names(md_evt),fixed = T)
+    mdb$event_df <- list(event_df=md_evt)
     mdb$number_of_events <- nrow(mdb$event_df$event_df)
     mdc <- cbind(mda[1,c("questionnaire_name","questionnaire_type","answer_time","session_number")],mdb)
     mdc$ID <- raw_single$ID
@@ -263,18 +289,17 @@ proc_schedule_single <- function(raw_single,tz="EST") {
   q_sum <- data.frame(ID = raw_single$ID,val_arr_dis_avg = mean(form_proc$`Mood Questionnaire`$v_a_distance,na.rm = T))
   e_sum <- data.frame(as.list(apply(form_proc$`Mood Questionnaire`[c("Anxious","Elated","Sad","Irritable","Energetic")],2,function(x){mean(as.numeric(x),na.rm = T)})))
   names(e_sum) <- paste(names(e_sum),"avg",sep = "_")
-  q_sum <- cbind(q_sum,e_sum)
+  s_sum <- data.frame(as.list(apply(form_proc$`Sleep Diary`[c("sleep_latency","woke_many_times","woke_early","overall")],2,function(x){mean(as.numeric(x),na.rm = T)})))
+  names(s_sum) <- paste(names(s_sum),"avg",sep = "_")
+
+  q_sum <- cbind(q_sum,e_sum,s_sum)
   q_sum$emo_rate_avg <- mean(unlist(e_sum),na.rm = T)
+  q_sum$sleep_di_avg <- mean(unlist(s_sum),na.rm = T)
   q_sum$val_emo_cor <- cor(apply(form_proc$`Mood Questionnaire`[c("Anxious","Elated","Sad","Irritable","Energetic")],1,function(x){mean(as.numeric(x),na.rm = T)}),form_proc$`Mood Questionnaire`$v_a_distance)
   ###return proc_answer object###########
 
-  #######Info session##########
-  info_df <- rbind(session_info_df,trial_info_df)
-  info_df <- info_df[order(info_df$scheduled_time),]
-  info_df$ID <- raw_single$ID
+
   pr_info_by_block$ID <- raw_single$ID
-  rownames(info_df) <- NULL
-  rownames(pr_info_by_block) <- NULL
   raw_single$trials <- trials_1
 
   return(list(raw_data=raw_single,
@@ -374,12 +399,17 @@ text_proc <- function(input_text = NULL) {
   type_indx[grepl("\t",input_text,fixed = T)] <- "tx1"
   type_indx[grepl(", ",input_text,fixed = T)] <- "tx2"
   type_indx[grepl("\n",input_text,fixed = T)] <- "ls1"
+  type_indx[grepl("category=",input_text,fixed = T)] <-"ls2"
 
   output_ls[type_indx=="video"]<-sapply(input_text[type_indx=="video"],list,USE.NAMES = F)
   output_ls[type_indx=="tx1"]<-lapply(strsplit(input_text[type_indx=="tx1"],"\t"),split_n_name)
   output_ls[type_indx=="tx2"]<-lapply(strsplit(input_text[type_indx=="tx2"],", "),split_n_name)
   output_ls[type_indx=="ls1"]<-lapply(strsplit(input_text[type_indx=="ls1"],"\n"),function(x){
     lapply(strsplit(x,"\t"),split_n_name)
+  })
+  input_text[type_indx=="ls2"] <- gsub("\ncategory=","/NTcategory=",input_text[type_indx=="ls2"],fixed=T)
+  output_ls[type_indx=="ls2"]<-lapply(strsplit(input_text[type_indx=="ls2"],"/NT"),function(x){
+    lapply(strsplit(gsub("\n",":",x),","),split_n_name)
   })
   if(any(is.na(type_indx))) {
     message("Unsupported string input")
