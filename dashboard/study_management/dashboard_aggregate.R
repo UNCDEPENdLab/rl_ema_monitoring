@@ -1,9 +1,9 @@
 ####Souce dependent functions:
 root_dir = getwd()
 
-# source(file.path(root_dir,"dashboard/study_management/data_management_functions.R"))
-# source(file.path(root_dir,"EEG_Dashboard.R"))
-# source(file.path(root_dir,"ECG_Dashboard.R"))
+source(file.path(root_dir,"dashboard/study_management/data_management_functions.R"))
+source(file.path(root_dir,"EEG_Dashboard.R"))
+source(file.path(root_dir,"ECG_Dashboard.R"))
 ###Dependent functions:
 require(lubridate)
 if (FALSE) {
@@ -16,7 +16,7 @@ if (FALSE) {
     if(dj == "video") {
       pat = ".*.mp4"
     } else {
-      pat = ".db"
+      pat = "*.db"
     }
     do.call(rbind,lapply(list_id,function(idx){
       db_files<-list.files(file.path(root_dir,idx,dj),pattern = pat,full.names = T,recursive = F,include.dirs = F)
@@ -107,10 +107,12 @@ proc_schedule <- function(schedule_df = NULL,tz="EST") {
   overall_info$completed_session <- aggregate(session_number ~ ID,data = sample_info[!is.na(sample_info$completed_time),],FUN = max)$session_number
 
   pr_info_subjwise <-  do.call(rbind,lapply(proc_data,`[[`,"performance_overall"))
+  q_summary <-  do.call(rbind,lapply(proc_data,`[[`,"form_summary"))
 
   return(list(proc_data=proc_data,
               subj_info = sp_info_sq,sample_info_df=overall_info,
-              subj_performance = performance_info, sample_performance = pr_info_subjwise))
+              subj_performance = performance_info, sample_performance = pr_info_subjwise,
+              sample_form_summary = q_summary))
 }
 
 proc_schedule_single <- function(raw_single,tz="EST") {
@@ -219,6 +221,9 @@ proc_schedule_single <- function(raw_single,tz="EST") {
       return(NA)
     }
   },USE.NAMES = F)
+
+
+  #### Session information data frame ####
   session_info_df <- raw_single$questionnaires
   session_info_df <- session_info_df[order(session_info_df$scheduled_time),]
   session_info_df$duration<-difftime(session_info_df$completed_time,session_info_df$start_time,units = "mins")
@@ -226,32 +231,97 @@ proc_schedule_single <- function(raw_single,tz="EST") {
   session_info_df$spec <- unlist(apply(session_info_df[c("type","number","description")],1,list),recursive = F)
   session_info_df<-session_info_df[c("session_number","scheduled_time","start_time","completed_time","duration","delay","spec")]
   session_info_df$type <- "questionnaires"
+
+  #######Info session##########
+  info_df <- rbind(session_info_df,trial_info_df)
+  info_df <- info_df[order(info_df$scheduled_time),]
+  info_df$ID <- raw_single$ID
+  rownames(info_df) <- NULL
+  rownames(pr_info_by_block) <- NULL
+
+  #Get start date:
+  startdate <- as.Date(info_df$scheduled_time[1])
+  ##Set start date stuff to be session 0
+  info_df$session_number[as.Date(info_df$scheduled_time) == startdate] <- 0
+
   #update answer DF as well"
   raw_single$answers$session_number<-session_info_df$session_number[match(round(as.numeric(raw_single$answers$answer_time,0)),round(as.numeric(session_info_df$completed_time),0))]
   ##Part II: proc answer df:
   ##Proc questionnaire data here: not yet
-  #######SKIP########
+  #Find answer:
+  form_data <- raw_single$answers
+  form_data <- form_data[form_data$answer!="",]
+  form_data$answer_prog <- text_proc(form_data$answer)
+  fdata_sp <- split(form_data,form_data$questionnaire_name)
+  #proc all the other first
+  form_proc <- lapply(fdata_sp[names(fdata_sp)!="Mood Questionnaire"],function(tkd){
+    #print(unique(tkd$questionnaire_name))
+    tke<-do.call(rbind,lapply(tkd$answer_prog,as.data.frame,sep="_"))
+    names(tke)<-gsub(".","_",names(tke),fixed = T)
+    tkf <- cbind(tkd[c("questionnaire_name","questionnaire_type","answer_time","session_number")],tke)
+    tkf$ID <- raw_single$ID
+    return(tkf)
+  })
+  names(form_proc) <- names(fdata_sp)[names(fdata_sp)!="Mood Questionnaire"]
+  form_proc$`Mood Questionnaire` <- do.call(rbind,lapply(split(fdata_sp$`Mood Questionnaire`,fdata_sp$`Mood Questionnaire`$questionnaire_number),function(mda){
+    #print(unique(mda$questionnaire_number))
+    mdb<-do.call(cbind,lapply(mda$answer_prog[mda$question %in% c(0,1)],as.data.frame))
+    if(is.null(names(mda$answer_prog[[which(mda$question=="2")]]))) {
+      md_evt <- do.call(rbind,lapply(mda$answer_prog[[which(mda$question=="2")]],as.data.frame))
+    } else {
+      md_evt <- as.data.frame(mda$answer_prog[[which(mda$question=="2")]])
+    }
+
+    names(md_evt)[names(md_evt)=="V_1"] <- "description"
+    names(md_evt)[names(md_evt)=="V_2"] <- "time_ago"
+    if(is.null(md_evt$category)) {
+      md_evt$category <- "event/activity:unknown"
+    }
+    names(md_evt)<-gsub(".","_",names(md_evt),fixed = T)
+    mdb$event_df <- list(event_df=md_evt)
+    mdb$number_of_events <- nrow(mdb$event_df$event_df)
+    mdc <- cbind(mda[1,c("questionnaire_name","questionnaire_type","answer_time","session_number")],mdb)
+    mdc$ID <- raw_single$ID
+    return(mdc)
+  }))
+  form_proc$`Mood Questionnaire`$v_a_distance <- sqrt((as.numeric(form_proc$`Mood Questionnaire`$Valence)^2) + (as.numeric(form_proc$`Mood Questionnaire`$Arousal)^2) )
+  ##summary stats for how much they answered
+  q_sum <- data.frame(ID = raw_single$ID,val_arr_dis_avg = mean(form_proc$`Mood Questionnaire`$v_a_distance,na.rm = T))
+  e_sum <- data.frame(as.list(apply(form_proc$`Mood Questionnaire`[c("Anxious","Elated","Sad","Irritable","Energetic")],2,function(x){mean(as.numeric(x),na.rm = T)})))
+  names(e_sum) <- paste(names(e_sum),"avg",sep = "_")
+  s_sum <- data.frame(as.list(apply(form_proc$`Sleep Diary`[c("sleep_latency","woke_many_times","woke_early","overall")],2,function(x){mean(as.numeric(x),na.rm = T)})))
+  names(s_sum) <- paste(names(s_sum),"avg",sep = "_")
+
+  q_sum <- cbind(q_sum,e_sum,s_sum)
+  q_sum$emo_rate_avg <- mean(unlist(e_sum),na.rm = T)
+  q_sum$sleep_di_avg <- mean(unlist(s_sum),na.rm = T)
+  q_sum$val_emo_cor <- cor(apply(form_proc$`Mood Questionnaire`[c("Anxious","Elated","Sad","Irritable","Energetic")],1,function(x){mean(as.numeric(x),na.rm = T)}),form_proc$`Mood Questionnaire`$v_a_distance)
   ###return proc_answer object###########
-  info_df <- rbind(session_info_df,trial_info_df)
-  info_df <- info_df[order(info_df$scheduled_time),]
-  info_df$ID <- raw_single$ID
+
+
   pr_info_by_block$ID <- raw_single$ID
-  rownames(info_df) <- NULL
-  rownames(pr_info_by_block) <- NULL
   raw_single$trials <- trials_1
 
-  return(list(raw_data=raw_single,info_df = info_df,performance_info=pr_info_by_block,performance_overall=px_overall,sID=raw_single$ID))
+  return(list(raw_data=raw_single,
+              info_df = info_df,
+              performance_info=pr_info_by_block,performance_overall=px_overall,
+              form_dfs=form_proc,form_summary=q_sum,
+              sID=raw_single$ID))
 }
-
-proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST",
+####Proc physio
+proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4,
                         eeg_sample_rate=256.03, sd_times=10, eeg_pre=500,eeg_post=1500, #EEG options
                         ecg_sample_rate = 100, HRstep = 10, ecg_pre=1000,ecg_post=10000 #ECG options
                         ) {
-
+  if (.Platform$OS.type == "windows") {
+    message("Forking is not available on windows. Parallelization will be turned off.")
+    thread=1
+  }
+  par_cl <- parallel::makeCluster(spec = thread,type = "FORK")
   exp_out<-lapply(unique(physio_df$subject_id),function(IDx){
     print(IDx)
     #Load the physio data
-    physio_concat <- load_physio_single(physio_df$file_path[physio_df$subject_id==IDx])
+    physio_concat <- load_physio_single(physio_df$file_path[physio_df$subject_id==IDx],cl = par_cl)
     #Get the matching behavioral data
     behav_df <- output$proc_data[[IDx]]$raw_data$trials
     behav_df <- behav_df[which(!is.na(behav_df$stim_time)),]
@@ -289,7 +359,7 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST",
     return(list(eeg_proc = eeg_raw,eeg_fb = eeg_proc, eeg_summary = eeg_summary, eeg_ov = eeg_ov,
            ecg_proc = ecg_raw,ecg_fb = ecg_fb, ecg_summary = ecg_summary, ecg_ov = ecg_ov))
   })
-
+  parallel::stopCluster(par_cl)
   nax <- c("proc","fb","summary")
   IDlist <- unique(physio_df$subject_id)
   output_fin<-lapply(c("eeg","ecg"),function(ay){
@@ -306,8 +376,12 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST",
   return(output_fin)
 }
 
-load_physio_single <- function(allpaths_sub) {
-  all_dt <- lapply(allpaths_sub,load_db,table_names=c("EEG_muse","Polar_heartrate"))
+load_physio_single <- function(allpaths_sub,cl=NULL) {
+  if(is.null(cl)) {
+    all_dt <- lapply(allpaths_sub,load_db,table_names=c("EEG_muse","Polar_heartrate"))
+  } else {
+    all_dt <- parallel::parLapply(cl,allpaths_sub,load_db,table_names=c("EEG_muse","Polar_heartrate"))
+  }
   eeg_aggregate <- do.call(rbind,lapply(all_dt,`[[`,"EEG_muse"))
   eeg_aggregate <- eeg_aggregate[order(eeg_aggregate$recording_time),]
   ecg_aggregate <- do.call(rbind,lapply(all_dt,`[[`,"Polar_heartrate"))
@@ -315,9 +389,41 @@ load_physio_single <- function(allpaths_sub) {
   return(list(eeg=eeg_aggregate,ecg=ecg_aggregate))
 }
 
+###Proc questionnaire, just in case it gets complicated:
+text_proc <- function(input_text = NULL) {
+  type_indx <- rep(NA,length(input_text))
+  output_ls <- as.list(rep(NA,length(input_text)))
+  ###Get the video string:
+  ###It could be faster to not use index, however, some gsub might work differently
+  type_indx[grepl(".mp4",input_text,fixed = T)] <- "video"
+  type_indx[grepl("\t",input_text,fixed = T)] <- "tx1"
+  type_indx[grepl(", ",input_text,fixed = T)] <- "tx2"
+  type_indx[grepl("\n",input_text,fixed = T)] <- "ls1"
+  type_indx[grepl("category=",input_text,fixed = T)] <-"ls2"
 
+  output_ls[type_indx=="video"]<-sapply(input_text[type_indx=="video"],list,USE.NAMES = F)
+  output_ls[type_indx=="tx1"]<-lapply(strsplit(input_text[type_indx=="tx1"],"\t"),split_n_name)
+  output_ls[type_indx=="tx2"]<-lapply(strsplit(input_text[type_indx=="tx2"],", "),split_n_name)
+  output_ls[type_indx=="ls1"]<-lapply(strsplit(input_text[type_indx=="ls1"],"\n"),function(x){
+    lapply(strsplit(x,"\t"),split_n_name)
+  })
+  input_text[type_indx=="ls2"] <- gsub("\ncategory=","/NTcategory=",input_text[type_indx=="ls2"],fixed=T)
+  output_ls[type_indx=="ls2"]<-lapply(strsplit(input_text[type_indx=="ls2"],"/NT"),function(x){
+    lapply(strsplit(gsub("\n",":",x),","),split_n_name)
+  })
+  if(any(is.na(type_indx))) {
+    message("Unsupported string input")
+  }
+  return(output_ls)
+}
 
-
+split_n_name <- function(x){
+  names(x) <- paste("V",1:length(x),sep = "_")
+  cp <- strsplit(x[grepl("=",x)],"=")
+  names(x)[grepl("=",x)]<-sapply(cp,`[[`,1)
+  x[grepl("=",x)]<-sapply(cp,`[[`,2)
+  return(as.list(x))
+}
 
 
 
