@@ -9,14 +9,14 @@ if(FALSE) {
   HRstep <- 10
   sample_rate <- 100
   
-  behavior = dbConnect(SQLite(), "Mandy_schedule.db")
+  behavior = dbConnect(SQLite(), "123_schedule.db")
   trials = dbGetQuery(behavior, "SELECT * FROM trials")
   ## remove blocks that have not been played yet
   if (length(which(is.na(trials$choice)))!=0){
     trials=trials[-c(which(is.na(trials$choice))),]}
   fbt <- trials$feedback_time
   
-  ECG = dbConnect(SQLite(), "Mandy_physio.db")
+  ECG = dbConnect(SQLite(), "123_physio.db")
   ECGd = dbGetQuery(ECG,"SELECT time_ms, rr_intervals, heartrate, contact FROM Polar_heartrate ORDER BY time_ms ASC")
   
   
@@ -201,6 +201,7 @@ load_ECG <- function(ECGd = NULL, HRstep = 10, sample_rate = 100) {
   }
   
   if (length(isplit)>0){
+    I0 <- NULL
     HRsplit <- matrix(list(),length(isplit)+1,2)
     HRsplit[[1,1]] <- hrt1[1:(isplit[1]-1)]
     HRsplit[[1,2]] <- intervals[1:(isplit[1]-1)]
@@ -222,11 +223,13 @@ load_ECG <- function(ECGd = NULL, HRstep = 10, sample_rate = 100) {
   
     
   # merge sections
+if (!nosplit){
   wiggleroom <- NULL
   beattimes <- matrix(list(),nrow(HRsplit),1)
   times1 <- matrix(list(),nrow(HRsplit),1)
   intervals1 <- matrix(list(),nrow(HRsplit),1)
   rate1 <- matrix(list(),nrow(HRsplit),1)
+  iD <- 1;
   for (i in 1:nrow(HRsplit)){
     if ((sum(HRsplit[[i,2]]>0)>=2) & !nosplit){
       timings <- correctTimings(HRsplit[[i,1]],HRsplit[[i,2]])
@@ -235,9 +238,10 @@ load_ECG <- function(ECGd = NULL, HRstep = 10, sample_rate = 100) {
       times1[[i,1]] <- output[,1]
       intervals1[[i,1]] <- output[,2]
       rate1[[i,1]] <- output[,3]
-      iD = iD+1;
+      iD <- iD+1;
     }
   }
+}
   if ((sum(I0>0)>=2) & nosplit){
     beattimes <- matrix(list(),length(t0),1)
     timings <- correctTimings(t0,I0)
@@ -342,7 +346,7 @@ ecg_epochs_around_feedback <- function(ECG_data,fbt,pre=1000,post=10000,sample_r
     Ta <- Ta + aL
     
     if (aL > 0){
-      ch1_a2f[i,] <- c(Ch1[ind],addpost)
+      ch1_a2f[i,1:length(ind)] <- Ch1[ind]
     }
   }
   ch1_a2f <- as.data.frame(ch1_a2f)
