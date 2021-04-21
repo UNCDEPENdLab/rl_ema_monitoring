@@ -295,6 +295,7 @@ proc_schedule_single <- function(raw_single,tz="EST") {
   q_sum <- cbind(q_sum,e_sum,s_sum)
   q_sum$emo_rate_avg <- mean(unlist(e_sum),na.rm = T)
   q_sum$sleep_di_avg <- mean(unlist(s_sum),na.rm = T)
+  q_sum$avg_evt_num <- mean(form_proc$`Mood Questionnaire`$number_of_events)
   q_sum$val_emo_cor <- cor(apply(form_proc$`Mood Questionnaire`[c("Anxious","Elated","Sad","Irritable","Energetic")],1,function(x){mean(as.numeric(x),na.rm = T)}),form_proc$`Mood Questionnaire`$v_a_distance)
   ###return proc_answer object###########
 
