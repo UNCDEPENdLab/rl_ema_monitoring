@@ -5,36 +5,41 @@
 library("RSQLite")
 library("dplyr")
 
+#compile and source C++ functions if not already in cache
+#Rcpp::sourceCpp("data_utils/timings2samples_cpp.cpp", cacheDir = getwd()) #not used at present because slower than block-wise
+Rcpp::sourceCpp("data_utils/timings2samples_block_cpp.cpp", cacheDir = getwd())
+
+
 if(FALSE) {
   HRstep <- 10
   sample_rate <- 100
-  
+
   behavior = dbConnect(SQLite(), "123_schedule.db")
   trials = dbGetQuery(behavior, "SELECT * FROM trials")
   ## remove blocks that have not been played yet
   if (length(which(is.na(trials$choice)))!=0){
     trials=trials[-c(which(is.na(trials$choice))),]}
   fbt <- trials$feedback_time
-  
+
   ECG = dbConnect(SQLite(), "123_physio.db")
   ECGd = dbGetQuery(ECG,"SELECT time_ms, rr_intervals, heartrate, contact FROM Polar_heartrate ORDER BY time_ms ASC")
-  
-  
+
+
 }
 
 correctTimings <- function(times, intervals){
   # correct timings
-  
+
   #mismatch function
   mismatch <- function(shift=0, x, y){
     y <- y + shift #apply shift to one series
     z <- sum( ((x-y) > 1000) * (x-y-1000) + (x-y < 0) * (y-x))
     return(z)
   }
-  
+
   times <- as.matrix(times)
   intervals <- as.matrix(intervals)
-  
+
   nz1 <- which(intervals != 0)[1]
   if (is.na(nz1)){
     timings <- NULL
@@ -65,12 +70,12 @@ correctTimings <- function(times, intervals){
     timings <- timings + mean(shft)
     wiggleroom <- length(shft)
   }
-  
+
   return(timings)
 }
 
 
-timings2samples <- function(timings,HRstep){
+timings2samples <- function(timings,HRstep) {
   i <- 0
   start <- ceiling(timings[1]/HRstep) * HRstep
   times <- NULL
@@ -80,11 +85,34 @@ timings2samples <- function(timings,HRstep){
     i <- i+1
     times[i] <- t
     ind <- which(timings > t)[1]
-    if (length(ind)>0){
+    if (length(ind)>0) {
       intervals[i] <- timings[ind]-timings[ind-1]
       rate[i] <- 60000/intervals[i]
     }
   }
+  output <- cbind(times,intervals,rate)
+  return(output)
+}
+
+
+# Alter the logic of the algorithm to work by timings, not the upsampled time grid.
+# This lets you fill in large chunks of the vector and to loop over the number of timings
+# (in the hundreds) rather than the time grid (in the thounsands)
+timings2samples_block_r <- function(timings,HRstep) {
+  start <- ceiling(timings[1]/HRstep) * HRstep
+  times <- seq(start, timings[length(timings)], by=HRstep) #don't copy each element in a loop (slow!)
+  nt <- length(timings)
+  intervals <- rep(NA, length(times))
+  offset <- 0
+  tdiff <- c(diff(timings), 0)
+  for (tt in 1:(nt-1)) {
+    last <- max(which(times < timings[tt+1]))
+    intervals[(offset+1):last] <- tdiff[tt]
+    offset <- last
+  }
+
+  rate <- 60000/intervals #vectorize the calculation of rates
+
   output <- cbind(times,intervals,rate)
   return(output)
 }
@@ -99,15 +127,15 @@ load_ECG <- function(ECGd = NULL, HRstep = 10, sample_rate = 100) {
   intervals <- data.frame("intervals"=numeric(0))
   hrt1 <- data.frame("time"=numeric(0))
   hr1 <- data.frame("heart_rate"=numeric(0))
-  
-  for (i in 1:nD){
+
+  for (i in 1:nD) {
     temp1 <- strsplit(ECGd$rr_intervals[i],"\\[")
     temp2 <- strsplit(temp1[[1]][2],"]")
-    
+
     if (is.na(temp2)){
       temp2 <- "0"
     }
-    
+
     if (any(grepl(",",temp2[[1]][1]))){
       temp3 <- strsplit(temp2[[1]][1],",")
       for (j in 1:length(temp3[[1]])){
@@ -115,14 +143,14 @@ load_ECG <- function(ECGd = NULL, HRstep = 10, sample_rate = 100) {
         hrt1 <- hrt1 %>% dplyr::add_row("time"=hrt$time[i])
         hr1 <- hr1 %>% dplyr::add_row("heart_rate"=hr$heart_rate[i])
       }
-      
+
     } else {
       intervals <- intervals %>% dplyr::add_row("intervals"=as.numeric(temp2))
       hrt1 <- hrt1 %>% dplyr::add_row("time"=hrt$time[i])
       hr1 <- hr1 %>% dplyr::add_row("heart_rate"=hr$heart_rate[i])
     }
   }
-  
+
   # find irregular times
   difftimes <- hrt1 %>% mutate(hrt1-lag(hrt1))
   difftimes <- difftimes[-c(1),]
@@ -138,10 +166,10 @@ load_ECG <- function(ECGd = NULL, HRstep = 10, sample_rate = 100) {
     }
     i = i+1
   }
-  
+
   intervals <- intervals * 1000/1024
   intervals[is.na(intervals)]=0
-  
+
   # find discontinuities and split to sections
   hrt1 <- as.data.frame(hrt1)
   difftimes <- hrt1 %>% mutate(hrt1-lag(hrt1))
@@ -155,11 +183,11 @@ load_ECG <- function(ECGd = NULL, HRstep = 10, sample_rate = 100) {
   isplit <- which(abs(deviations)>1000)+1
   isplit <- ilast[isplit]
   minseg <- 10
-  
+
   hr1 <- as.matrix(hr1)
   hrt1 <- as.matrix(hrt1)
   intervals <- as.matrix(intervals)
-  
+
   while (length(isplit)>0 & isplit[1] < minseg){
     hrt1 <- hrt1[-c(1:(isplit[1]-1))]
     hr1 <- hr1[-c(1:(isplit[1]-1))]
@@ -167,16 +195,16 @@ load_ECG <- function(ECGd = NULL, HRstep = 10, sample_rate = 100) {
     isplit <- isplit - isplit[1] +1
     isplit <- isplit[-c(1)]
   }
-  
+
   todelete <- NULL
   iC <- 1
-  
+
   ####ISSUE!!!!!#####
   ####Special case for the dataset "123"
   ##If isplit is of lenght of zero, the it will stop...
   ###The syntax also wouldn't allow for isplit == 1, because i in 1:0 is not gonna work.
   ###################
-  
+
   if (length(isplit)>0){
     todelete <- NULL
     iC <- 1
@@ -187,7 +215,7 @@ load_ECG <- function(ECGd = NULL, HRstep = 10, sample_rate = 100) {
       }
     }
   }
-  
+
   if (length(isplit)>0){
     for (i in 1:length(todelete)){
       inds <- isplit[(todelete[i]-1)]:isplit[todelete[i]]-1
@@ -199,7 +227,7 @@ load_ECG <- function(ECGd = NULL, HRstep = 10, sample_rate = 100) {
       todelete <- todelete-1
     }
   }
-  
+
   if (length(isplit)>0){
     I0 <- NULL
     HRsplit <- matrix(list(),length(isplit)+1,2)
@@ -219,9 +247,9 @@ load_ECG <- function(ECGd = NULL, HRstep = 10, sample_rate = 100) {
       nosplit = TRUE
     }
   }
-  
-  
-    
+
+
+
   # merge sections
 if (!nosplit){
   wiggleroom <- NULL
@@ -234,7 +262,7 @@ if (!nosplit){
     if ((sum(HRsplit[[i,2]]>0)>=2) & !nosplit){
       timings <- correctTimings(HRsplit[[i,1]],HRsplit[[i,2]])
       beattimes[[i,1]] <- timings
-      output <- timings2samples(timings,HRstep=10)
+      output <- timings2samples_block_cpp(timings,HRstep=10)
       times1[[i,1]] <- output[,1]
       intervals1[[i,1]] <- output[,2]
       rate1[[i,1]] <- output[,3]
@@ -246,15 +274,15 @@ if (!nosplit){
     beattimes <- matrix(list(),length(t0),1)
     timings <- correctTimings(t0,I0)
     beattimes <- timings
-    output <- timings2samples(timings,HRstep=10)
+    output <- timings2samples_block_cpp(timings,HRstep=10)
     times1 <- output[,1]
     intervals1 <- output[,2]
     rate1 <- output[,3]
   }
-  
+
   # check
   stopifnot(length(beattimes)==length(times1) | length(times1)==length(intervals1) | length(intervals1)==length(rate1))
-  
+
   # merge data
   if (!nosplit){
     times2 <- as.vector(times1[[1,1]])
@@ -301,9 +329,9 @@ if (!nosplit){
         rate2[(length(rate2)+1):(length(rate2)+length(temp_rate))] <- temp_rate
       }
     }
-    
+
   }
-  
+
   ECG_data <- data.frame(times=times2,rate=rate2)
   return(ECG_data)
 }
@@ -315,10 +343,10 @@ ecg_epochs_around_feedback <- function(ECG_data,fbt,pre=1000,post=10000,sample_r
   post <- round(post/step,0)
   Td <- 0
   Ta <- 0
-  
+
   Ch1 <- ECG_data$rate
   rrt <- ECG_data$times
-  
+
   ch1_a2f <- matrix(NA,nrow=length(fbt),ncol=pre+post+1);
   for (i in 1:length(fbt)){
     fbt0 <- which(rrt>fbt[i])
@@ -331,7 +359,7 @@ ecg_epochs_around_feedback <- function(ECG_data,fbt,pre=1000,post=10000,sample_r
     }
     dL <- pre+1+post
     aL <- length(ind)
-    
+
     if (length(ind)>0){
       if (ind[length(ind)] > length(rrt)){
         addpost <- ind[length(ind)] - length(rrt)
@@ -344,13 +372,13 @@ ecg_epochs_around_feedback <- function(ECG_data,fbt,pre=1000,post=10000,sample_r
     }
     Td <- Td + dL
     Ta <- Ta + aL
-    
+
     if (aL > 0){
       ch1_a2f[i,1:length(ind)] <- Ch1[ind]
     }
   }
   ch1_a2f <- as.data.frame(ch1_a2f)
-  
+
   return(ch1_a2f) # rows = number of trials, columns = number of timestamps
 }
 
@@ -359,7 +387,7 @@ ecg_epochs_around_feedback <- function(ECG_data,fbt,pre=1000,post=10000,sample_r
 get_good_ECG <- function(blocks,a2f){
   nbl <- unique(blocks)
   ch1_a2f <- as.matrix(a2f)
-  
+
   Ngood1 <- NULL
   Ntotal <- NULL
   perGood <- NULL
