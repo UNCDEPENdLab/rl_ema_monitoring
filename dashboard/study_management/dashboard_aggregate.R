@@ -1,5 +1,6 @@
 ####Souce dependent functions:
-root_dir = getwd()
+#root_dir = getwd()
+root_dir = dirname(dirname(getwd()))
 
 source(file.path(root_dir,"dashboard/study_management/data_management_functions.R"))
 source(file.path(root_dir,"EEG_Dashboard.R"))
@@ -32,7 +33,7 @@ if (FALSE) {
   #########END########
 
   #example for proc_schedule:
-  output<-proc_schedule(schedule_df = path_info$schedule)
+  output <- proc_schedule(schedule_df = path_info$schedule,tz="EST",days_limit=60)
   ##Output a list of :
   output$proc_data #is a list with a length equal to the number of db files, include data imported from db
   output$subj_info #is a list with a length equal to the number of subjects, include subject information on compliance
@@ -87,14 +88,14 @@ ms_to_date = function(ms, t0="1970-01-01", timezone) {
   as.POSIXct(sec, origin=t0, tz=timezone)
 }
 
-proc_schedule <- function(schedule_df = NULL,tz="EST") {
+proc_schedule <- function(schedule_df = NULL,days_limit=60,tz="EST") {
   #load in data using shane's function
   raw_data <- lapply(1:nrow(schedule_df),function(i){
-    db_raw <- getSchedDataItem(subjID = schedule_df$subject_id[[i]],abs_path = schedule_df$file_path[[i]])
+    db_raw <- getSchedDataItem(subjID = schedule_df$subject_id[[i]]) # ,abs_path = schedule_df$file_path[[i]]
     db_raw$ID <- schedule_df$subject_id[[i]]
     return(db_raw)
   })
-  proc_data <- lapply(raw_data,proc_schedule_single,tz=tz)
+  proc_data <- lapply(raw_data,proc_schedule_single,tz=tz,days_limit=days_limit)
   names(proc_data) <- sapply(proc_data,`[[`,"sID")
   ####do more aggregation here:
   #####NEED MORE SUBJ DATA FOR AGGREGATION########
@@ -115,7 +116,8 @@ proc_schedule <- function(schedule_df = NULL,tz="EST") {
               sample_form_summary = q_summary))
 }
 
-proc_schedule_single <- function(raw_single,tz="EST") {
+proc_schedule_single <- function(raw_single,days_limit=60,tz="EST") {
+  print(raw_single$ID)
   ###NO TIMEZONE INFORMATION!!!!Using EST at the moment;
   raw_single$sessions$start_timestamp<-lubridate::parse_date_time(raw_single$sessions$start_timestamp,"%b $d, %Y %I:%M:%S %p",tz = tz)
   raw_single$sessions$stop_timestamp<-lubridate::parse_date_time(raw_single$sessions$stop_timestamp,"%b $d, %Y %I:%M:%S %p",tz=tz)
@@ -239,10 +241,16 @@ proc_schedule_single <- function(raw_single,tz="EST") {
   rownames(info_df) <- NULL
   rownames(pr_info_by_block) <- NULL
 
-  #Get start date:
+  ##Get start date:
   startdate <- as.Date(info_df$scheduled_time[1])
   ##Set start date stuff to be session 0
   info_df$session_number[as.Date(info_df$scheduled_time) == startdate] <- 0
+  ##do a date session match:
+  date_sess_match_df <- data.frame(date=unique(as.Date(info_df$scheduled_time)),days=unique(as.Date(info_df$scheduled_time)) - startdate,stringsAsFactors = F)
+  date_sess_match_df <- date_sess_match_df[date_sess_match_df$days<=days_limit,]
+  ##
+
+
 
   #update answer DF as well"
   raw_single$answers$session_number<-session_info_df$session_number[match(round(as.numeric(raw_single$answers$answer_time,0)),round(as.numeric(session_info_df$completed_time),0))]
@@ -254,36 +262,43 @@ proc_schedule_single <- function(raw_single,tz="EST") {
   form_data$answer_prog <- text_proc(form_data$answer)
   fdata_sp <- split(form_data,form_data$questionnaire_name)
   #proc all the other first
-  form_proc <- lapply(fdata_sp[names(fdata_sp)!="Mood Questionnaire"],function(tkd){
-    #print(unique(tkd$questionnaire_name))
-    tke<-do.call(rbind,lapply(tkd$answer_prog,as.data.frame,sep="_"))
-    names(tke)<-gsub(".","_",names(tke),fixed = T)
-    tkf <- cbind(tkd[c("questionnaire_name","questionnaire_type","answer_time","session_number")],tke)
+  form_proc <- lapply(fdata_sp,function(tkd){
+    if(unique(tkd$questionnaire_name) %in% c("Mood Questionnaire","Sleep Diary")) {
+      evt_q_index <- ifelse(unique(tkd$questionnaire_name) == "Mood Questionnaire",2,1)
+      tkf<-do.call(rbind,lapply(split(tkd,tkd$questionnaire_number),function(mda){
+        mdb<-do.call(cbind,lapply(mda$answer_prog[mda$question!=evt_q_index],as.data.frame))
+        if(evt_q_index %in% mda$question) {
+          ###Event df proc
+          if(is.null(names(mda$answer_prog[[which(mda$question==evt_q_index)]]))) {
+            md_evt <- do.call(rbind,lapply(mda$answer_prog[[which(mda$question==evt_q_index)]],as.data.frame))
+          } else {
+            md_evt <- as.data.frame(mda$answer_prog[[which(mda$question==evt_q_index)]])
+          }
+
+          names(md_evt)[names(md_evt)=="V_1"] <- "description"
+          names(md_evt)[names(md_evt)=="V_2"] <- "time_ago"
+          if(is.null(md_evt$category)) {
+            md_evt$category <- "event/activity:unknown"
+          }
+          names(md_evt)<-gsub(".","_",names(md_evt),fixed = T)
+          mdb$event_df <- list(event_df=md_evt)
+          mdb$number_of_events <- nrow(mdb$event_df$event_df)
+        } else {
+          mdb$event_df <- NA
+          mdb$number_of_events <- 0
+        }
+        mdc <- cbind(mda[1,c("questionnaire_name","questionnaire_type","answer_time","session_number")],mdb)
+        return(mdc)
+      }))
+    } else {
+      tke<-do.call(rbind,lapply(tkd$answer_prog,as.data.frame,sep="_"))
+      tkf <- cbind(tkd[c("questionnaire_name","questionnaire_type","answer_time","session_number","question")],tke)
+    }
+    names(tkf)<-gsub(".","_",names(tkf),fixed = T)
     tkf$ID <- raw_single$ID
     return(tkf)
   })
-  names(form_proc) <- names(fdata_sp)[names(fdata_sp)!="Mood Questionnaire"]
-  form_proc$`Mood Questionnaire` <- do.call(rbind,lapply(split(fdata_sp$`Mood Questionnaire`,fdata_sp$`Mood Questionnaire`$questionnaire_number),function(mda){
-    #print(unique(mda$questionnaire_number))
-    mdb<-do.call(cbind,lapply(mda$answer_prog[mda$question %in% c(0,1)],as.data.frame))
-    if(is.null(names(mda$answer_prog[[which(mda$question=="2")]]))) {
-      md_evt <- do.call(rbind,lapply(mda$answer_prog[[which(mda$question=="2")]],as.data.frame))
-    } else {
-      md_evt <- as.data.frame(mda$answer_prog[[which(mda$question=="2")]])
-    }
 
-    names(md_evt)[names(md_evt)=="V_1"] <- "description"
-    names(md_evt)[names(md_evt)=="V_2"] <- "time_ago"
-    if(is.null(md_evt$category)) {
-      md_evt$category <- "event/activity:unknown"
-    }
-    names(md_evt)<-gsub(".","_",names(md_evt),fixed = T)
-    mdb$event_df <- list(event_df=md_evt)
-    mdb$number_of_events <- nrow(mdb$event_df$event_df)
-    mdc <- cbind(mda[1,c("questionnaire_name","questionnaire_type","answer_time","session_number")],mdb)
-    mdc$ID <- raw_single$ID
-    return(mdc)
-  }))
   form_proc$`Mood Questionnaire`$v_a_distance <- sqrt((as.numeric(form_proc$`Mood Questionnaire`$Valence)^2) + (as.numeric(form_proc$`Mood Questionnaire`$Arousal)^2) )
   ##summary stats for how much they answered
   q_sum <- data.frame(ID = raw_single$ID,val_arr_dis_avg = mean(form_proc$`Mood Questionnaire`$v_a_distance,na.rm = T))
@@ -296,6 +311,7 @@ proc_schedule_single <- function(raw_single,tz="EST") {
   q_sum$emo_rate_avg <- mean(unlist(e_sum),na.rm = T)
   q_sum$sleep_di_avg <- mean(unlist(s_sum),na.rm = T)
   q_sum$avg_evt_num <- mean(form_proc$`Mood Questionnaire`$number_of_events)
+  q_sum$avg_sleep_evt_num <- mean(form_proc$`Sleep Diary`$number_of_events)
   q_sum$val_emo_cor <- cor(apply(form_proc$`Mood Questionnaire`[c("Anxious","Elated","Sad","Irritable","Energetic")],1,function(x){mean(as.numeric(x),na.rm = T)}),form_proc$`Mood Questionnaire`$v_a_distance)
   ###return proc_answer object###########
 
@@ -330,7 +346,7 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
 
     ###EEG
     eeg_raw <- load_EEG(EEGd = physio_concat$eeg,sample_rate = eeg_sample_rate,sd_times = sd_times)
-    eeg_proc <- eeg_epochs_around_feedback(EEG_data = eeg_raw,
+    eeg_fb <- eeg_epochs_around_feedback(EEG_data = eeg_raw,
                                            pre = eeg_pre,post = eeg_post,sample_rate = eeg_sample_rate,
                                            fbt = as.numeric(behav_df$feedback_time)*1000)
     eeg_rawsum <- get_good_EEG(blocks=behav_df$block,a2f=eeg_proc)
@@ -357,7 +373,7 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
     ecg_ov <- aggregate(per_Good ~ ID,data = ecg_summary,FUN = mean,na.rm=T)
     ecg_ov$worst_allblocks <- min(ecg_summary$per_Good)
 
-    return(list(eeg_proc = eeg_raw,eeg_fb = eeg_proc, eeg_summary = eeg_summary, eeg_ov = eeg_ov,
+    return(list(physio_raw=physio_concat,eeg_proc = eeg_raw,eeg_fb = eeg_fb, eeg_summary = eeg_summary, eeg_ov = eeg_ov,
            ecg_proc = ecg_raw,ecg_fb = ecg_fb, ecg_summary = ecg_summary, ecg_ov = ecg_ov))
   })
   parallel::stopCluster(par_cl)
