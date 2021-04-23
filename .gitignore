@@ -15,3 +15,4 @@ conda-env
 .DS_Store
 .Rdata
 *.Rproj
+*.Rdata

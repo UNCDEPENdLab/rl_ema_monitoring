@@ -1,5 +1,6 @@
 ####Souce dependent functions:
-root_dir = getwd()
+#root_dir = getwd()
+root_dir = dirname(dirname(getwd()))
 
 source(file.path(root_dir,"dashboard/study_management/data_management_functions.R"))
 source(file.path(root_dir,"EEG_Dashboard.R"))
@@ -90,7 +91,7 @@ ms_to_date = function(ms, t0="1970-01-01", timezone) {
 proc_schedule <- function(schedule_df = NULL,days_limit=60,tz="EST") {
   #load in data using shane's function
   raw_data <- lapply(1:nrow(schedule_df),function(i){
-    db_raw <- getSchedDataItem(subjID = schedule_df$subject_id[[i]],abs_path = schedule_df$file_path[[i]])
+    db_raw <- getSchedDataItem(subjID = schedule_df$subject_id[[i]]) # ,abs_path = schedule_df$file_path[[i]]
     db_raw$ID <- schedule_df$subject_id[[i]]
     return(db_raw)
   })
