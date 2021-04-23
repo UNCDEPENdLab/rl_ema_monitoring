@@ -1,15 +1,18 @@
 # 2021-03-09 AndyP
 # This function analyzes ECG from an SQLlite .db file and extracts %avg per block for use in the Dashboard
 
-
 library("RSQLite")
 library("dplyr")
 
 #compile and source C++ functions if not already in cache
 #Rcpp::sourceCpp("data_utils/timings2samples_cpp.cpp", cacheDir = getwd()) #not used at present because slower than block-wise
-Rcpp::sourceCpp("data_utils/timings2samples_block_cpp.cpp", cacheDir = getwd())
 
+#set this to some path on your computer where the repo lives
+#the cache holds the compiled function so it doesn't have to recompile later
+repo_path <- "~/Data_Analysis/Momentum"
+Rcpp::sourceCpp(file.path(repo_path, "rl_ema_monitoring/data_utils/timings2samples_block_cpp.cpp"), cacheDir = getwd())
 
+#test case
 if(FALSE) {
   HRstep <- 10
   sample_rate <- 100
@@ -24,10 +27,9 @@ if(FALSE) {
   ECG = dbConnect(SQLite(), "123_physio.db")
   ECGd = dbGetQuery(ECG,"SELECT time_ms, rr_intervals, heartrate, contact FROM Polar_heartrate ORDER BY time_ms ASC")
 
-
 }
 
-correctTimings <- function(times, intervals){
+correctTimings <- function(times, intervals) {
   # correct timings
 
   #mismatch function
@@ -75,81 +77,24 @@ correctTimings <- function(times, intervals){
 }
 
 
-timings2samples <- function(timings,HRstep) {
-  i <- 0
-  start <- ceiling(timings[1]/HRstep) * HRstep
-  times <- NULL
-  intervals <- NULL
-  rate <- NULL
-  for (t in seq(from=start, to=timings[length(timings)], by=HRstep)){
-    i <- i+1
-    times[i] <- t
-    ind <- which(timings > t)[1]
-    if (length(ind)>0) {
-      intervals[i] <- timings[ind]-timings[ind-1]
-      rate[i] <- 60000/intervals[i]
-    }
-  }
-  output <- cbind(times,intervals,rate)
-  return(output)
-}
-
-
-# Alter the logic of the algorithm to work by timings, not the upsampled time grid.
-# This lets you fill in large chunks of the vector and to loop over the number of timings
-# (in the hundreds) rather than the time grid (in the thounsands)
-timings2samples_block_r <- function(timings,HRstep) {
-  start <- ceiling(timings[1]/HRstep) * HRstep
-  times <- seq(start, timings[length(timings)], by=HRstep) #don't copy each element in a loop (slow!)
-  nt <- length(timings)
-  intervals <- rep(NA, length(times))
-  offset <- 0
-  tdiff <- c(diff(timings), 0)
-  for (tt in 1:(nt-1)) {
-    last <- max(which(times < timings[tt+1]))
-    intervals[(offset+1):last] <- tdiff[tt]
-    offset <- last
-  }
-
-  rate <- 60000/intervals #vectorize the calculation of rates
-
-  output <- cbind(times,intervals,rate)
-  return(output)
-}
-
-
 load_ECG <- function(ECGd = NULL, HRstep = 10, sample_rate = 100) {
-  hrt <- as.data.frame(as.numeric(ECGd$time_ms));
-  hr <- as.data.frame(as.numeric(ECGd$heartrate));
-  colnames(hrt)[1] <- "time"
-  colnames(hr)[1] <- "heart_rate"
-  nD = nrow(ECGd)
-  intervals <- data.frame("intervals"=numeric(0))
-  hrt1 <- data.frame("time"=numeric(0))
-  hr1 <- data.frame("heart_rate"=numeric(0))
+  #Notes on expected data format for rr_intervals
+  # "" means that no RR was recorded (often when contact=='false') -> converted to 0
+  # [] indicates a blank RR -> converted to NA
+  # [number, number] indicates multiple events within a time interval -> expanded to elements of intervals
+  # [number] is a single interval -> expanded to one element of intervals
 
-  for (i in 1:nD) {
-    temp1 <- strsplit(ECGd$rr_intervals[i],"\\[")
-    temp2 <- strsplit(temp1[[1]][2],"]")
+  rr_parse <- gsub("^$", "0", ECGd$rr_intervals) #empty rows become 0
+  rr_parse <- gsub("[]", "NA", rr_parse, fixed=TRUE) #blank RRs become NA
+  rr_parse <- gsub("[\\[\\]]", "", rr_parse, perl=TRUE) #delete [ and ] from all strings to split
+  rr_list <- strsplit(rr_parse, "\\s*,\\s*", perl=TRUE) #split elements on comma
+  n_times <- sapply(rr_list, length) #count numbers in each rr_interval for replicating heartrate and time_ms
 
-    if (is.na(temp2)){
-      temp2 <- "0"
-    }
-
-    if (any(grepl(",",temp2[[1]][1]))){
-      temp3 <- strsplit(temp2[[1]][1],",")
-      for (j in 1:length(temp3[[1]])){
-        intervals <- intervals %>% dplyr::add_row("intervals"=as.numeric(temp3[[1]][j]))
-        hrt1 <- hrt1 %>% dplyr::add_row("time"=hrt$time[i])
-        hr1 <- hr1 %>% dplyr::add_row("heart_rate"=hr$heart_rate[i])
-      }
-
-    } else {
-      intervals <- intervals %>% dplyr::add_row("intervals"=as.numeric(temp2))
-      hrt1 <- hrt1 %>% dplyr::add_row("time"=hrt$time[i])
-      hr1 <- hr1 %>% dplyr::add_row("heart_rate"=hr$heart_rate[i])
-    }
-  }
+  #not sure why we need a one-column data.frame as opposed to just a vector, but leaving as-is
+  #consider changing intervals, hr1, hrt1 to vectors for simplicity?
+  intervals <- data.frame(intervals=type.convert(unlist(rr_list), na.strings = "NA"))
+  hr1 <- data.frame(heart_rate=rep(ECGd$heartrate, times=n_times))
+  hrt1 <- data.frame(time=as.numeric(rep(ECGd$time_ms, times=n_times))) #stored as integer64 internally? Just make it numeric
 
   # find irregular times
   difftimes <- hrt1 %>% mutate(hrt1-lag(hrt1))
@@ -405,6 +350,4 @@ get_good_ECG <- function(blocks,a2f){
   Ngood_df <- dplyr::tibble(per_Good=perGood,block=nbl)
   return(Ngood_df)
 }
-
-
 
