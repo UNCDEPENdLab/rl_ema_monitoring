@@ -26,7 +26,7 @@ iS <- 1
 df <- output_physio$eeg$fb
 name <- names(df)
 df <- df[[name[iS]]]
-a2f <- round(ncol(df$ch1)/2) # default times are -500 to 1500 ms for EEG
+a2f <- round(ncol(df$ch1)/4) # default times are -500 to 1500 ms for EEG
 y <- rep(seq(1,nrow(df$ch1),length.out=nrow(df$ch1)),4)
 name <- names(df)
 dq <- rbind(df[[name[1]]],df[[name[[2]]]],df[[name[3]]],df[[name[4]]]) # concatenate channels 1-4
