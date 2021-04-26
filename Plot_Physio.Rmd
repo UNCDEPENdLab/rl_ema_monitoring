@@ -21,7 +21,7 @@ load('~/Momentum/output_schedule.Rdata')
 library(ggplot2)
 library(tidyverse)
 library(viridis)
-iS <- 1
+iS <- 2
 # plot for individual subject iS out of a cached physio file
 df <- output_physio$eeg$fb
 name <- names(df)
@@ -51,5 +51,23 @@ cat('\n')
 ```
 
 ```{r plot_ECG, echo=FALSE}
-
+library(ggplot2)
+library(tidyverse)
+library(viridis)
+iS <- 2
+# plot for individual subject iS out of a cached physio file
+df <- output_physio$ecg$fb
+name <- names(df)
+df <- df[[name[iS]]]
+a2f <- round(ncol(df)/6) # default times are -1000 to 10000 ms for ECG
+y <- rep(seq(1,nrow(df),length.out=nrow(df)),1)
+df <- df %>% mutate(session=y)
+df <- df %>% pivot_longer(cols=starts_with("V"),names_to="t", values_to="V")
+df <- df %>% mutate(t0=as.numeric(substr(t,2,nchar(t))))
+df <- df %>% group_by(t0) %>% summarize(mean = mean(V, na.rm = TRUE), st_err=var(V,na.rm=TRUE)/sqrt(length(V)-sum(is.na(V))))
+cat('\n')
+cat("<!-- This is a comment for subject", iS, "-->\n")
+ggplot(df, aes(x=t0,y=mean)) + geom_line() + geom_errorbar(aes(ymin=mean-st_err,ymax=mean+st_err),width=0.2) + scale_x_continuous(breaks=c(0,a2f,max(df$t0)),labels=c(-1000,0,100000),name='time [s]') +
+  geom_vline(xintercept = a2f, lty = "dashed", color = "#FF0000", size = 2)
+cat('\n')
 ```
