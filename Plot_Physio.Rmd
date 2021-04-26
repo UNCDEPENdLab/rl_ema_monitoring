@@ -67,7 +67,6 @@ df <- df %>% mutate(t0=as.numeric(substr(t,2,nchar(t))))
 df <- df %>% group_by(t0) %>% summarize(mean = mean(V, na.rm = TRUE), st_err=var(V,na.rm=TRUE)/sqrt(length(V)-sum(is.na(V))))
 cat('\n')
 cat("<!-- This is a comment for subject", iS, "-->\n")
-ggplot(df, aes(x=t0,y=mean)) + geom_line() + geom_errorbar(aes(ymin=mean-st_err,ymax=mean+st_err),width=0.2) + scale_x_continuous(breaks=c(0,a2f,max(df$t0)),labels=c(-1000,0,100000),name='time [ms]') +
-  geom_vline(xintercept = a2f, lty = "dashed", color = "#FF0000", size = 2)
+ggplot(df, aes(x=t0,y=mean)) + geom_line() + geom_point() + geom_ribbon(aes(ymin = mean-st_err, ymax = mean+st_err), linetype=2, alpha=0.1) + scale_x_continuous(breaks=c(0,a2f,max(df$t0)),labels=c(-1000,0,100000),name='time [ms]') + geom_vline(xintercept = a2f, lty = "dashed", color = "#FF0000", size = 2)
 cat('\n')
 ```
