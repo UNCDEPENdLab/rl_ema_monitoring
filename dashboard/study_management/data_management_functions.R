@@ -222,7 +222,7 @@ getActiveList <- function(root_dir=NULL) {
   # get the whole path to cfg.json
   cfg_path <- paste0(root_path, '/', root_dir, '/cfg.json')
   # import json from python
-  json <- import("json")
+  json <- reticulate::import("json")
   # import python built-ins
   py <- import_builtins()
   # variable to assign the path to
