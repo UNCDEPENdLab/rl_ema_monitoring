@@ -1,28 +1,116 @@
 ---
 title: "RL EMA QA Dashboard"
+output: html_document
+
 ---
 
-Welcome to the RL EMA Dashboard!
-
-```{r setup, include=FALSE, echo=FALSE}
-source("dashboard_utils.R")
-source("render_utils.R")
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(comment = NA, tidy = FALSE, warning = FALSE, message = FALSE)
+#source("C:/Users/tshan/rl_ema_monitoring/dashboard/study_management/data_management_functions.R")
+#source("render_utils.R")
 library(pacman)
-p_load(DT, dplyr, htmltools)
+p_load(DT, dplyr, htmltools, tidyr, ggplot2, plotly, widgetframe, readr)
+#loads libraries and sets working directory to the root ./rl_ema_monitoring
+library("data.table")
+library("RSQLite")
+library("plyr")
+library("dplyr")
+library("pixiedust")
+library("ggplot2")
+library("zoo")
+library("tidyverse")
+library("knitr")
+library("reticulate")
+library("lubridate")
+library("rjson")
+library("R.utils")
+#setwd("/Users/abbegaillovette/Documents/GitHub/rl_ema_monitoring/")
+# starting in rl_ema_monitoring/site/
+root_dir = dirname(dirname(getwd())) #"/Users/abbegaillovette/Documents/GitHub/rl_ema_monitoring/"
+source(file.path(root_dir,"dashboard/study_management/data_management_functions.R"))
+#root_dir = dirname(dirname(getwd()))
+source(file.path(root_dir,"dashboard/study_management/dashboard_aggregate.R"))
+#root_dir = dirname(dirname(getwd()))
+source(file.path(root_dir,"EEG_Dashboard.R"))
+#root_dir = dirname(dirname(getwd()))
+source(file.path(root_dir,"ECG_Dashboard.R"))
+#root_dir = dirname(dirname(getwd()))
+#getwd()
+root_dir = "../../data/Subjects"
+path_info<-lapply(c("schedule","physio","video"),function(dj){
+  list_id <- list.dirs(path = root_dir,recursive = F,full.names = F)
+  if(dj == "video") {
+    pat = ".*.mp4"
+  } else {
+    pat = ".db"
+  }
+  do.call(rbind,lapply(list_id,function(idx){
+    db_files<-list.files(file.path(root_dir,idx,dj),pattern = pat,full.names = T,recursive = F,include.dirs = F)
+    if(length(db_files)>0){
+      dx<-data.frame(subject_id=idx,file_path=db_files,stringsAsFactors = F)
+      return(dx)
+    } else {
+      return(NULL)
+    }
+  }))
+})
+names(path_info) <- c("schedule","physio","video")
+path_info
+getwd()
+output<-proc_schedule(schedule_df = path_info$schedule)
+Subject <- output$sample_info_df$ID
+Site <- output$sample_info_df$State
+Group <- output$sample_info_df$study_group
+Overall_Compliance <- round(output$sample_info_df$compliance, digits= 4)
+#getwd()
+load("../data/output_physio.Rdata")
+load("../data/output_schedule.Rdata")
+#Games % Stats
+Avg_Objective_Percent_Correct_No_Feedback <- mean(output$subj_performance$abs_accurate_nofeed, na.rm= TRUE)
+Avg_Objective_Percent_Correct_No_Feedback <- round(Avg_Objective_Percent_Correct_No_Feedback, digits = 4)
+Avg_Objective_Percent_Correct_Feedback <- mean(output$subj_performance$abs_accurate_feed, na.rm= TRUE)
+Avg_Objective_Percent_Correct_Feedback <- round(Avg_Objective_Percent_Correct_Feedback, digits = 4)
+Avg_Experienced_Percent_Correct_No_Feedback <- mean(output$subj_performance$relative_accuracy_nofeed, na.rm= TRUE)
+Avg_Experienced_Percent_Correct_No_Feedback <- round(Avg_Experienced_Percent_Correct_No_Feedback, digits = 4)
+Avg_Experienced_Percent_Correct_Feedback <- mean(output$subj_performance$relative_accuracy_feed, na.rm= TRUE)
+Avg_Experienced_Percent_Correct_Feedback <- round(Avg_Experienced_Percent_Correct_Feedback, digits = 4)
+#Add EEG Avg Here (named EEG_Average)
+EEG_Average <- output_physio$eeg$sample_summary$avg_allCh[match(output$sample_info_df$ID,output_physio$eeg$sample_summary$ID)]
+EEG_Average <- round(output_physio$eeg$sample_summary$avg_allCh, digits = 4)
+#Add HR Avg Here (named HR_Average)
+hr_gen <- output_physio$ecg$summary
+print(hr_gen)
+HR_Average <- mean(hr_gen$per_Good*100, na.rm = TRUE)
+HR_Average <- round(HR_Average, digits = 4)
+#
+ID_Overview = data.table(
+  ID = Subject,
+  Site = Site,
+  Group = Group,
+  "Overall Compliance" = Overall_Compliance,
+  "Avg Obj Correct (no feedback)" = Avg_Objective_Percent_Correct_No_Feedback,
+  "Avg Obj Correct (w/ feedback)" = Avg_Objective_Percent_Correct_Feedback,
+  "Avg Rel Correct (no feedback)" = Avg_Experienced_Percent_Correct_No_Feedback,
+  "Avg Rel Correct (w/ feedback)" = Avg_Experienced_Percent_Correct_Feedback,
+  "EEG Average" = EEG_Average,
+  "HR Average" = HR_Average,
+  "Left %" = mean(output$subj_performance$side_bias, na.rm = TRUE)
+)
 ```
 
-# Active participants
-```{r}
-sdf <- getSubjPageList(getwd())
+# Active Participant Overview
 
-#Shane: ideally, we'd keep the 'Rendering Error' as a link and when the user goes to the page, it provides a log file of what went wrong.
+```{r, echo= FALSE}
+#b print(ID_Overview)
+#blogdown::shortcode_open("table")
+widgetframe::frameWidget(datatable(ID_Overview, class='compact', escape=FALSE, selection='none'))
+#blogdown::shortcode_close("table")
 
-DT::datatable(sdf, class = 'compact', escape = FALSE, selection='none')
 ```
 
 
 # Inactive participants
 
-```{r}
+```{r, echo=FALSE}
 #datatable(sdf$inactive)
 ```

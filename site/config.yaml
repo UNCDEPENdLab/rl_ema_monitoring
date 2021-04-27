@@ -1,7 +1,7 @@
-baseurl: /
+baseurl: http://10.220.55.203:4321/
 languageCode: en-us
-title: A Hugo website
-theme: "ace-documentation"
+title: Momentum
+theme: "hugo-lithium"
 googleAnalytics: ''
 disqusShortname: ''
 ignoreFiles:
@@ -17,9 +17,9 @@ menu:
     - name: About
       url: /about/
     - name: GitHub
-      url: https://github.com/rstudio/blogdown
-    - name: Twitter
-      url: https://twitter.com/rstudio
+      url: https://github.com/UNCDEPENdLab/rl_ema_monitoring
+    - name: Momentum
+      url: https://en.wikipedia.org/wiki/Behavioral_momentum
 params:
   MathJaxCDN: //cdnjs.cloudflare.com/ajax/libs
   MathJaxVersion: 2.7.5
@@ -34,5 +34,5 @@ params:
   logo:
     alt: Logo
     height: 50
-    url: logo.png
+    url: Momentum_Logo.png
     width: 50
