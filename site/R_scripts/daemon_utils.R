@@ -81,7 +81,14 @@ getData2ContentFromJSON <- function() {
   # Basic function to load the old data.json
   # file from a known destination.
   #####################################
-  return(rjson::fromJSON(file="R_scripts/data.json"))
+  print(getwd())
+  # initialize json data default return value to be an empty list
+  json_data <- list()
+  # if the file is not empty
+  if(file.info("R_scripts/data.json")$size > 0){
+    tryCatch({json_data <- rjson::fromJSON(file="R_scripts/data.json")})
+  }
+  return(json_data)
 }
 
 addRMD <- function(base_list=NULL, append_str=NULL) {
@@ -148,9 +155,23 @@ renderRMDs <- function(render_list=NULL) {
   # time of rmd files so that they are automatically
   # re-rendered by Hugo.
   ########################################
+  # check if running within R Studio
+  isRStudio <- Sys.getenv("RSTUDIO") == "1"
+  # if running from RStudio
+  #if(isRStudio == TRUE) {
+  #  # then Blogdown will automatically re-render on save
   for(rmd in render_list) {
     fs::file_touch(paste0('content/', rmd))
   }
+  #}
+  # otherwise
+  #else {
+  #  # manually run a re-render
+  #  for(rmd in render_list) {
+  #    #html_name <- gsub('.Rmd', '.html', rmd)
+  #    rmarkdown::render(rmd) # , output_file = html_name
+  #  }
+  #}
 }
 
 runRMDRerender <- function() {
@@ -161,15 +182,15 @@ runRMDRerender <- function() {
   # data files.
   ############################
   # get the current system state
-  new_data <- buildData2ContentFromSys()
-  # load the old system state
-  old_data <- getData2ContentFromJSON()
+  new_data <- try({buildData2ContentFromSys()})
+  # try to load the old system state (will fail on initial start-up due to there being no previous state)
+  old_data <- tryCatch({getData2ContentFromJSON()})
   # get the rmds to re-render
-  render_list <- getRMDsToRender(old_data=old_data, new_data=new_data)
+  render_list <- tryCatch({getRMDsToRender(old_data=old_data, new_data=new_data)})
   # re-render the rmds
-  renderRMDs(render_list=render_list)
+  tryCatch({renderRMDs(render_list=render_list)})
   # save the new system state
-  setData2ContentJSON(new_json=new_data)
+  tryCatch({setData2ContentJSON(new_json=new_data)})
 }
 
 exportRMDPID <- function(pid=NULL) {
@@ -188,20 +209,20 @@ importRMDPID <- function() {
   return(readLines('R_scripts/rmd_daemon_pid.txt'))
 }
 
-exportBlogdownPort <- function(pid=NULL) {
+exportBlogdownPort <- function(portNum=NULL) {
   #######################
   # Basic function to save the daemon
-  # pid to a file from a known destination.
+  # port to a file from a known destination.
   #######################
-  write(pid, "R_scripts/blogdown_pid.txt")
+  write(portNum, "R_scripts/blogdown_port.txt")
 }
 
-importBlogdownPID <- function() {
+importBlogdownPort <- function() {
   #######################
   # Basic function to load the daemon
-  # pid from a file from a known destination.
+  # port from a file from a known destination.
   #######################
-  return(readLines('R_scripts/blogdown_pid.txt'))
+  return(readLines('R_scripts/blogdown_port.txt'))
 }
 
 startRMDDaemon <- function() {
@@ -210,6 +231,8 @@ startRMDDaemon <- function() {
   #######################
   # start the daemon
   pid <- sys::exec_background("Rscript", "R_scripts/rmd_daemon.R")
+  # print the pid to console
+  print(paste0("Launched the re-render service in the background (process ID: ", toString(pid),")."))
   # save the pid to memory
   exportRMDPID(pid=pid)
 }
@@ -227,26 +250,23 @@ stopRMDDaemon <- function() {
   rm(pid)
 }
 
-startBlogdownDaemon <- function() {
+startBlogdownDaemon <- function(portNum=NULL, host=NULL) {
   #######################
   # Basic function to start the daemon.
   #######################
   # launch blogdown as a daemon with a given port
   # start the daemon
-  pid <- sys::exec_background("Rscript", "R_scripts/blogdown_daemon.R")
-  # save the pid to memory
-  exportBlogdownPID(pid=pid)
+  system2("Rscript", paste0("R_scripts/blogdown_daemon.R -H ", host, " -P ", portNum))
+  # save the port to memory
+  exportBlogdownPort(portNum=portNum)
 }
 
 stopBlogdownDaemon <- function() {
   #######################
   # Basic function to stop the daemon.
   #######################
-  # load the pid
-  pid = importBlogdownPID()
+  # load the port
+  portNum = importBlogdownPort()
   # stop the daemon
-  tools::pskill(pid)
-  # daemon clean-up
-  sys::exec_status(pid)
-  rm(pid)
+  system2('kill', paste0('$(lsof -t -i:', portNum, ')'))
 }

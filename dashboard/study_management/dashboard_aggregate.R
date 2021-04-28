@@ -1,9 +1,10 @@
 ####Souce dependent functions:
-root_dir = getwd()
+#root_dir = getwd()
+root_dir = dirname(dirname(getwd()))
 
 source(file.path(root_dir,"dashboard/study_management/data_management_functions.R"))
 source(file.path(root_dir,"EEG_Dashboard.R"))
-source(file.path(root_dir,"ECG_Dashboard.R"))
+source(file.path(root_dir,"ECG_Dashboard2.R"))
 ###Dependent functions:
 require(lubridate)
 if (FALSE) {
@@ -90,8 +91,12 @@ ms_to_date = function(ms, t0="1970-01-01", timezone) {
 proc_schedule <- function(schedule_df = NULL,days_limit=60,tz="EST") {
   #load in data using shane's function
   raw_data <- lapply(1:nrow(schedule_df),function(i){
+<<<<<<< HEAD
     #print(i)
     db_raw <- load_db(dbpath = schedule_df$file_path[[i]],table_names = NULL)
+=======
+    db_raw <- getSchedDataItem(subjID = schedule_df$subject_id[[i]]) # ,abs_path = schedule_df$file_path[[i]]
+>>>>>>> f1ca03088939434eb9629719ff3bd63b9f62160e
     db_raw$ID <- schedule_df$subject_id[[i]]
     db_raw$data_mtime <- lubridate::as_datetime(file.info(schedule_df$file_path[[i]])$mtime,tz=tz)
     db_raw$data_folder <- dirname(schedule_df$file_path[[i]])
