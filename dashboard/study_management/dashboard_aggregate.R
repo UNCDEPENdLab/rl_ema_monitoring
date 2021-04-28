@@ -90,8 +90,11 @@ ms_to_date = function(ms, t0="1970-01-01", timezone) {
 proc_schedule <- function(schedule_df = NULL,days_limit=60,tz="EST") {
   #load in data using shane's function
   raw_data <- lapply(1:nrow(schedule_df),function(i){
-    db_raw <- getSchedDataItem(subjID = schedule_df$subject_id[[i]],abs_path = schedule_df$file_path[[i]])
+    #print(i)
+    db_raw <- load_db(dbpath = schedule_df$file_path[[i]],table_names = NULL)
     db_raw$ID <- schedule_df$subject_id[[i]]
+    db_raw$data_mtime <- lubridate::as_datetime(file.info(schedule_df$file_path[[i]])$mtime,tz=tz)
+    db_raw$data_folder <- dirname(schedule_df$file_path[[i]])
     return(db_raw)
   })
   proc_data <- lapply(raw_data,proc_schedule_single,tz=tz,days_limit=days_limit)
@@ -120,6 +123,7 @@ proc_schedule_single <- function(raw_single,days_limit=60,tz="EST") {
   ###NO TIMEZONE INFORMATION!!!!Using EST at the moment;
   raw_single$sessions$start_timestamp<-lubridate::parse_date_time(raw_single$sessions$start_timestamp,"%b $d, %Y %I:%M:%S %p",tz = tz)
   raw_single$sessions$stop_timestamp<-lubridate::parse_date_time(raw_single$sessions$stop_timestamp,"%b $d, %Y %I:%M:%S %p",tz=tz)
+
   ###Part I: Trial
   time_vars <- c("scheduled_time","stim_time","choice_time","feedback_time")
   for (tx in time_vars) {
@@ -184,22 +188,22 @@ proc_schedule_single <- function(raw_single,days_limit=60,tz="EST") {
   pr_info_by_block <- do.call(rbind,lapply(info_by_block,`[[`,"performance"))
   #Process compliance
   trial_info_df<-merge(raw_single$sessions,tr_info_by_block,by = "block",all = T)
-  trial_info_df$session_number<-match(round(as.numeric(trial_info_df$scheduled_time),0),unique(round(as.numeric(trial_info_df$scheduled_time),0)))
+  #trial_info_df$session_number<-match(round(as.numeric(trial_info_df$scheduled_time),0),unique(round(as.numeric(trial_info_df$scheduled_time),0)))
   trial_info_df<-trial_info_df[,-grep("_ms",names(trial_info_df))]
   trial_info_df$spec <-unlist(apply(trial_info_df[c("block","start_trial","last_trial")],1,list),recursive = F)
 
   #assign session number to each of the different type of data:
-  trials_1$session_number<-trial_info_df$session_number[match(trials_1$block,trial_info_df$block)]
-  pr_info_by_block$session_number<-trial_info_df$session_number[match(pr_info_by_block$block,trial_info_df$block)]
+  #trials_1$session_number<-trial_info_df$session_number[match(trials_1$block,trial_info_df$block)]
+  #pr_info_by_block$session_number<-trial_info_df$session_number[match(pr_info_by_block$block,trial_info_df$block)]
 
-  trial_info_df<-trial_info_df[c("session_number","scheduled_time","start_time","completed_time","duration","delay","spec")]
+  trial_info_df<-trial_info_df[c("scheduled_time","start_time","completed_time","duration","delay","spec")]
   trial_info_df$type <- "trials"
 
   px_overall <- data.frame(ID=raw_single$ID,
                            side_bias=mean(trials_1$choice,na.rm = T),
                            mean_rt = mean(trials_1$rt,na.rm = T),
                            abs_accurate_overall = mean(as.numeric(trials_1$accuracy),na.rm = T),
-                           relative_accuracy_feed = mean(as.numeric(trials_1$relative_accuracy),na.rm = T),
+                           relative_accuracy_overall = mean(as.numeric(trials_1$relative_accuracy),na.rm = T),
                            abs_accurate_feed = mean(as.numeric(trials_1[which(trials_1$feedback==1),]$accuracy),na.rm = T),
                            relative_accuracy_feed = mean(as.numeric(trials_1[which(trials_1$feedback==1),]$relative_accuracy),na.rm = T),
                            abs_accurate_nofeed = mean(as.numeric(trials_1[which(trials_1$feedback==0),]$accuracy),na.rm = T),
@@ -224,13 +228,15 @@ proc_schedule_single <- function(raw_single,days_limit=60,tz="EST") {
   },USE.NAMES = F)
 
 
+
+  ##Part 0: Session Assignment:
   #### Session information data frame ####
   session_info_df <- raw_single$questionnaires
   session_info_df <- session_info_df[order(session_info_df$scheduled_time),]
   session_info_df$duration<-difftime(session_info_df$completed_time,session_info_df$start_time,units = "mins")
   session_info_df$delay<-difftime(session_info_df$start_time,session_info_df$scheduled_time,units = "mins")
   session_info_df$spec <- unlist(apply(session_info_df[c("type","number","description")],1,list),recursive = F)
-  session_info_df<-session_info_df[c("session_number","scheduled_time","start_time","completed_time","duration","delay","spec")]
+  session_info_df<-session_info_df[c("scheduled_time","start_time","completed_time","duration","delay","spec")]
   session_info_df$type <- "questionnaires"
 
   #######Info session##########
@@ -247,7 +253,11 @@ proc_schedule_single <- function(raw_single,days_limit=60,tz="EST") {
   ##do a date session match:
   date_sess_match_df <- data.frame(date=unique(as.Date(info_df$scheduled_time)),days=unique(as.Date(info_df$scheduled_time)) - startdate,stringsAsFactors = F)
   date_sess_match_df <- date_sess_match_df[date_sess_match_df$days<=days_limit,]
-  ##
+  date_sess_match_df$index <- NA
+  date_sess_match_df$index[2:(nrow(date_sess_match_df))] <- split(1:(4*nrow(date_sess_match_df)), ceiling(seq_along(1:(4*nrow(date_sess_match_df)))/4))[1:(nrow(date_sess_match_df)-1)]
+
+  ##For each day
+  split(info_df,as.Date(info_df$scheduled_time,tz = tz))
 
 
 
@@ -286,12 +296,12 @@ proc_schedule_single <- function(raw_single,days_limit=60,tz="EST") {
           mdb$event_df <- NA
           mdb$number_of_events <- 0
         }
-        mdc <- cbind(mda[1,c("questionnaire_name","questionnaire_type","answer_time","session_number")],mdb)
+        mdc <- cbind(mda[1,c("questionnaire_name","questionnaire_type","answer_time")],mdb)
         return(mdc)
       }))
     } else {
       tke<-do.call(rbind,lapply(tkd$answer_prog,as.data.frame,sep="_"))
-      tkf <- cbind(tkd[c("questionnaire_name","questionnaire_type","answer_time","session_number","question")],tke)
+      tkf <- cbind(tkd[c("questionnaire_name","questionnaire_type","answer_time","question")],tke)
     }
     names(tkf)<-gsub(".","_",names(tkf),fixed = T)
     tkf$ID <- raw_single$ID
@@ -317,6 +327,13 @@ proc_schedule_single <- function(raw_single,days_limit=60,tz="EST") {
 
   pr_info_by_block$ID <- raw_single$ID
   raw_single$trials <- trials_1
+
+  output <- list(raw_data=raw_single,
+                 info_df = info_df,
+                 performance_info=pr_info_by_block,performance_overall=px_overall,
+                 form_dfs=form_proc,form_summary=q_sum,
+                 sID=raw_single$ID)
+  save(output, )
 
   return(list(raw_data=raw_single,
               info_df = info_df,
