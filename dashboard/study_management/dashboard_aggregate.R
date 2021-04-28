@@ -374,6 +374,8 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
       message("Found ",length(physio_files_diff), " new physio files for: ",IDx)
     } else {
       physio_files_diff <- physio_files_new
+      physio_concat <- NULL
+      physio_files <- NULL
     }
     if(length(physio_files_diff)>0) {
       #Load the physio data, para for muiltiple files
@@ -384,6 +386,7 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
       physio_files<-unique(c(physio_files,physio_files_new))
       save(physio_files,physio_concat,file = physio_rawcache_file)
     }
+
     if(!force_reproc && physio_files_diff < 1 && file.exists(physio_proc_file)) {
       load(physio_proc_file)
       output$new_data <- FALSE
@@ -399,6 +402,7 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
     sess_map<-unique(behav_df[c("block","session_number")])
 
     ###EEG
+    message("Processing new EEG data for: ",IDx)
     eeg_raw <- load_EEG(EEGd = physio_concat$eeg,sample_rate = eeg_sample_rate,sd_times = sd_times)
     eeg_fb <- eeg_epochs_around_feedback(EEG_data = eeg_raw,
                                            pre = eeg_pre,post = eeg_post,sample_rate = eeg_sample_rate,
@@ -417,6 +421,7 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
     eeg_ov$ID <- IDx
 
     ###ECG
+    message("Processing new ECG data for: ",IDx)
     ecg_raw <- load_ECG(ECGd = physio_concat$ecg,HRstep = HRstep,sample_rate = ecg_sample_rate)
     ecg_fb <- ecg_epochs_around_feedback(ECG_data = ecg_raw,fbt = as.numeric(behav_df$feedback_time)*1000,
                                          pre = ecg_pre,post = ecg_post,sample_rate = ecg_sample_rate)
