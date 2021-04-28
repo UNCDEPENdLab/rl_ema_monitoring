@@ -403,7 +403,7 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
     eeg_fb <- eeg_epochs_around_feedback(EEG_data = eeg_raw,
                                            pre = eeg_pre,post = eeg_post,sample_rate = eeg_sample_rate,
                                            fbt = as.numeric(behav_df$feedback_time)*1000)
-    eeg_rawsum <- get_good_EEG(blocks=behav_df$block,a2f=eeg_proc)
+    eeg_rawsum <- get_good_EEG(blocks=behav_df$block,a2f=eeg_fb)
     eeg_summary <- eeg_rawsum[1:4] / eeg_rawsum$ntrial
     names(eeg_summary) <- paste("per_Ch",1:4,sep = "_")
     eeg_summary$block <- eeg_rawsum$nbl
