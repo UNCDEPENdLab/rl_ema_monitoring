@@ -1,0 +1,13 @@
+---
+title: '123'
+output: html_document
+categories: ["subjects"]
+tags: [!r basename(getwd())]
+params:
+  id: !r basename(getwd())
+---
+
+```{r setup, include=TRUE, echo=TRUE}
+knitr::opts_chunk$set(echo = TRUE)
+print(params$id)
+```

@@ -22,7 +22,8 @@ opt = parse_args(OptionParser(option_list=option_list))
 # set the baseurl within the project yaml file
 old_yaml <- read_yaml("config.yaml")
 new_baseurl <- paste0('http://', opt$host, ':', opt$port, '/')
-write_yaml()
+old_yaml$baseurl <- new_baseurl
+write_yaml(old_yaml, file="config.yaml")
 
 # set the plan to not be sequential
 plan(multisession)

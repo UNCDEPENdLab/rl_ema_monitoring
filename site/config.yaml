@@ -1,25 +1,26 @@
-baseurl: http://10.220.55.203:4321/
+baseurl: http://10.220.55.203:4322/
 languageCode: en-us
 title: Momentum
-theme: "hugo-lithium"
+theme: hugo-lithium
 googleAnalytics: ''
 disqusShortname: ''
 ignoreFiles:
-  - \.Rmd$
-  - \.Rmarkdown$
-  - _cache$
-  - \.knit\.md$
-  - \.utf8\.md$
+- \.Rmd$
+- \.Rmarkdown$
+- _cache$
+- \.knit\.md$
+- \.utf8\.md$
 permalinks:
   post: /:year/:month/:day/:slug/
+  subjects: /:slug/
 menu:
   main:
-    - name: About
-      url: /about/
-    - name: GitHub
-      url: https://github.com/UNCDEPENdLab/rl_ema_monitoring
-    - name: Momentum
-      url: https://en.wikipedia.org/wiki/Behavioral_momentum
+  - name: About
+    url: /about/
+  - name: GitHub
+    url: https://github.com/UNCDEPENdLab/rl_ema_monitoring
+  - name: Momentum
+    url: https://en.wikipedia.org/wiki/Behavioral_momentum
 params:
   MathJaxCDN: //cdnjs.cloudflare.com/ajax/libs
   MathJaxVersion: 2.7.5
@@ -27,8 +28,8 @@ params:
   favicon: favicon.ico
   highlightjsCDN: //cdnjs.cloudflare.com/ajax/libs
   highlightjsLang:
-    - r
-    - yaml
+  - r
+  - yaml
   highlightjsTheme: github
   highlightjsVersion: 9.12.0
   logo:

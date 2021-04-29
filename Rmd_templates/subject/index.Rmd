@@ -1,0 +1,17 @@
+```{python, include=FALSE, echo=FALSE}
+import pathlib
+```
+
+---
+title: "`python pathlib.Path(__file__).parent.absolute()`"
+output: html_document
+categories: ["subjects"]
+tags: ["`python pathlib.Path(__file__).parent.absolute()`"]
+params:
+  id: `python pathlib.Path(__file__).parent.absolute()`
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+cat(params$id)
+```

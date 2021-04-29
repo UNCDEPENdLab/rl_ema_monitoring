@@ -99,20 +99,37 @@ ID_Overview = data.table(
 ```
 
 ```{r active_split, echo=FALSE, dependson="setup"}
+#source("../../dashboard/render_utils.R")
 # get the base url
-burl <- yaml::read_yaml("../config.yaml")$baseurl
-urls <- rep(paste0(burl, 'Subjects/'), nrow(ID_Overview))
+#burl <- yaml::read_yaml("../config.yaml")$baseurl
+#urls <- rep(paste0('/subjects/'), nrow(ID_Overview)) # burl, 
+ids <- ID_Overview$ID
 # use paste0 to compose markdown-formatted hyperlinks
-#ID_Overview$ID <- paste0("[", ID_Overview$ID, "](", urls, ID_Overview$ID, ")")
-#ID_Overview$ID <- htmltools::a(href=paste0(urls, ID_Overview$ID))
-ID_Overview$ID <- paste0("<a href='", urls, ID_Overview$ID, "'>", ID_Overview$ID, "</a>")
+ID_Overview$ID <- paste0("<a target='_parent' href='/",ID_Overview$ID, "/'>", ID_Overview$ID, "</a>")
+#ID_Overview$ID <- convert_to_link(ID_Overview$ID)
+# create a new folder and rmd template if for each subject that hasn't been initialized
+for(id in ids) {
+  # if the path does not exist
+  if(dir.exists(paste0('subjects/', id)) == FALSE) {
+    # then create the directory
+    dir.create(paste0('subjects/', id))
+  }
+  # if the rmd for the subject does not exist
+  if(file.exists(paste0('subjects/', id, '/index.Rmd')) == FALSE) {
+    # then create a subject Rmd from the template
+    # just makes a blank Rmd for now
+    #file.create(paste0('Subjects/', id, '/_index.Rmd'))
+    file.copy("../../Rmd_templates/subject/index.Rmd", paste0('subjects/', id, '/index.Rmd'))
+    # blogdown::hugo_cmd("new --kind subject subjects/test/index.Rmd")
+    #rmarkdown::draft(paste0("subjects/", id, "/_index.Rmd"), template="../../Rmd_templates/subject", create_dir=TRUE)
+  }
+}
 # get the active subjects
 #active_list <- getActiveList(root_dir="rl_ema_monitoring")
 # make DT with only active subjects
 #Active_Overview <- subset(ID_Overview, !(ID %in% active_list))
 # make DT with only inactive subjects
 #Inactive_Overview <- subset(ID_Overview, ID %in% active_list)
-
 ```
 
 # Active Participant Overview
@@ -123,7 +140,7 @@ library(pacman)
 library(reticulate)
 p_load(DT, dplyr, htmltools, tidyr, ggplot2, plotly, widgetframe, readr)
 #blogdown::shortcode_open("table")
-widgetframe::frameWidget(datatable(ID_Overview, class='compact', escape=FALSE, selection='none')) # Active
+widgetframe::frameWidget(datatable(ID_Overview, class='compact', escape=1, selection='none',)) # Active 
 #blogdown::shortcode_close("table")
 ```
 
