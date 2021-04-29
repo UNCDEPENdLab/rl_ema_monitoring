@@ -1,7 +1,7 @@
 ####Souce dependent functions:
 #root_dir = getwd()
-root_dir = dirname(dirname(getwd()))
-
+root_dir <- getwd()
+repo_path <- dirname(root_dir)
 source(file.path(root_dir,"dashboard/study_management/data_management_functions.R"))
 source(file.path(root_dir,"EEG_Dashboard.R"))
 source(file.path(root_dir,"ECG_Dashboard2.R"))
@@ -33,7 +33,7 @@ if (FALSE) {
   #########END########
 
   #example for proc_schedule:
-  output <- proc_schedule(schedule_df = path_info$schedule,tz="EST",days_limit=60)
+  output <- proc_schedule(schedule_df = path_info$schedule,tz="EST",days_limit=60,force_reproc=F)
   ##Output a list of :
   output$proc_data #is a list with a length equal to the number of db files, include data imported from db
   output$subj_info #is a list with a length equal to the number of subjects, include subject information on compliance
@@ -88,15 +88,17 @@ ms_to_date = function(ms, t0="1970-01-01", timezone) {
   as.POSIXct(sec, origin=t0, tz=timezone)
 }
 
-proc_schedule <- function(schedule_df = NULL,days_limit=60,tz="EST") {
+proc_schedule <- function(schedule_df = NULL,days_limit=60,force_reproc=FALSE,tz="EST") {
   #load in data using shane's function
   raw_data <- lapply(1:nrow(schedule_df),function(i){
-    db_raw <- getSchedDataItem(subjID = schedule_df$subject_id[[i]]) # ,abs_path = schedule_df$file_path[[i]]
+    db_raw <- load_db(dbpath = schedule_df$file_path[[i]],table_names = NULL)
     db_raw$ID <- schedule_df$subject_id[[i]]
+    db_raw$data_mtime <- lubridate::as_datetime(file.info(schedule_df$file_path[[i]])$mtime,tz=tz)
+    db_raw$data_folder <- dirname(schedule_df$file_path[[i]])
     return(db_raw)
   })
-  proc_data <- lapply(raw_data,proc_schedule_single,tz=tz,days_limit=days_limit)
-  names(proc_data) <- sapply(proc_data,`[[`,"sID")
+  proc_data <- lapply(raw_data,proc_schedule_single,tz=tz,days_limit=days_limit,force_reproc=force_reproc)
+  names(proc_data) <- sapply(proc_data,`[[`,"ID")
   ####do more aggregation here:
   #####NEED MORE SUBJ DATA FOR AGGREGATION########
   sample_info <- do.call(rbind,lapply(proc_data,`[[`,"info_df"))
@@ -110,17 +112,30 @@ proc_schedule <- function(schedule_df = NULL,days_limit=60,tz="EST") {
   pr_info_subjwise <-  do.call(rbind,lapply(proc_data,`[[`,"performance_overall"))
   q_summary <-  do.call(rbind,lapply(proc_data,`[[`,"form_summary"))
 
-  return(list(proc_data=proc_data,
+  return(list(proc_data=proc_data,newdata_IDs=sapply(proc_data,`[[`,"ID",USE.NAMES = F)[sapply(proc_data,`[[`,"new_data")],
               subj_info = sp_info_sq,sample_info_df=overall_info,
               subj_performance = performance_info, sample_performance = pr_info_subjwise,
               sample_form_summary = q_summary))
 }
 
-proc_schedule_single <- function(raw_single,days_limit=60,tz="EST") {
-  print(raw_single$ID)
+proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz="EST") {
+  #print(raw_single$ID)
+
+  output_path <- file.path(raw_single$data_folder,paste(raw_single$ID,"_schedule_proc.rdata",sep = ""))
+  if(file.exists(output_path) && !force_reproc) {
+    load(output_path)
+    if(difftime(raw_single$data_mtime,output$raw_data$data_mtime,units = "mins") < 60){
+      #if data less than 60 minutes in different don't proc
+      output$new_data <- FALSE
+      message("No new schedule data for: ",output$ID)
+      return(output)
+    }
+  }
+  message("Processing schedule file for: ",raw_single$ID)
   ###NO TIMEZONE INFORMATION!!!!Using EST at the moment;
   raw_single$sessions$start_timestamp<-lubridate::parse_date_time(raw_single$sessions$start_timestamp,"%b $d, %Y %I:%M:%S %p",tz = tz)
   raw_single$sessions$stop_timestamp<-lubridate::parse_date_time(raw_single$sessions$stop_timestamp,"%b $d, %Y %I:%M:%S %p",tz=tz)
+
   ###Part I: Trial
   time_vars <- c("scheduled_time","stim_time","choice_time","feedback_time")
   for (tx in time_vars) {
@@ -169,7 +184,7 @@ proc_schedule_single <- function(raw_single,days_limit=60,tz="EST") {
     ##Performance data:
     px <- data.frame(block=unique(ix$block),
                      date=unique(as.Date(ix$feedback_time)),
-                     side_bias=mean(ix$choice,na.rm = T),
+                     IDe_bias=mean(ix$choice,na.rm = T),
                      mean_rt = mean(ix$rt,na.rm = T),
                      abs_accurate_feed = mean(as.numeric(ix[which(ix$feedback==1),]$accuracy),na.rm = T),
                      relative_accuracy_feed = mean(as.numeric(ix[which(ix$feedback==1),]$relative_accuracy),na.rm = T),
@@ -185,22 +200,22 @@ proc_schedule_single <- function(raw_single,days_limit=60,tz="EST") {
   pr_info_by_block <- do.call(rbind,lapply(info_by_block,`[[`,"performance"))
   #Process compliance
   trial_info_df<-merge(raw_single$sessions,tr_info_by_block,by = "block",all = T)
-  trial_info_df$session_number<-match(round(as.numeric(trial_info_df$scheduled_time),0),unique(round(as.numeric(trial_info_df$scheduled_time),0)))
+  #trial_info_df$session_number<-match(round(as.numeric(trial_info_df$scheduled_time),0),unique(round(as.numeric(trial_info_df$scheduled_time),0)))
   trial_info_df<-trial_info_df[,-grep("_ms",names(trial_info_df))]
   trial_info_df$spec <-unlist(apply(trial_info_df[c("block","start_trial","last_trial")],1,list),recursive = F)
 
   #assign session number to each of the different type of data:
-  trials_1$session_number<-trial_info_df$session_number[match(trials_1$block,trial_info_df$block)]
-  pr_info_by_block$session_number<-trial_info_df$session_number[match(pr_info_by_block$block,trial_info_df$block)]
+  #trials_1$session_number<-trial_info_df$session_number[match(trials_1$block,trial_info_df$block)]
+  #pr_info_by_block$session_number<-trial_info_df$session_number[match(pr_info_by_block$block,trial_info_df$block)]
 
-  trial_info_df<-trial_info_df[c("session_number","scheduled_time","start_time","completed_time","duration","delay","spec")]
+  trial_info_df<-trial_info_df[c("scheduled_time","start_time","completed_time","duration","delay","spec")]
   trial_info_df$type <- "trials"
 
   px_overall <- data.frame(ID=raw_single$ID,
-                           side_bias=mean(trials_1$choice,na.rm = T),
+                           IDe_bias=mean(trials_1$choice,na.rm = T),
                            mean_rt = mean(trials_1$rt,na.rm = T),
                            abs_accurate_overall = mean(as.numeric(trials_1$accuracy),na.rm = T),
-                           relative_accuracy_feed = mean(as.numeric(trials_1$relative_accuracy),na.rm = T),
+                           relative_accuracy_overall = mean(as.numeric(trials_1$relative_accuracy),na.rm = T),
                            abs_accurate_feed = mean(as.numeric(trials_1[which(trials_1$feedback==1),]$accuracy),na.rm = T),
                            relative_accuracy_feed = mean(as.numeric(trials_1[which(trials_1$feedback==1),]$relative_accuracy),na.rm = T),
                            abs_accurate_nofeed = mean(as.numeric(trials_1[which(trials_1$feedback==0),]$accuracy),na.rm = T),
@@ -225,13 +240,15 @@ proc_schedule_single <- function(raw_single,days_limit=60,tz="EST") {
   },USE.NAMES = F)
 
 
+
+  ##Part 0: Session Assignment:
   #### Session information data frame ####
   session_info_df <- raw_single$questionnaires
   session_info_df <- session_info_df[order(session_info_df$scheduled_time),]
   session_info_df$duration<-difftime(session_info_df$completed_time,session_info_df$start_time,units = "mins")
   session_info_df$delay<-difftime(session_info_df$start_time,session_info_df$scheduled_time,units = "mins")
   session_info_df$spec <- unlist(apply(session_info_df[c("type","number","description")],1,list),recursive = F)
-  session_info_df<-session_info_df[c("session_number","scheduled_time","start_time","completed_time","duration","delay","spec")]
+  session_info_df<-session_info_df[c("scheduled_time","start_time","completed_time","duration","delay","spec")]
   session_info_df$type <- "questionnaires"
 
   #######Info session##########
@@ -248,7 +265,11 @@ proc_schedule_single <- function(raw_single,days_limit=60,tz="EST") {
   ##do a date session match:
   date_sess_match_df <- data.frame(date=unique(as.Date(info_df$scheduled_time)),days=unique(as.Date(info_df$scheduled_time)) - startdate,stringsAsFactors = F)
   date_sess_match_df <- date_sess_match_df[date_sess_match_df$days<=days_limit,]
-  ##
+  date_sess_match_df$index <- NA
+  date_sess_match_df$index[2:(nrow(date_sess_match_df))] <- split(1:(4*nrow(date_sess_match_df)), ceiling(seq_along(1:(4*nrow(date_sess_match_df)))/4))[1:(nrow(date_sess_match_df)-1)]
+
+  ##For each day
+  split(info_df,as.Date(info_df$scheduled_time,tz = tz))
 
 
 
@@ -287,12 +308,12 @@ proc_schedule_single <- function(raw_single,days_limit=60,tz="EST") {
           mdb$event_df <- NA
           mdb$number_of_events <- 0
         }
-        mdc <- cbind(mda[1,c("questionnaire_name","questionnaire_type","answer_time","session_number")],mdb)
+        mdc <- cbind(mda[1,c("questionnaire_name","questionnaire_type","answer_time")],mdb)
         return(mdc)
       }))
     } else {
       tke<-do.call(rbind,lapply(tkd$answer_prog,as.data.frame,sep="_"))
-      tkf <- cbind(tkd[c("questionnaire_name","questionnaire_type","answer_time","session_number","question")],tke)
+      tkf <- cbind(tkd[c("questionnaire_name","questionnaire_type","answer_time","question")],tke)
     }
     names(tkf)<-gsub(".","_",names(tkf),fixed = T)
     tkf$ID <- raw_single$ID
@@ -319,14 +340,21 @@ proc_schedule_single <- function(raw_single,days_limit=60,tz="EST") {
   pr_info_by_block$ID <- raw_single$ID
   raw_single$trials <- trials_1
 
-  return(list(raw_data=raw_single,
+  output <- list(raw_data=raw_single,
+                 info_df = info_df,
+                 performance_info=pr_info_by_block,performance_overall=px_overall,
+                 form_dfs=form_proc,form_summary=q_sum,
+                 ID=raw_single$ID)
+  save(output, file = output_path)
+
+  return(list(raw_data=raw_single, new_data=TRUE,
               info_df = info_df,
               performance_info=pr_info_by_block,performance_overall=px_overall,
               form_dfs=form_proc,form_summary=q_sum,
-              sID=raw_single$ID))
+              ID=raw_single$ID))
 }
 ####Proc physio
-proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4,
+proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4, force_reload=FALSE,force_reproc=FALSE,
                         eeg_sample_rate=256.03, sd_times=10, eeg_pre=500,eeg_post=1500, #EEG options
                         ecg_sample_rate = 100, HRstep = 10, ecg_pre=1000,ecg_post=10000 #ECG options
                         ) {
@@ -334,22 +362,52 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
     message("Forking is not available on windows. Parallelization will be turned off.")
     thread=1
   }
-  par_cl <- parallel::makeCluster(spec = thread,type = "FORK")
+
   exp_out<-lapply(unique(physio_df$subject_id),function(IDx){
-    print(IDx)
-    #Load the physio data
-    physio_concat <- load_physio_single(physio_df$file_path[physio_df$subject_id==IDx],cl = par_cl)
+    physio_files_new <- physio_df$file_path[physio_df$subject_id==IDx]
+    physio_rawcache_file <- file.path(unique(dirname(physio_df$file_path[physio_df$subject_id==IDx])),paste(IDx,"_physio_raw.rdata",sep = ""))
+    physio_proc_file <- file.path(unique(dirname(physio_df$file_path[physio_df$subject_id==IDx])),paste(IDx,"_physio_proc.rdata",sep = ""))
+
+    if(force_reload && file.exists(physio_rawcache_file)) {
+      load(physio_rawcache_file)
+      physio_files_diff <- physio_files_new[!physio_files_new %in% physio_files]
+      message("Found ",length(physio_files_diff), " new physio files for: ",IDx)
+    } else {
+      physio_files_diff <- physio_files_new
+      physio_concat <- NULL
+      physio_files <- NULL
+    }
+    if(length(physio_files_diff)>0) {
+      #Load the physio data, para for muiltiple files
+      par_cl <- parallel::makeCluster(spec = thread,type = "FORK")
+      message("Loading new physio data for: ",IDx)
+      physio_concat <- load_physio_single(allpaths_sub = physio_files_diff,old_data=physio_concat,cl = par_cl)
+      parallel::stopCluster(par_cl)
+      physio_files<-unique(c(physio_files,physio_files_new))
+      save(physio_files,physio_concat,file = physio_rawcache_file)
+    }
+
+    if(!force_reproc && physio_files_diff < 1 && file.exists(physio_proc_file)) {
+      load(physio_proc_file)
+      output$new_data <- FALSE
+      return(output)
+    }
+    message("Processing new physio data for: ",IDx)
     #Get the matching behavioral data
     behav_df <- output$proc_data[[IDx]]$raw_data$trials
     behav_df <- behav_df[which(!is.na(behav_df$stim_time)),]
+    if(is.null(behav_df$session_number)) {
+      behav_df$session_number <- NA
+    }
     sess_map<-unique(behav_df[c("block","session_number")])
 
     ###EEG
+    message("Processing new EEG data for: ",IDx)
     eeg_raw <- load_EEG(EEGd = physio_concat$eeg,sample_rate = eeg_sample_rate,sd_times = sd_times)
     eeg_fb <- eeg_epochs_around_feedback(EEG_data = eeg_raw,
                                            pre = eeg_pre,post = eeg_post,sample_rate = eeg_sample_rate,
                                            fbt = as.numeric(behav_df$feedback_time)*1000)
-    eeg_rawsum <- get_good_EEG(blocks=behav_df$block,a2f=eeg_proc)
+    eeg_rawsum <- get_good_EEG(blocks=behav_df$block,a2f=eeg_fb)
     eeg_summary <- eeg_rawsum[1:4] / eeg_rawsum$ntrial
     names(eeg_summary) <- paste("per_Ch",1:4,sep = "_")
     eeg_summary$block <- eeg_rawsum$nbl
@@ -363,6 +421,7 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
     eeg_ov$ID <- IDx
 
     ###ECG
+    message("Processing new ECG data for: ",IDx)
     ecg_raw <- load_ECG(ECGd = physio_concat$ecg,HRstep = HRstep,sample_rate = ecg_sample_rate)
     ecg_fb <- ecg_epochs_around_feedback(ECG_data = ecg_raw,fbt = as.numeric(behav_df$feedback_time)*1000,
                                          pre = ecg_pre,post = ecg_post,sample_rate = ecg_sample_rate)
@@ -372,13 +431,15 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
     ecg_summary <- ecg_summary[order(names(ecg_summary))]
     ecg_ov <- aggregate(per_Good ~ ID,data = ecg_summary,FUN = mean,na.rm=T)
     ecg_ov$worst_allblocks <- min(ecg_summary$per_Good)
-
-    return(list(physio_raw=physio_concat,eeg_proc = eeg_raw,eeg_fb = eeg_fb, eeg_summary = eeg_summary, eeg_ov = eeg_ov,
-           ecg_proc = ecg_raw,ecg_fb = ecg_fb, ecg_summary = ecg_summary, ecg_ov = ecg_ov))
+    output <- list(eeg_raw=physio_concat$eeg,ecg_raw=physio_concat$ecg,new_data=TRUE,ID=IDx,eeg_proc = eeg_raw,eeg_fb = eeg_fb, eeg_summary = eeg_summary, eeg_ov = eeg_ov,
+                   ecg_proc = ecg_raw,ecg_fb = ecg_fb, ecg_summary = ecg_summary, ecg_ov = ecg_ov)
+    save(output,file = physio_proc_file)
+    return(output)
   })
-  parallel::stopCluster(par_cl)
-  nax <- c("proc","fb","summary")
+
+  nax <- c("raw","proc","fb","summary")
   IDlist <- unique(physio_df$subject_id)
+
   output_fin<-lapply(c("eeg","ecg"),function(ay){
     output_ls<-lapply(nax,function(ax){
       output <- lapply(exp_out,`[[`,paste(ay,ax,sep = "_"))
@@ -390,18 +451,23 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
     return(output_ls)
   })
   names(output_fin) <- c("eeg","ecg")
+  output_fin$newdata_IDs <- IDlist[sapply(exp_out,`[[`,"new_data")]
   return(output_fin)
 }
 
-load_physio_single <- function(allpaths_sub,cl=NULL) {
+load_physio_single <- function(allpaths_sub,old_data=NULL,cl=NULL) {
   if(is.null(cl)) {
     all_dt <- lapply(allpaths_sub,load_db,table_names=c("EEG_muse","Polar_heartrate"))
   } else {
     all_dt <- parallel::parLapply(cl,allpaths_sub,load_db,table_names=c("EEG_muse","Polar_heartrate"))
   }
   eeg_aggregate <- do.call(rbind,lapply(all_dt,`[[`,"EEG_muse"))
-  eeg_aggregate <- eeg_aggregate[order(eeg_aggregate$recording_time),]
   ecg_aggregate <- do.call(rbind,lapply(all_dt,`[[`,"Polar_heartrate"))
+  if(!is.null(old_data)){
+    eeg_aggregate <- rbind(old_data$eeg,eeg_aggregate)
+    ecg_aggregate <- rbind(old_data$ecg,ecg_aggregate)
+  }
+  eeg_aggregate <- eeg_aggregate[order(eeg_aggregate$recording_time),]
   ecg_aggregate <- ecg_aggregate[order(ecg_aggregate$time_ms),]
   return(list(eeg=eeg_aggregate,ecg=ecg_aggregate))
 }

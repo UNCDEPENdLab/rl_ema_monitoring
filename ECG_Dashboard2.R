@@ -9,7 +9,12 @@ library("dplyr")
 
 #set this to some path on your computer where the repo lives
 #the cache holds the compiled function so it doesn't have to recompile later
-repo_path <- "~/Data_Analysis/Momentum"
+if(!exists("repo_path",envir = .GlobalEnv)) {
+  repo_path <- "~/Data_Analysis/Momentum"
+}
+##add C++11 flag for MacOS BigSur Clang & RcppArmadillo for R 4.0
+Sys.setenv("PKG_CXXFLAGS"="-std=c++11")
+
 Rcpp::sourceCpp(file.path(repo_path, "rl_ema_monitoring/data_utils/timings2samples_block_cpp.cpp"), cacheDir = getwd())
 
 #test case
