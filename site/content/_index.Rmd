@@ -103,10 +103,9 @@ ID_Overview = data.table(
 # get the base url
 #burl <- yaml::read_yaml("../config.yaml")$baseurl
 #urls <- rep(paste0('/subjects/'), nrow(ID_Overview)) # burl, 
-ids <- ID_Overview$ID
+ids <- tolower(ID_Overview$ID)
 # use paste0 to compose markdown-formatted hyperlinks
-ID_Overview$ID <- paste0("<a target='_parent' href='/",ID_Overview$ID, "/'>", ID_Overview$ID, "</a>")
-#ID_Overview$ID <- convert_to_link(ID_Overview$ID)
+ID_Overview$ID <- paste0("<a target='_parent' href='/",ids, "/'>", ID_Overview$ID, "</a>") # subjects/
 # create a new folder and rmd template if for each subject that hasn't been initialized
 for(id in ids) {
   # if the path does not exist
@@ -114,14 +113,17 @@ for(id in ids) {
     # then create the directory
     dir.create(paste0('subjects/', id))
   }
-  # if the rmd for the subject does not exist
-  if(file.exists(paste0('subjects/', id, '/index.Rmd')) == FALSE) {
-    # then create a subject Rmd from the template
-    # just makes a blank Rmd for now
-    #file.create(paste0('Subjects/', id, '/_index.Rmd'))
-    file.copy("../../Rmd_templates/subject/index.Rmd", paste0('subjects/', id, '/index.Rmd'))
-    # blogdown::hugo_cmd("new --kind subject subjects/test/index.Rmd")
-    #rmarkdown::draft(paste0("subjects/", id, "/_index.Rmd"), template="../../Rmd_templates/subject", create_dir=TRUE)
+  curr_path <- paste0('subjects/', id)
+  # if the md and the Rmd for the subject does not exist
+  if(file.exists(paste0(curr_path, '/index.Rmd')) == FALSE) {
+    tryCatch({
+      # then create a subject Rmd from the template
+      blogdown::hugo_cmd(paste0("new subjects/", id, " -s .."))
+    })
+    tryCatch({
+      # rename the .md file to a .Rmd (this allows Go to be used properly in archetypes)
+    file.rename(paste0(curr_path, "/index.md"), paste0(curr_path, "/index.Rmd"))
+    })
   }
 }
 # get the active subjects

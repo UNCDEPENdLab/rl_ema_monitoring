@@ -10,6 +10,7 @@ ignoreFiles:
 - _cache$
 - \.knit\.md$
 - \.utf8\.md$
+- \archetypes$
 permalinks:
   post: /:year/:month/:day/:slug/
   subjects: /:slug/
