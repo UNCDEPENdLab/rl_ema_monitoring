@@ -16,3 +16,5 @@ conda-env
 .Rdata
 *.Rproj
 *.Rdata
+/site/data/*
+/site/content/*subjects

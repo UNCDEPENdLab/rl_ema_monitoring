@@ -99,20 +99,41 @@ ID_Overview = data.table(
 ```
 
 ```{r active_split, echo=FALSE, dependson="setup"}
+pacman::p_load(reticulate)
+#source("../../dashboard/render_utils.R")
 # get the base url
-burl <- yaml::read_yaml("../config.yaml")$baseurl
-urls <- rep(paste0(burl, 'Subjects/'), nrow(ID_Overview))
+#burl <- yaml::read_yaml("../config.yaml")$baseurl
+#urls <- rep(paste0('/subjects/'), nrow(ID_Overview)) # burl, 
+ids <- tolower(ID_Overview$ID)
 # use paste0 to compose markdown-formatted hyperlinks
-#ID_Overview$ID <- paste0("[", ID_Overview$ID, "](", urls, ID_Overview$ID, ")")
-#ID_Overview$ID <- htmltools::a(href=paste0(urls, ID_Overview$ID))
-ID_Overview$ID <- paste0("<a href='", urls, ID_Overview$ID, "'>", ID_Overview$ID, "</a>")
+ID_Overview$ID <- paste0("<a target='_parent' href='/",ids, "/'>", ID_Overview$ID, "</a>") # subjects/
+# create a new folder and rmd template if for each subject that hasn't been initialized
+for(id in ids) {
+  # if the path does not exist
+  if(dir.exists(paste0('subjects/', id)) == FALSE) {
+    # then create the directory
+    dir.create(paste0('subjects/', id))
+  }
+  curr_path <- paste0('subjects/', id)
+  # if the md and the Rmd for the subject does not exist
+  if(file.exists(paste0(curr_path, '/index.Rmd')) == FALSE) {
+    tryCatch({
+      # then create a subject Rmd from the template
+      blogdown::hugo_cmd(paste0("new subjects/", id, " -s .."))
+    })
+    tryCatch({
+      # rename the .md file to a .Rmd (this allows Go to be used properly in archetypes)
+    file.rename(paste0(curr_path, "/index.md"), paste0(curr_path, "/index.Rmd"))
+    })
+  }
+}
+#reticulate::use_condaenv('/Users/shanebuckley/Library/r-miniconda/envs/r-reticulate')
 # get the active subjects
-#active_list <- getActiveList(root_dir="rl_ema_monitoring")
+active_list <- getActiveList(root_dir="rl_ema_monitoring")
 # make DT with only active subjects
-#Active_Overview <- subset(ID_Overview, !(ID %in% active_list))
+Active_Overview <- subset(ID_Overview, !(ID %in% active_list))
 # make DT with only inactive subjects
-#Inactive_Overview <- subset(ID_Overview, ID %in% active_list)
-
+Inactive_Overview <- subset(ID_Overview, ID %in% active_list)
 ```
 
 # Active Participant Overview
@@ -120,18 +141,15 @@ ID_Overview$ID <- paste0("<a href='", urls, ID_Overview$ID, "'>", ID_Overview$ID
 ```{r, echo=FALSE}
 #b print(ID_Overview)
 library(pacman)
-library(reticulate)
 p_load(DT, dplyr, htmltools, tidyr, ggplot2, plotly, widgetframe, readr)
-#blogdown::shortcode_open("table")
-widgetframe::frameWidget(datatable(ID_Overview, class='compact', escape=FALSE, selection='none')) # Active
-#blogdown::shortcode_close("table")
+widgetframe::frameWidget(datatable(Active_Overview, class='compact', escape=1, selection='none',)) # Active 
 ```
 
-# Inactive participants
+# Inactive Participant Overview
 
 ```{r, echo=FALSE}
 library(pacman)
 p_load(DT, dplyr, htmltools, tidyr, ggplot2, plotly, widgetframe, readr)
 #blogdown::shortcode_open("table")
-#widgetframe::frameWidget(datatable(Inactive_Overview, class='compact', escape=FALSE, selection='none'))
+widgetframe::frameWidget(datatable(Inactive_Overview, class='compact', escape=FALSE, selection='none'))
 ```
