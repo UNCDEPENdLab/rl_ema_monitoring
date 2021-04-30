@@ -82,10 +82,10 @@ getPathFromCfg <- function(root_dir, sourced_file, keywords=NA, exclusion=NA, pa
   root_path <- findRoot(root_dir)
   # get the whole path to cfg.json
   cfg_path <- paste0(root_path, '/', root_dir, '/cfg.json')
-  # import json from python
-  json <- import("json")
   # import python built-ins
   py <- import_builtins()
+  # import json from python
+  json <- reticulate::import("json")
   # variable to assign the path to
   file_path <- NA
   # open the cfg.json file
@@ -170,10 +170,10 @@ sourceFromCfg <- function(root_dir, sourced_file) {
   root_path <- findRoot(root_dir)
   # get the whole path to cfg.json
   cfg_path <- paste0(root_path, '/', root_dir, '/cfg.json')
-  # import json from python
-  json <- import("json")
   # import python built-ins
   py <- import_builtins()
+  # import json from python
+  json <- reticulate::import("json")
   # variable to assign the path to
   file_path <- NA
   # open the cfg.json file
@@ -221,10 +221,10 @@ getActiveList <- function(root_dir=NULL) {
   root_path <- findRoot(root_dir)
   # get the whole path to cfg.json
   cfg_path <- paste0(root_path, '/', root_dir, '/cfg.json')
-  # import json from python
-  json <- reticulate::import("json")
   # import python built-ins
   py <- import_builtins()
+  # import json from python
+  json <- reticulate::import("json")
   # variable to assign the path to
   file_path <- NA
   # open the cfg.json file
