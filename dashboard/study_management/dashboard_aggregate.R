@@ -48,6 +48,7 @@ if (FALSE) {
                                ecg_sample_rate = 100, HRstep = 10, ecg_pre=1000,ecg_post=10000 #ECG options
                                )
   names(output_physio)
+  save(output,output_physio,file = "aggregate_output.rdata")
   #list: two data sets: EEG & ECG
   ###within each data sets:
   #####proc: list of proc'ed eeg raw data, length of subjects

@@ -340,7 +340,7 @@ ecg_epochs_around_feedback2 <- function(ECG_data,fbt,pre=1000,post=10000,sample_
   cl<-parallel::makeForkCluster(thread)
   fbt_sp <- split(fbt,as.Date(ms_to_date(fbt,timezone = "EST")))
   ch1_a2f<-do.call(rbind,parallel::parLapply(cl,1:length(fbt_sp),function(y){
-    message("Processing Day ",y," ECG data")
+    system(paste0("echo Processing Day ",y," of ECG data"))
     sub_ECG <- ECG_data[which(ECG_data$Date==names(fbt_sp)[[y]]),]
     ax<-do.call(rbind,lapply(fbt_sp[[y]],function(x) {
       fb0 <- which(sub_ECG$times > x)[1]
