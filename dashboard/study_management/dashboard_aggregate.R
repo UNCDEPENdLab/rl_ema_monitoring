@@ -9,10 +9,10 @@ source(file.path(root_dir,"ECG_Dashboard2.R"))
 require(lubridate)
 if (FALSE) {
   ###!!!!!!Use this to get path_info if you have standardized data folder including .json for each subject and .db files!!!!!!######
-  path_info<-get_ema_subject_metadata(root_dir = "rl_ema_monitoring")
+  path_info <- get_ema_subject_metadata(root_dir = "rl_ema_monitoring")
   ###Otherwise use this chunk (9-27) to get the data to get path_info
-  root_dir = "./data/Subjects"
-  path_info<-lapply(c("schedule","physio","video"),function(dj){
+  root_dir <- "./data/Subjects"
+  path_info <- lapply(c("schedule","physio","video"),function(dj){
     list_id <- list.dirs(path = root_dir,recursive = F,full.names = F)
     if(dj == "video") {
       pat = ".*.mp4"
@@ -33,7 +33,7 @@ if (FALSE) {
   #########END########
 
   #example for proc_schedule:
-  output <- proc_schedule(schedule_df = path_info$schedule,tz="EST",days_limit=60,force_reproc=F)
+  output <- proc_schedule(schedule_df = path_info$schedule,tz=Sys.timezone(),days_limit=60,force_reproc=F)
   ##Output a list of :
   output$proc_data #is a list with a length equal to the number of db files, include data imported from db
   output$subj_info #is a list with a length equal to the number of subjects, include subject information on compliance
@@ -43,7 +43,7 @@ if (FALSE) {
 
   #example for proc_physio:
   ##!!!!Must first proc the schedule data as physio uses the trial level data to generate percentage;
-  output_physio <- proc_physio(physio_df = path_info$physio,sch_pro_output=output, tz="EST",
+  output_physio <- proc_physio(physio_df = path_info$physio,sch_pro_output=output, tz="EST",thread=4,force_reload=FALSE,force_reproc=FALSE,
                                eeg_sample_rate=256.03, sd_times=10, eeg_pre=500,eeg_post=1500, #EEG options
                                ecg_sample_rate = 100, HRstep = 10, ecg_pre=1000,ecg_post=10000 #ECG options
                                )
@@ -54,7 +54,7 @@ if (FALSE) {
   #####fb: list of proc'ed eeg data, near the feedback times, length of subjects
   #####*summary: list of summary data frame for each subject, used for dashboard table generation, length of subjects
   #####*sample_summary: a data.frame of all subjects, used for dashboard overall table, nrow of subjects
-
+  save(output,output_physio,file = "fin_output.rdata")
 }
 
 #####Session number is dependent on scheduled time. Possible 1 game per day but with 2 sessions worth of data.
@@ -83,12 +83,11 @@ load_db <- function(dbpath,table_names=NULL) {
   return(tables)
 }
 
-ms_to_date = function(ms, t0="1970-01-01", timezone) {
-  sec = ms / 1000
-  as.POSIXct(sec, origin=t0, tz=timezone)
+ms_to_date <- function(ms, t0="1970-01-01", timezone=Sys.timezone()) {
+  as.POSIXct(ms / 1000, origin=t0, tz=timezone)
 }
 
-proc_schedule <- function(schedule_df = NULL,days_limit=60,force_reproc=FALSE,tz="EST") {
+proc_schedule <- function(schedule_df = NULL,days_limit=35,task_limit=56,force_reproc=FALSE,tz="EST") {
   #load in data using shane's function
   raw_data <- lapply(1:nrow(schedule_df),function(i){
     db_raw <- load_db(dbpath = schedule_df$file_path[[i]],table_names = NULL)
@@ -368,7 +367,7 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
     physio_rawcache_file <- file.path(unique(dirname(physio_df$file_path[physio_df$subject_id==IDx])),paste(IDx,"_physio_raw.rdata",sep = ""))
     physio_proc_file <- file.path(unique(dirname(physio_df$file_path[physio_df$subject_id==IDx])),paste(IDx,"_physio_proc.rdata",sep = ""))
 
-    if(force_reload && file.exists(physio_rawcache_file)) {
+    if(!force_reload && file.exists(physio_rawcache_file)) {
       load(physio_rawcache_file)
       physio_files_diff <- physio_files_new[!physio_files_new %in% physio_files]
       message("Found ",length(physio_files_diff), " new physio files for: ",IDx)
@@ -387,12 +386,13 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
       save(physio_files,physio_concat,file = physio_rawcache_file)
     }
 
-    if(!force_reproc && physio_files_diff < 1 && file.exists(physio_proc_file)) {
+    if(!force_reproc && length(physio_files_diff) < 1 && file.exists(physio_proc_file)) {
+      message("Loading processed physio data for: ",IDx)
       load(physio_proc_file)
       output$new_data <- FALSE
       return(output)
     }
-    message("Processing new physio data for: ",IDx)
+
     #Get the matching behavioral data
     behav_df <- output$proc_data[[IDx]]$raw_data$trials
     behav_df <- behav_df[which(!is.na(behav_df$stim_time)),]
@@ -423,15 +423,16 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
     ###ECG
     message("Processing new ECG data for: ",IDx)
     ecg_raw <- load_ECG(ECGd = physio_concat$ecg,HRstep = HRstep,sample_rate = ecg_sample_rate)
-    ecg_fb <- ecg_epochs_around_feedback(ECG_data = ecg_raw,fbt = as.numeric(behav_df$feedback_time)*1000,
-                                         pre = ecg_pre,post = ecg_post,sample_rate = ecg_sample_rate)
-    ecg_summary <- get_good_ECG(blocks = behav_df$block,a2f = ecg_fb)
+    ecg_fb <- ecg_epochs_around_feedback2(ECG_data = ecg_raw,fbt = as.numeric(behav_df$feedback_time)*1000,
+                                         pre = ecg_pre,post = ecg_post,sample_rate = ecg_sample_rate,thread=thread)
+    ecg_summary <- get_good_ECG(blocks = behav_df$block,ch1_a2f = ecg_fb)
     ecg_summary$session_number<-sess_map$session_number[match(ecg_summary$block,sess_map$block)]
     ecg_summary$ID <- IDx
     ecg_summary <- ecg_summary[order(names(ecg_summary))]
     ecg_ov <- aggregate(per_Good ~ ID,data = ecg_summary,FUN = mean,na.rm=T)
     ecg_ov$worst_allblocks <- min(ecg_summary$per_Good)
-    output <- list(eeg_raw=physio_concat$eeg,ecg_raw=physio_concat$ecg,new_data=TRUE,ID=IDx,eeg_proc = eeg_raw,eeg_fb = eeg_fb, eeg_summary = eeg_summary, eeg_ov = eeg_ov,
+    output <- list(new_data=TRUE,ID=IDx,
+                   eeg_proc = eeg_raw,eeg_fb = eeg_fb, eeg_summary = eeg_summary, eeg_ov = eeg_ov,
                    ecg_proc = ecg_raw,ecg_fb = ecg_fb, ecg_summary = ecg_summary, ecg_ov = ecg_ov)
     save(output,file = physio_proc_file)
     return(output)

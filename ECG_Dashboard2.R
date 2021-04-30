@@ -332,11 +332,36 @@ ecg_epochs_around_feedback <- function(ECG_data,fbt,pre=1000,post=10000,sample_r
   return(ch1_a2f) # rows = number of trials, columns = number of timestamps
 }
 
+ecg_epochs_around_feedback2 <- function(ECG_data,fbt,pre=1000,post=10000,sample_rate=100,thread=6){
+  step <- 1000/sample_rate
+  pre <- round(pre/step,0)
+  post <- round(post/step,0)
+  ECG_data$Date <- as.Date(ms_to_date(ECG_data$times))
+  cl<-parallel::makeForkCluster(thread)
+  fbt_sp <- split(fbt,as.Date(ms_to_date(fbt,timezone = "EST")))
+  ch1_a2f<-do.call(rbind,parallel::parLapply(cl,1:length(fbt_sp),function(y){
+    message("Processing Day ",y," ECG data")
+    sub_ECG <- ECG_data[which(ECG_data$Date==names(fbt_sp)[[y]]),]
+    ax<-do.call(rbind,lapply(fbt_sp[[y]],function(x) {
+      fb0 <- which(sub_ECG$times > x)[1]
+      if(is.na(fb0)){
+        return(matrix(NA,ncol = pre+post+1,nrow = 1))
+      }
+      indx <- (fb0-pre):(fb0+post)
+      indx[indx<1 | indx > nrow(sub_ECG)] <- NA
+      a<-matrix(sub_ECG$rate[indx],nrow = 1)
+      rownames(a)<-x
+      return(a)
+    }))
+    return(ax)
+  }))
+  parallel::stopCluster(cl)
 
+  return(ch1_a2f) # rows = number of trials, columns = number of timestamps
+}
 
-get_good_ECG <- function(blocks,a2f){
+get_good_ECG <- function(blocks,ch1_a2f){
   nbl <- unique(blocks)
-  ch1_a2f <- as.matrix(a2f)
 
   Ngood1 <- NULL
   Ntotal <- NULL
