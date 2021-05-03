@@ -1,0 +1,97 @@
+---
+title: "Compliance"
+output:
+  html_document: default
+---
+```{r OVERALL COMPLIANCE, include=FALSE}
+# this chunk provides code for the Compliance table
+## shows delays on each task (resting state, games, sleep diary, mood report, mood post-task, daily recording)
+
+#loads libraries and sets working directory to the root ./rl_ema_monitoring
+library("RSQLite")
+library("plyr")
+library("dplyr")
+library("pixiedust")
+library("ggplot2")
+library("zoo")
+library("tidyverse")
+library("knitr")
+library("reticulate")
+library("lubridate")
+library("rjson")
+library("R.utils")
+setwd("/Users/abbegaillovette/Documents/GitHub/rl_ema_monitoring/")
+root_dir = "/Users/abbegaillovette/Documents/GitHub/rl_ema_monitoring/"
+source(file.path(root_dir,"dashboard/study_management/data_management_functions.R"))
+source(file.path(root_dir,"dashboard/study_management/dashboard_aggregate.R"))
+source(file.path(root_dir,"EEG_Dashboard.R"))
+source(file.path(root_dir,"ECG_Dashboard.R"))
+
+#pulls from dashboard_aggregate.R functions and creates compliance table (basic)
+#path_info<-get_ema_subject_metadata(root_dir = "rl_ema_monitoring")
+root_dir = "./data/Subjects"
+  path_info<-lapply(c("schedule","physio","video"),function(dj){
+    list_id <- list.dirs(path = root_dir,recursive = F,full.names = F)
+    if(dj == "video") {
+      pat = ".*.mp4"
+    } else {
+      pat = ".db"
+    }
+    do.call(rbind,lapply(list_id,function(idx){
+      db_files<-list.files(file.path(root_dir,idx,dj),pattern = pat,full.names = T,recursive = F,include.dirs = F)
+      if(length(db_files)>0){
+        dx<-data.frame(subject_id=idx,file_path=db_files,stringsAsFactors = F)
+        return(dx)
+      } else {
+        return(NULL)
+      }
+    }))
+  })
+  names(path_info) <- c("schedule","physio","video")
+  path_info
+output<-proc_schedule(schedule_df = path_info$schedule)
+output$sample_info_df
+output$subj_info$`Abbegail`
+compliance <-output$subj_info$`Abbegail`[c("scheduled_time","delay","type", "session_number")]
+compliance$scheduled_time <- as.Date(compliance$scheduled_time)
+compliance$delay <- round(as.numeric(compliance$delay), digits = 0)
+compliance$s_type[compliance$type=="trials"] <- "Behavioral Game"
+compliance$s_type[compliance$type=="questionnaires"] <- sapply(output$subj_info$`Abbegail`$spec[compliance$type=="questionnaires"],`[[`,3)
+compliance$session_number <- as.character(compliance$session_number)
+compliance$delay <- round(compliance$delay)
+
+#filters out NA/incomplete/upcoming data
+compliance_filtered <- compliance %>% filter(!is.na(s_type))
+compliance_filtered <- compliance_filtered %>% filter(!is.na(delay))
+print(compliance_filtered)
+
+#pivot table
+library("pivottabler")
+compliance_pf <- PivotTable$new()
+compliance_pf$addData(compliance_filtered)
+compliance_pf$addColumnDataGroups("s_type", addTotal=FALSE)
+compliance_pf$addRowDataGroups("scheduled_time", addTotal=FALSE)
+compliance_pf$addRowDataGroups("session_number", addTotal=FALSE)
+compliance_pf$defineCalculation(calculationName = "delay", summariseExpression = "mean(as.numeric(delay), na.rm=TRUE)")
+compliance_pf$evaluatePivot()
+
+# apply the green style for an average delay of between 0 and 2 hours
+cells <- compliance_pf$findCells(minValue=0, maxValue=120, includeNull=FALSE, includeNA=FALSE)
+compliance_pf$setStyling(cells=cells, declarations=list("background-color"="#C6EFCE", "color"="#006100"))
+
+# apply the yellow style for an average delay of between 2 and 4 hours
+cells <- compliance_pf$findCells(minValue=121, maxValue=240, includeNull=FALSE, includeNA=FALSE)
+compliance_pf$setStyling(cells=cells, declarations=list("background-color"="#FFEB9C", "color"="#9C5700"))
+
+# apply the red style for an average delay of 4 hours or greater
+cells <- compliance_pf$findCells(minValue=241, includeNull=FALSE, includeNA=FALSE)
+compliance_pf$setStyling(cells=cells, declarations=list("background-color"="#FFC7CE", "color"="#9C0006"))
+```
+
+
+### Task Compliance
+
+```{r, echo=FALSE}
+compliance_pf$renderPivot()
+```
+
