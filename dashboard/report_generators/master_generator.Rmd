@@ -3,6 +3,8 @@ title: "Abbegail"
 output: html_document
 params:
   id: Abbegail
+  proc_sched: "/Users/dp/Downloads/abb_proc_sched.RData"
+  proc_phys: "/Users/dp/Downloads/emp_physiooutput.RData"
 ---
 
 ```{r setup, include=FALSE}
@@ -22,34 +24,91 @@ source("~/Downloads/rl_ema_monitoring/dashboard/study_management/dashboard_aggre
 
 #Commenting this out too since it takes forever to do output_physio, and reading in Jiazhou's outputs instead
 #using this instead:
- root_dir <- "./data/Subjects"
-   path_info<-lapply(c("schedule","physio","video"),function(dj){
-     list_id <- list.dirs(path = root_dir,recursive = F,full.names = F)
-     if(dj == "video") {
-       pat = ".*.mp4"
-     } else {
-       pat = ".db"
-     }
-     do.call(rbind,lapply(list_id,function(idx){
-       db_files<-list.files(file.path(root_dir,idx,dj),pattern = pat,full.names = T,recursive = F,include.dirs = F)
-       if(length(db_files)>0){
-         dx<-data.frame(subject_id=idx,file_path=db_files,stringsAsFactors = F)
-         return(dx)
-       } else {
-         return(NULL)
-       }
-     }))
-   })
-   names(path_info) <- c("schedule","physio","video")
+ # root_dir <- "/Users/dp/Downloads/rl_ema_monitoring/data/Subjects"
+ #   path_info<-lapply(c("schedule","physio","video"),function(dj){
+ #     list_id <- list.dirs(path = root_dir,recursive = F,full.names = F)
+ #     if(dj == "video") {
+ #       pat = ".*.mp4"
+ #     } else {
+ #       pat = ".db"
+ #     }
+ #     do.call(rbind,lapply(list_id,function(idx){
+ #       db_files<-list.files(file.path(root_dir,idx,dj),pattern = pat,full.names = T,recursive = F,include.dirs = F)
+ #       if(length(db_files)>0){
+ #         dx<-data.frame(subject_id=idx,file_path=db_files,stringsAsFactors = F)
+ #         return(dx)
+ #       } else {
+ #         return(NULL)
+ #       }
+ #     }))
+ #   })
+ #   names(path_info) <- c("schedule","physio","video")
+ #   
+ #  #example for proc_schedule:
+ #  output<-proc_schedule(schedule_df = path_info$schedule)
  
- output <- proc_schedule(schedule_df = path_info$schedule)
+ info <- params$proc_sched$subj_performance %>% select(block,date)
+ info <- transmute(info,"Date"=date,"Block"=block)
+ 
+ 
+```
+
+
+```{r sleep, include=FALSE}
+diary <- params$proc_sched$proc_data$Abbegail$form_dfs$`Sleep Diary`
+diary <- diary[,-c(1:3,9)]
+diary <- rename(diary,"Block"=session_number)
+diary <- left_join(diary,info,by="Block")
+diary$Date <- lapply(diary$Date,function(dt){
+  year <- str_extract(dt,"\\d{4}")
+  month <- str_extract(dt,"-\\d{2}-") %>% str_extract("\\d{2}")
+  day <- str_extract(dt,"\\d{2}$")
+  return(paste0(month,"/",day,"/",year))
+})
+diary <- transmute(diary, "Date"=Date, "Block"=Block, "Sleep latency"=sleep_latency, "Woke many time"=woke_many_times, "Woke early"=woke_early, "Overall"=overall)
+diary <- arrange(diary, -row_number())
+
+
+```
+
+```{r mood, include=FALSE}
+mood <- params$proc_sched$proc_data$Abbegail$form_dfs$`Mood Questionnaire`
+
+# rolling_avg <- c()
+# for(row in 1:nrow(mood)){
+#   if(row < 10){
+#     rolling_avg <- append(rolling_avg,999)
+#   } else{
+#     total <- 0
+#     for(r in 0:9){
+#       total <- total + mood[row-r,"number_of_events"]
+#       ev_avg <- total/10
+#     }
+#     rolling_avg <- append(rolling_avg,ev_avg)
+#   }
+# }
+# mood$rolling_avg <- rolling_avg
+mood <- mood[,-c(1:3,9,12,14,15)]
+mood$`RA Check` <- c(1,1,1,0,1,1,1,0,1,0,0,0,1,1,1,1,1,1,1,1,0,1,1,1,1,1)#adding RA check column, which will eventually be filled by REDCap integration
+mood <- rename(mood,"Block"=session_number)
+mood <- left_join(mood,info,by="Block")
+mood$Date <- lapply(mood$Date,function(dt){
+  year <- str_extract(dt,"\\d{4}")
+  month <- str_extract(dt,"-\\d{2}-") %>% str_extract("\\d{2}")
+  day <- str_extract(dt,"\\d{2}$")
+  return(paste0(month,"/",day,"/",year))
+})
+mood <- arrange(mood, -row_number())
+mood <- transmute(mood, "Date"=Date, "Block"=Block, "RA Check"=`RA Check`,"Number of events"=number_of_events, "Valence"=Valence, "Arousal"=Arousal, "Anxious"=Anxious, "Elated"=Elated, "Irritable"=Irritable,"Energetic"=Energetic)
+
+avg_last_ten <- 1.5 #temporarily manually assigning this value; it will eventually live in the summary table for questionnaire data
 ```
 
 ```{r performance, include=FALSE}
 
 #performance breakdown
 
-perf <- output$subj_performance 
+perf <- params$proc_sched$subj_performance 
 df1 <- filter(perf,!is.na(date)) #get rid of blocks not played
 df1$date <- lapply(df1$date,function(dt){
   year <- str_extract(dt,"\\d{4}")
@@ -79,16 +138,15 @@ rownames(df3) <- NULL
 
 ```{r eeg, include=FALSE}
 #Commenting this out too since it takes forever to do output_physio, and reading in Jiazhou's outputs instead
-# output_physio <- proc_physio(physio_df = path_info$physio,sch_pro_output=output, tz="EST",
+# proc_physsio <- proc_physio(physio_df = path_info$physio,sch_pro_output=output, tz="EST",
 #                                eeg_sample_rate=256.03, sd_times=10, eeg_pre=500,eeg_post=1500, #EEG options
 #                                ecg_sample_rate = 100, HRstep = 10, ecg_pre=1000,ecg_post=10000 #ECG options
 #                                )
 
-load("/Users/dp/Downloads/emp_physiooutput.RData")
-eeg <- output_physio$eeg$summary$Abbegail
-abb_info <- output$subj_performance %>% select(block,date)
+eeg <- params$proc_phys$eeg$summary$Abbegail
+info <- params$proc_sched$subj_performance %>% select(block,date)
 
-eeg_dates <- left_join(eeg,abb_info,by="block")
+eeg_dates <- left_join(eeg,info,by="block")
 
 eeg_avg <- mutate(eeg_dates,"avg"=(per_Ch_1 + per_Ch_2 + per_Ch_3 +per_Ch_4)/4)
 eeg_row_ordered <- arrange(eeg_avg, -row_number())
@@ -117,9 +175,9 @@ eeg_col_named <- transmute(eeg_row_ordered, "Date"=date, "Block"=block, "Overall
 ```
  
 ```{r hr, include=FALSE}
-hr <- output_physio$ecg$summary$Abbegail
+hr <- params$proc_phys$ecg$summary$Abbegail
 
-hr_dates <- left_join(hr,abb_info,by="block")
+hr_dates <- left_join(hr,info,by="block")
 
 
 hr_ordered <- arrange(hr_dates, -row_number())
@@ -140,11 +198,11 @@ hr_ordered <- transmute(hr_ordered, "Date"=date, "Block"=block, "Good signal %"=
 ```
 
 ```{r compliance, include=FALSE}
-compliance <-output$subj_info$`Abbegail`[c("scheduled_time","delay","type", "session_number")]
+compliance <-params$proc_sched$subj_info$`Abbegail`[c("scheduled_time","delay","type", "session_number")]
 compliance$scheduled_time <- as.Date(compliance$scheduled_time)
 compliance$delay <- round(as.numeric(compliance$delay), digits = 0)
 compliance$s_type[compliance$type=="trials"] <- "Behavioral Game"
-compliance$s_type[compliance$type=="questionnaires"] <- sapply(output$subj_info$`Abbegail`$spec[compliance$type=="questionnaires"],`[[`,3)
+compliance$s_type[compliance$type=="questionnaires"] <- sapply(params$proc_sched$subj_info$`Abbegail`$spec[compliance$type=="questionnaires"],`[[`,3)
 compliance$session_number <- as.character(compliance$session_number)
 compliance$delay <- round(compliance$delay)
 
@@ -185,8 +243,8 @@ kbl(df3) %>%
   kable_styling(fixed_thead = T) %>%
   column_spec(1, bold = T) %>%
   column_spec(2, bold = T) %>%
-  column_spec(3, background=case_when(df3[,3]>80 ~ "green",df3[,3]>70 & df3[,3]<=80 ~ "yellow", df3[,3]<70 ~ "red")) %>%
-  column_spec(4, background=case_when(df3[,4]>80 ~ "green",df3[,4]>70 & df3[,4]<=80 ~ "yellow", df3[,4]<70 ~ "red")) %>%
+  column_spec(3, background=case_when(df3[,3]>80 ~ "#C6EFCE",df3[,3]>70 & df3[,3]<=80 ~ "#FFEB9C", df3[,3]<70 ~ "#ffc7ce")) %>%
+  column_spec(4, background=case_when(df3[,4]>80 ~ "#C6EFCE",df3[,4]>70 & df3[,4]<=80 ~ "#FFEB9C", df3[,4]<70 ~ "#ffc7ce")) %>%
   column_spec(5, color=ifelse(df3[,5] > 55 | is.na(df3[,5]), "#D8D8D8", "black")) %>%
   column_spec(6, color=ifelse(df3[,6] > 55 | is.na(df3[,6]), "#D8D8D8","black")) %>%
   column_spec(7, color=ifelse(df3[,7] > 1400, "#E6E6E6","black")) %>%
@@ -208,7 +266,7 @@ kbl(eeg_col_named) %>%
   kable_styling(fixed_thead = T) %>%
   column_spec(1, bold = T) %>%
   column_spec(2, bold = T) %>%
-  column_spec(3, background=if_else(eeg_col_named$`Overall % good`>80, "green", "red")) %>%
+  column_spec(3, background=if_else(eeg_col_named$`Overall % good`>80, "#C6EFCE", "#ffc7ce")) %>%
   column_spec(4, color=if_else(eeg_col_named[4]>70, "#D8D8D8", "black")) %>%
   column_spec(5, color=if_else(eeg_col_named[5]>70, "#D8D8D8", "black")) %>%
   column_spec(6, color=if_else(eeg_col_named[6]>70, "#D8D8D8", "black")) %>%
@@ -223,11 +281,46 @@ kbl(hr_ordered) %>%
   kable_styling(fixed_thead = T) %>%
   column_spec(1, bold = T) %>%
   column_spec(2, bold = T) %>%
-  column_spec(3, background=if_else(hr_ordered[3]>90, "green", "red"))
+  column_spec(3, background=if_else(hr_ordered[3]>90, "#C6EFCE", "#ffc7ce"))
 ```
 
+\newline
+\newline
+# Sleep diary
+```{r diary table, echo=FALSE}
+#Will need to change the figure for sleep_di_avg when we figure out that threshold
+kbl(diary) %>%
+  kable_styling(fixed_thead = T) %>%
+  column_spec(1, bold = T) %>%
+  column_spec(2, bold = T) %>%
+  column_spec(3, color=if_else(params$proc_sched$sample_form_summary$sleep_di_avg > 50, "#D8D8D8", "black")) %>%
+  column_spec(4, color=if_else(params$proc_sched$sample_form_summary$sleep_di_avg > 50, "#D8D8D8", "black")) %>%
+  column_spec(5, color=if_else(params$proc_sched$sample_form_summary$sleep_di_avg > 50, "#D8D8D8", "black")) %>%
+  column_spec(6, color=if_else(params$proc_sched$sample_form_summary$sleep_di_avg > 50, "#D8D8D8", "black"))
+```
+
+\newline
+\newline
+# Mood questionnaire
+```{r mood table, echo=FALSE}
+#Will need to change the figure for val_arr_dis_avg when we figure out that threshold
+kbl(mood) %>%
+  kable_styling(fixed_thead = T) %>%
+  column_spec(1, bold = T) %>%
+  column_spec(2, bold = T) %>%
+  column_spec(3, background=if_else(mood[3]==1, "#C6EFCE", "#ffc7ce")) %>%
+  column_spec(4, color="#D8D8D8") %>%
+  column_spec(5, color=if_else(params$proc_sched$sample_form_summary$val_arr_dis_avg > 50, "#D8D8D8", "black")) %>%
+  column_spec(6, color=if_else(params$proc_sched$sample_form_summary$val_arr_dis_avg > 50, "#D8D8D8", "black")) %>%
+  column_spec(7, color=if_else(params$proc_sched$sample_form_summary$val_arr_dis_avg > 50, "#D8D8D8", "black")) %>%
+  column_spec(8, color=if_else(params$proc_sched$sample_form_summary$val_arr_dis_avg > 50, "#D8D8D8", "black")) %>%
+  column_spec(9, color=if_else(params$proc_sched$sample_form_summary$val_arr_dis_avg > 50, "#D8D8D8", "black")) %>%
+  column_spec(10, color=if_else(params$proc_sched$sample_form_summary$val_arr_dis_avg > 50, "#D8D8D8", "black"))
+
+#remove_column(table,11) #get rid of rolling average column, used to color the number of events column
 
 
+```
 
 
 
