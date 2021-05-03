@@ -2,9 +2,9 @@
 #root_dir = getwd()
 root_dir <- getwd()
 repo_path <- dirname(root_dir)
-source(file.path(root_dir,"dashboard/study_management/data_management_functions.R"))
-source(file.path(root_dir,"EEG_Dashboard.R"))
-source(file.path(root_dir,"ECG_Dashboard2.R"))
+#source(file.path(root_dir,"dashboard/study_management/data_management_functions.R"))
+#source(file.path(root_dir,"EEG_Dashboard.R"))
+#source(file.path(root_dir,"ECG_Dashboard2.R"))
 ###Dependent functions:
 require(lubridate)
 if (FALSE) {

@@ -649,3 +649,9 @@ refresh_ema_cache <- function(
   #cat(log_result, file=log_file, sep="\n") #something along these lines
   #return(log_result) #as a data.frame or other summary object
 }
+date_format <- function(dt=NULL){
+  year <- str_extract(dt,"\\d{4}")
+  month <- str_extract(dt,"-\\d{2}-") %>% str_extract("\\d{2}")
+  day <- str_extract(dt,"\\d{2}$")
+  return(paste0(month,"/",day,"/",year))
+}

@@ -80,7 +80,7 @@ eeg <- rename(eeg,"Block"=block)
 
 eeg_dates <- left_join(eeg,blk_dt,by="Block") #add date column
 
-eeg_avg <- mutate(eeg_dates,"avg"=(per_Ch_1 + per_Ch_2 + per_Ch_3 +per_Ch_4)/4) #create colum for avg EEG signal 
+eeg_avg <- mutate(eeg_dates,"avg"=(per_Ch_1 + per_Ch_2 + per_Ch_3 +per_Ch_4)/4) #create column for avg EEG signal 
 
 eeg_row_ordered <- arrange(eeg_avg, -row_number()) #flip df so most recent blocks are first
 
