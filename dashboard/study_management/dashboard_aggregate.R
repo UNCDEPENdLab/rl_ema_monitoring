@@ -2,9 +2,9 @@
 #root_dir = getwd()
 root_dir <- getwd()
 repo_path <- dirname(root_dir)
-source(file.path(root_dir,"dashboard/study_management/data_management_functions.R"))
-source(file.path(root_dir,"EEG_Dashboard.R"))
-source(file.path(root_dir,"ECG_Dashboard2.R"))
+#source(file.path(root_dir,"dashboard/study_management/data_management_functions.R"))
+#source(file.path(root_dir,"EEG_Dashboard.R"))
+#source(file.path(root_dir,"ECG_Dashboard2.R"))
 ###Dependent functions:
 require(lubridate)
 if (FALSE) {
@@ -90,7 +90,8 @@ ms_to_date <- function(ms, t0="1970-01-01", timezone=Sys.timezone()) {
 proc_schedule <- function(schedule_df = NULL,days_limit=35,task_limit=56,force_reproc=FALSE,tz="EST") {
   #load in data using shane's function
   raw_data <- lapply(1:nrow(schedule_df),function(i){
-    db_raw <- load_db(dbpath = schedule_df$file_path[[i]],table_names = NULL)
+    dbpath <- paste0(schedule_df$file_path[[i]], '/', schedule_df$file_name[[i]])
+    db_raw <- load_db(dbpath=dbpath,table_names = NULL)
     db_raw$ID <- schedule_df$subject_id[[i]]
     db_raw$data_mtime <- lubridate::as_datetime(file.info(schedule_df$file_path[[i]])$mtime,tz=tz)
     db_raw$data_folder <- dirname(schedule_df$file_path[[i]])
@@ -378,7 +379,9 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
     message("Forking is not available on windows. Parallelization will be turned off.")
     thread=1
   }
-
+  # modify physio_df to have physio_df$file_path include the file name
+  physio_df <- within(physio_df, file_path <- paste0(file_path, '/', file_name))
+  
   exp_out<-lapply(unique(physio_df$subject_id),function(IDx){
     physio_files_new <- physio_df$file_path[physio_df$subject_id==IDx]
     physio_rawcache_file <- file.path(unique(dirname(physio_df$file_path[physio_df$subject_id==IDx])),paste(IDx,"_physio_raw.rdata",sep = ""))
