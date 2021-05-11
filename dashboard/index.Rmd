@@ -75,7 +75,8 @@ ID_Overview = data.table(
   "Left %" = round(output$sample_performance$side_bias, digits = 3),
   "Valence/Arousal Distance from Origin" = round(qxn$val_arr_dis_avg, digits = 3),
   "Emotion Distance from 0" = round(qxn$emo_rate_avg, digits = 3),
-  "Emotion/Valence Correlation" = round(qxn$val_emo_cor, digits = 3)
+  "Emotion/Valence Correlation" = round(qxn$val_emo_cor, digits = 3), row.names = FALSE,
+)
   #TO ADD: REDCap Variables, Active/Inactive variable, link to individual page`
 ```
 

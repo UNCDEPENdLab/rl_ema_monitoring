@@ -3,22 +3,26 @@ title: Subject report
 output: html_document
 ---
 
+# Individual Participant Page {.tabset}
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-knitr::opts_knit$set(root.dir = '~/Downloads/rl_ema_monitoring') #probably need to change this root dir for general use
+knitr::opts_knit$set(root.dir = '/Users/abbegaillovette/Documents/GitHub/rl_ema_monitoring', repo_path = '/Users/abbegaillovette/Documents/GitHub/')
 library(kableExtra)
 library(dplyr)
-#Probably need to change these paths for general use
-source("~/Downloads/rl_ema_monitoring/EEG_Dashboard.R")
-source("~/Downloads/rl_ema_monitoring/ECG_Dashboard.R")
-source("~/Downloads/rl_ema_monitoring/dashboard/study_management/data_management_functions.R")
-source("~/Downloads/rl_ema_monitoring/dashboard/study_management/dashboard_aggregate.R")
+library("RcppArmadillo")
+repo_path <<- "/Users/abbegaillovette/Documents/GitHub/"
+root_dir='/Users/abbegaillovette/Documents/GitHub/rl_ema_monitoring'
+source("/Users/abbegaillovette/Documents/GitHub/rl_ema_monitoring/EEG_Dashboard.R")
+source("/Users/abbegaillovette/Documents/GitHub/rl_ema_monitoring/ECG_Dashboard.R")
+source("/Users/abbegaillovette/Documents/GitHub/rl_ema_monitoring/dashboard/study_management/data_management_functions.R")
+source("/Users/abbegaillovette/Documents/GitHub/rl_ema_monitoring/dashboard/study_management/dashboard_aggregate.R")
 ```
 
 ```{r load, include=FALSE}
 #Not sure how subject-specific processed schedule file data and processed physio file data will be passed to this Rmd, so just loading in local RData objects and manually accessing a single subject's data for now
-load("/Users/dp/Downloads/abb_proc_sched.RData") 
-load("/Users/dp/Downloads/emp_physiooutput.RData")
+load("/Users/abbegaillovette/Desktop/abb_proc_sched.Rdata") 
+load("/Users/abbegaillovette/Desktop/emp_physiooutput.rdata")
 perf <- filter(output$subj_performance,ID=="Abbegail")
 proc_sched <- output$proc_data$'Abbegail'
 info <- output$subj_info$'Abbegail'
@@ -128,6 +132,12 @@ compliance_filtered <- compliance %>% filter(!is.na(s_type))
 compliance_filtered <- compliance_filtered %>% filter(!is.na(delay))
 print(compliance_filtered)
 
+wide_compliance <- compliance_filtered %>% pivot_wider(
+  names_from = s_type,
+  values_from = delay
+)
+print(wide_compliance)
+
 #pivot table
 library("pivottabler")
 compliance_pf <- PivotTable$new()
@@ -151,9 +161,15 @@ cells <- compliance_pf$findCells(minValue=241, includeNull=FALSE, includeNA=FALS
 compliance_pf$setStyling(cells=cells, declarations=list("background-color"="#FFC7CE", "color"="#9C0006"))
 ```
 
+\newline
+## Task compliance
+```{r compliance table, echo=FALSE}
+#Compliance table
+compliance_pf$renderPivot()
+```
 
 \newline
-# Task performance
+## Task performance
 
 ```{r perf table, echo=FALSE}
 #Task performance table
@@ -169,15 +185,9 @@ kbl(task) %>%
   column_spec(8, color=ifelse(task[,8] >= 67 | task[,8] < 67, "#D8D8D8","black"))
 ```
 
-\newline
-# Task compliance
-```{r compliance table, echo=FALSE}
-#Compliance table
-compliance_pf$renderPivot()
-```
 
 \newline
-# EEG
+## EEG
 ```{r two, echo=FALSE}
 #EEG table
 kbl(eeg_col_named) %>%
@@ -192,7 +202,7 @@ kbl(eeg_col_named) %>%
 ```
 
 \newline
-# HR
+## HR
 ```{r hr perf, echo=FALSE}
 #HR table
 kbl(hr_ordered) %>%
@@ -203,7 +213,7 @@ kbl(hr_ordered) %>%
 ```
 
 \newline
-# Sleep diary
+## Sleep diary
 ```{r diary table, echo=FALSE}
 #Sleep diary table
 #Will need to change the figure for sleep_di_avg when we figure out that threshold
@@ -218,7 +228,7 @@ kbl(diary) %>%
 ```
 
 \newline
-# Mood questionnaire
+## Mood questionnaire
 ```{r mood table, echo=FALSE}
 #Mood table
 #Will need to change the figure for val_arr_dis_avg when we figure out that threshold
