@@ -329,7 +329,7 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
     }
     names(tkf)<-gsub(".","_",names(tkf),fixed = T)
     tkf$ID <- raw_single$ID
-    tkf[tkf=="NA"] <- NA
+    #tkf[tkf=="NA"] <- NA
     tkf <- tkf[order(tkf$answer_time),]
     rownames(tkf)<-NULL
     return(tkf)
@@ -381,7 +381,7 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
   }
   # modify physio_df to have physio_df$file_path include the file name
   physio_df <- within(physio_df, file_path <- paste0(file_path, '/', file_name))
-  
+
   exp_out<-lapply(unique(physio_df$subject_id),function(IDx){
     physio_files_new <- physio_df$file_path[physio_df$subject_id==IDx]
     physio_rawcache_file <- file.path(unique(dirname(physio_df$file_path[physio_df$subject_id==IDx])),paste(IDx,"_physio_raw.rdata",sep = ""))
