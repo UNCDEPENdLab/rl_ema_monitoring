@@ -458,13 +458,13 @@ color: #d14;
   function tryEval(code) {
     var result = null;
     try {
-      result = eval("(" + code + ")");
+      result = eval(code);
     } catch(error) {
       if (!error instanceof SyntaxError) {
         throw error;
       }
       try {
-        result = eval(code);
+        result = eval("(" + code + ")");
       } catch(e) {
         if (e instanceof SyntaxError) {
           throw error;
@@ -1369,15 +1369,6 @@ border: 0;
 }
 </style>
 
-<style type="text/css">
-  code{white-space: pre-wrap;}
-  span.smallcaps{font-variant: small-caps;}
-  span.underline{text-decoration: underline;}
-  div.column{display: inline-block; vertical-align: top; width: 50%;}
-  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
-  ul.task-list{list-style: none;}
-    </style>
-
 <style type="text/css">code{white-space: pre;}</style>
 <style type="text/css">
   pre:not([class]) {
@@ -1422,7 +1413,6 @@ h6 {
   text-align: left;
 }
 </style>
-
 
 
 
@@ -1542,8 +1532,8 @@ summary {
 
 <div id="task-compliance" class="section level2">
 <h2>Task compliance</h2>
-<div id="htmlwidget-e6e966be87419a89e2f5" style="width:auto;height:auto;" class="pivottabler html-widget"></div>
-<script type="application/json" data-for="htmlwidget-e6e966be87419a89e2f5">{"x":{"tableCss":".Table {display: table; border-collapse: collapse; }\r\n.ColumnHeader {font-family: Arial; font-size: 0.75em; border: 1px solid lightgray; vertical-align: middle; font-weight: bold; background-color: #F2F2F2; padding: 2px; text-align: center; }\r\n.RowHeader {font-family: Arial; font-size: 0.75em; border: 1px solid lightgray; vertical-align: middle; font-weight: bold; background-color: #F2F2F2; padding: 2px 8px 2px 2px; text-align: left; }\r\n.Cell {font-family: Arial; font-size: 0.75em; padding: 2px 2px 2px 8px; border: 1px solid lightgray; vertical-align: middle; text-align: right; }\r\n.OutlineColumnHeader {font-family: Arial; font-size: 0.75em; border: 1px solid lightgray; vertical-align: middle; font-weight: bold; background-color: #F2F2F2; padding: 2px; text-align: center; }\r\n.OutlineRowHeader {font-family: Arial; font-size: 0.75em; border: 1px solid lightgray; vertical-align: middle; font-weight: bold; background-color: #F2F2F2; padding: 2px 8px 2px 2px; text-align: left; }\r\n.OutlineCell {font-family: Arial; font-size: 0.75em; padding: 2px 2px 2px 8px; border: 1px solid lightgray; vertical-align: middle; text-align: right; background-color: #F8F8F8; font-weight: bold; }\r\n.Total {font-family: Arial; font-size: 0.75em; padding: 2px 2px 2px 8px; border: 1px solid lightgray; vertical-align: middle; text-align: right; }\r\n","tableHtml":"<table class=\"Table\">\n  <tr>\n    <th class=\"RowHeader\" colspan=\"2\">&nbsp;<\/th>\n    <th class=\"ColumnHeader\">5m Resting State<\/th>\n    <th class=\"ColumnHeader\">Behavioral Game<\/th>\n    <th class=\"ColumnHeader\">Daily recording<\/th>\n    <th class=\"ColumnHeader\">Mood post task<\/th>\n    <th class=\"ColumnHeader\">Mood Questionnaire<\/th>\n    <th class=\"ColumnHeader\">Sleep Diary<\/th>\n  <\/tr>\n  <tr>\n    <th class=\"RowHeader\">2020-11-09<\/th>\n    <th class=\"RowHeader\">0<\/th>\n    <td class=\"Cell\" style=\"background-color: #C6EFCE; color: #006100; \">5<\/td>\n    <td class=\"Cell\" style=\"background-color: #C6EFCE; color: #006100; \">31.1428571428571<\/td>\n    <td class=\"Cell\" style=\"background-color: #C6EFCE; color: #006100; \">2<\/td>\n    <td class=\"Cell\" style=\"background-color: #FFEB9C; color: #9C5700; \">204<\/td>\n    <td class=\"Cell\" style=\"background-color: #C6EFCE; color: #006100; \">15<\/td>\n    <td class=\"Cell\" style=\"background-color: #FFEB9C; color: #9C5700; \">204<\/td>\n  <\/tr>\n  <tr>\n    <th class=\"RowHeader\" rowspan=\"3\">2020-11-10<\/th>\n    <th class=\"RowHeader\">2<\/th>\n    <td class=\"Cell\" style=\"background-color: #FFEB9C; color: #9C5700; \">124<\/td>\n    <td class=\"Cell\" style=\"background-color: #FFEB9C; color: #9C5700; \">142.5<\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\" style=\"background-color: #FFEB9C; color: #9C5700; \">137<\/td>\n    <td class=\"Cell\"><\/td>\n  <\/tr>\n  <tr>\n    <th class=\"RowHeader\">3<\/th>\n    <td class=\"Cell\" style=\"background-color: #C6EFCE; color: #006100; \">9<\/td>\n    <td class=\"Cell\" style=\"background-color: #C6EFCE; color: #006100; \">19<\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\" style=\"background-color: #C6EFCE; color: #006100; \">14<\/td>\n    <td class=\"Cell\"><\/td>\n  <\/tr>\n  <tr>\n    <th class=\"RowHeader\">NA<\/th>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\" style=\"background-color: #C6EFCE; color: #006100; \">113<\/td>\n    <td class=\"Cell\" style=\"background-color: #FFEB9C; color: #9C5700; \">177<\/td>\n  <\/tr>\n  <tr>\n    <th class=\"RowHeader\" rowspan=\"3\">2020-11-11<\/th>\n    <th class=\"RowHeader\">4<\/th>\n    <td class=\"Cell\" style=\"background-color: #FFEB9C; color: #9C5700; \">139<\/td>\n    <td class=\"Cell\" style=\"background-color: #FFEB9C; color: #9C5700; \">148<\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n  <\/tr>\n  <tr>\n    <th class=\"RowHeader\">5<\/th>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">1460<\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">1471.66666666667<\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">1466<\/td>\n    <td class=\"Cell\"><\/td>\n  <\/tr>\n  <tr>\n    <th class=\"RowHeader\">NA<\/th>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">386<\/td>\n    <td class=\"Cell\" style=\"background-color: #FFEB9C; color: #9C5700; \">195<\/td>\n  <\/tr>\n  <tr>\n    <th class=\"RowHeader\">2020-11-12<\/th>\n    <th class=\"RowHeader\">NA<\/th>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\" style=\"background-color: #FFEB9C; color: #9C5700; \">182<\/td>\n  <\/tr>\n  <tr>\n    <th class=\"RowHeader\" rowspan=\"2\">2020-11-13<\/th>\n    <th class=\"RowHeader\">6<\/th>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">528<\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">542.5<\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n  <\/tr>\n  <tr>\n    <th class=\"RowHeader\">NA<\/th>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">452<\/td>\n    <td class=\"Cell\" style=\"background-color: #FFEB9C; color: #9C5700; \">169<\/td>\n  <\/tr>\n  <tr>\n    <th class=\"RowHeader\" rowspan=\"2\">2020-11-14<\/th>\n    <th class=\"RowHeader\">7<\/th>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">423<\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">447.333333333333<\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">3021<\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n  <\/tr>\n  <tr>\n    <th class=\"RowHeader\">NA<\/th>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">1013<\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">425<\/td>\n  <\/tr>\n  <tr>\n    <th class=\"RowHeader\" rowspan=\"2\">2020-11-15<\/th>\n    <th class=\"RowHeader\">8<\/th>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">1557<\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">1566<\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n  <\/tr>\n  <tr>\n    <th class=\"RowHeader\">NA<\/th>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">979<\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">341<\/td>\n  <\/tr>\n  <tr>\n    <th class=\"RowHeader\" rowspan=\"2\">2020-11-16<\/th>\n    <th class=\"RowHeader\">9<\/th>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">1462<\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">1485.33333333333<\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">1475<\/td>\n    <td class=\"Cell\"><\/td>\n  <\/tr>\n  <tr>\n    <th class=\"RowHeader\">NA<\/th>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\" style=\"background-color: #C6EFCE; color: #006100; \">15<\/td>\n    <td class=\"Cell\" style=\"background-color: #FFEB9C; color: #9C5700; \">175<\/td>\n  <\/tr>\n  <tr>\n    <th class=\"RowHeader\">2020-11-17<\/th>\n    <th class=\"RowHeader\">NA<\/th>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\" style=\"background-color: #FFEB9C; color: #9C5700; \">226<\/td>\n  <\/tr>\n  <tr>\n    <th class=\"RowHeader\" rowspan=\"2\">2020-11-18<\/th>\n    <th class=\"RowHeader\">10<\/th>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">1608<\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">1646<\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n  <\/tr>\n  <tr>\n    <th class=\"RowHeader\">NA<\/th>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">2137<\/td>\n    <td class=\"Cell\"><\/td>\n  <\/tr>\n  <tr>\n    <th class=\"RowHeader\" rowspan=\"2\">2020-11-19<\/th>\n    <th class=\"RowHeader\">11<\/th>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">5367<\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">5377.5<\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">5373<\/td>\n    <td class=\"Cell\"><\/td>\n  <\/tr>\n  <tr>\n    <th class=\"RowHeader\">NA<\/th>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\" style=\"background-color: #FFEB9C; color: #9C5700; \">141<\/td>\n    <td class=\"Cell\" style=\"background-color: #FFEB9C; color: #9C5700; \">217<\/td>\n  <\/tr>\n  <tr>\n    <th class=\"RowHeader\" rowspan=\"2\">2020-11-23<\/th>\n    <th class=\"RowHeader\">12<\/th>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">3122<\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">3134<\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">3127<\/td>\n    <td class=\"Cell\"><\/td>\n  <\/tr>\n  <tr>\n    <th class=\"RowHeader\">NA<\/th>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">266<\/td>\n  <\/tr>\n  <tr>\n    <th class=\"RowHeader\">2020-11-24<\/th>\n    <th class=\"RowHeader\">NA<\/th>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">267<\/td>\n  <\/tr>\n  <tr>\n    <th class=\"RowHeader\">2020-11-26<\/th>\n    <th class=\"RowHeader\">NA<\/th>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">5370<\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">5969<\/td>\n    <td class=\"Cell\"><\/td>\n  <\/tr>\n  <tr>\n    <th class=\"RowHeader\" rowspan=\"2\">2020-11-30<\/th>\n    <th class=\"RowHeader\">13<\/th>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">1007<\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">1039.5<\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">1054<\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">1025<\/td>\n    <td class=\"Cell\"><\/td>\n  <\/tr>\n  <tr>\n    <th class=\"RowHeader\">NA<\/th>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">269<\/td>\n  <\/tr>\n  <tr>\n    <th class=\"RowHeader\" rowspan=\"2\">2020-12-01<\/th>\n    <th class=\"RowHeader\">14<\/th>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">4279<\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">4287.5<\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">4283<\/td>\n    <td class=\"Cell\"><\/td>\n  <\/tr>\n  <tr>\n    <th class=\"RowHeader\">NA<\/th>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\" style=\"background-color: #FFEB9C; color: #9C5700; \">224<\/td>\n  <\/tr>\n  <tr>\n    <th class=\"RowHeader\">2020-12-02<\/th>\n    <th class=\"RowHeader\">NA<\/th>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\" style=\"background-color: #FFEB9C; color: #9C5700; \">204<\/td>\n  <\/tr>\n  <tr>\n    <th class=\"RowHeader\">2020-12-03<\/th>\n    <th class=\"RowHeader\">NA<\/th>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\" style=\"background-color: #FFEB9C; color: #9C5700; \">126<\/td>\n  <\/tr>\n  <tr>\n    <th class=\"RowHeader\">2020-12-04<\/th>\n    <th class=\"RowHeader\">NA<\/th>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">618<\/td>\n  <\/tr>\n  <tr>\n    <th class=\"RowHeader\" rowspan=\"2\">2020-12-05<\/th>\n    <th class=\"RowHeader\">15<\/th>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">3020<\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">3028.5<\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n  <\/tr>\n  <tr>\n    <th class=\"RowHeader\">NA<\/th>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">3527<\/td>\n    <td class=\"Cell\"><\/td>\n  <\/tr>\n  <tr>\n    <th class=\"RowHeader\" rowspan=\"2\">2020-12-07<\/th>\n    <th class=\"RowHeader\">16<\/th>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">2371<\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">2392<\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n  <\/tr>\n  <tr>\n    <th class=\"RowHeader\">NA<\/th>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">602<\/td>\n    <td class=\"Cell\" style=\"background-color: #FFEB9C; color: #9C5700; \">166<\/td>\n  <\/tr>\n  <tr>\n    <th class=\"RowHeader\">2020-12-08<\/th>\n    <th class=\"RowHeader\">NA<\/th>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">2102<\/td>\n    <td class=\"Cell\"><\/td>\n  <\/tr>\n  <tr>\n    <th class=\"RowHeader\" rowspan=\"2\">2020-12-09<\/th>\n    <th class=\"RowHeader\">17<\/th>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">365<\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">375<\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n  <\/tr>\n  <tr>\n    <th class=\"RowHeader\">NA<\/th>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\" style=\"background-color: #FFEB9C; color: #9C5700; \">149<\/td>\n  <\/tr>\n  <tr>\n    <th class=\"RowHeader\" rowspan=\"3\">2020-12-10<\/th>\n    <th class=\"RowHeader\">18<\/th>\n    <td class=\"Cell\" style=\"background-color: #FFEB9C; color: #9C5700; \">176<\/td>\n    <td class=\"Cell\" style=\"background-color: #FFEB9C; color: #9C5700; \">211.333333333333<\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n  <\/tr>\n  <tr>\n    <th class=\"RowHeader\">19<\/th>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">1169<\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">1194.5<\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">1205<\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">1190<\/td>\n    <td class=\"Cell\"><\/td>\n  <\/tr>\n  <tr>\n    <th class=\"RowHeader\">NA<\/th>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\" style=\"background-color: #C6EFCE; color: #006100; \">86<\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\" style=\"background-color: #FFEB9C; color: #9C5700; \">124<\/td>\n    <td class=\"Cell\" style=\"background-color: #FFEB9C; color: #9C5700; \">231<\/td>\n  <\/tr>\n  <tr>\n    <th class=\"RowHeader\">2020-12-11<\/th>\n    <th class=\"RowHeader\">NA<\/th>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\" style=\"background-color: #FFEB9C; color: #9C5700; \">161<\/td>\n  <\/tr>\n  <tr>\n    <th class=\"RowHeader\">2020-12-14<\/th>\n    <th class=\"RowHeader\">NA<\/th>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\" style=\"background-color: #FFEB9C; color: #9C5700; \">202<\/td>\n  <\/tr>\n<\/table>","settings":[]},"evals":[],"jsHooks":[]}</script>
+<div id="htmlwidget-331acf1e28680c18abdc" style="width:auto;height:auto;" class="pivottabler html-widget"></div>
+<script type="application/json" data-for="htmlwidget-331acf1e28680c18abdc">{"x":{"tableCss":".Table {display: table; border-collapse: collapse; }\r\n.ColumnHeader {font-family: Arial; font-size: 0.75em; border: 1px solid lightgray; vertical-align: middle; font-weight: bold; background-color: #F2F2F2; padding: 2px; text-align: center; }\r\n.RowHeader {font-family: Arial; font-size: 0.75em; border: 1px solid lightgray; vertical-align: middle; font-weight: bold; background-color: #F2F2F2; padding: 2px 8px 2px 2px; text-align: left; }\r\n.Cell {font-family: Arial; font-size: 0.75em; padding: 2px 2px 2px 8px; border: 1px solid lightgray; vertical-align: middle; text-align: right; }\r\n.OutlineColumnHeader {font-family: Arial; font-size: 0.75em; border: 1px solid lightgray; vertical-align: middle; font-weight: bold; background-color: #F2F2F2; padding: 2px; text-align: center; }\r\n.OutlineRowHeader {font-family: Arial; font-size: 0.75em; border: 1px solid lightgray; vertical-align: middle; font-weight: bold; background-color: #F2F2F2; padding: 2px 8px 2px 2px; text-align: left; }\r\n.OutlineCell {font-family: Arial; font-size: 0.75em; padding: 2px 2px 2px 8px; border: 1px solid lightgray; vertical-align: middle; text-align: right; background-color: #F8F8F8; font-weight: bold; }\r\n.Total {font-family: Arial; font-size: 0.75em; padding: 2px 2px 2px 8px; border: 1px solid lightgray; vertical-align: middle; text-align: right; }\r\n","tableHtml":"<table class=\"Table\">\n  <tr>\n    <th class=\"RowHeader\" colspan=\"2\">&nbsp;<\/th>\n    <th class=\"ColumnHeader\">5m Resting State<\/th>\n    <th class=\"ColumnHeader\">Behavioral Game<\/th>\n    <th class=\"ColumnHeader\">Daily recording<\/th>\n    <th class=\"ColumnHeader\">Mood post task<\/th>\n    <th class=\"ColumnHeader\">Mood Questionnaire<\/th>\n    <th class=\"ColumnHeader\">Sleep Diary<\/th>\n  <\/tr>\n  <tr>\n    <th class=\"RowHeader\">2020-11-09<\/th>\n    <th class=\"RowHeader\">0<\/th>\n    <td class=\"Cell\" style=\"background-color: #C6EFCE; color: #006100; \">5<\/td>\n    <td class=\"Cell\" style=\"background-color: #C6EFCE; color: #006100; \">31.1428571428571<\/td>\n    <td class=\"Cell\" style=\"background-color: #C6EFCE; color: #006100; \">2<\/td>\n    <td class=\"Cell\" style=\"background-color: #FFEB9C; color: #9C5700; \">204<\/td>\n    <td class=\"Cell\" style=\"background-color: #C6EFCE; color: #006100; \">15<\/td>\n    <td class=\"Cell\" style=\"background-color: #FFEB9C; color: #9C5700; \">204<\/td>\n  <\/tr>\n  <tr>\n    <th class=\"RowHeader\">2020-11-10<\/th>\n    <th class=\"RowHeader\">NA<\/th>\n    <td class=\"Cell\" style=\"background-color: #C6EFCE; color: #006100; \">66.5<\/td>\n    <td class=\"Cell\" style=\"background-color: #C6EFCE; color: #006100; \">80.75<\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\" style=\"background-color: #C6EFCE; color: #006100; \">88<\/td>\n    <td class=\"Cell\" style=\"background-color: #FFEB9C; color: #9C5700; \">177<\/td>\n  <\/tr>\n  <tr>\n    <th class=\"RowHeader\">2020-11-11<\/th>\n    <th class=\"RowHeader\">NA<\/th>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">799.5<\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">942.2<\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">746<\/td>\n    <td class=\"Cell\" style=\"background-color: #FFEB9C; color: #9C5700; \">195<\/td>\n  <\/tr>\n  <tr>\n    <th class=\"RowHeader\">2020-11-12<\/th>\n    <th class=\"RowHeader\">NA<\/th>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\" style=\"background-color: #FFEB9C; color: #9C5700; \">182<\/td>\n  <\/tr>\n  <tr>\n    <th class=\"RowHeader\">2020-11-13<\/th>\n    <th class=\"RowHeader\">NA<\/th>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">528<\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">542.5<\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">452<\/td>\n    <td class=\"Cell\" style=\"background-color: #FFEB9C; color: #9C5700; \">169<\/td>\n  <\/tr>\n  <tr>\n    <th class=\"RowHeader\">2020-11-14<\/th>\n    <th class=\"RowHeader\">NA<\/th>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">423<\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">447.333333333333<\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">3021<\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">1013<\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">425<\/td>\n  <\/tr>\n  <tr>\n    <th class=\"RowHeader\">2020-11-15<\/th>\n    <th class=\"RowHeader\">NA<\/th>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">1557<\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">1566<\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">979<\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">341<\/td>\n  <\/tr>\n  <tr>\n    <th class=\"RowHeader\">2020-11-16<\/th>\n    <th class=\"RowHeader\">NA<\/th>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">1462<\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">1485.33333333333<\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">745<\/td>\n    <td class=\"Cell\" style=\"background-color: #FFEB9C; color: #9C5700; \">175<\/td>\n  <\/tr>\n  <tr>\n    <th class=\"RowHeader\">2020-11-17<\/th>\n    <th class=\"RowHeader\">NA<\/th>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\" style=\"background-color: #FFEB9C; color: #9C5700; \">226<\/td>\n  <\/tr>\n  <tr>\n    <th class=\"RowHeader\">2020-11-18<\/th>\n    <th class=\"RowHeader\">NA<\/th>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">1608<\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">1646<\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">2137<\/td>\n    <td class=\"Cell\"><\/td>\n  <\/tr>\n  <tr>\n    <th class=\"RowHeader\">2020-11-19<\/th>\n    <th class=\"RowHeader\">NA<\/th>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">5367<\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">5377.5<\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">2757<\/td>\n    <td class=\"Cell\" style=\"background-color: #FFEB9C; color: #9C5700; \">217<\/td>\n  <\/tr>\n  <tr>\n    <th class=\"RowHeader\">2020-11-23<\/th>\n    <th class=\"RowHeader\">NA<\/th>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">3122<\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">3134<\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">3127<\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">266<\/td>\n  <\/tr>\n  <tr>\n    <th class=\"RowHeader\">2020-11-24<\/th>\n    <th class=\"RowHeader\">NA<\/th>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">267<\/td>\n  <\/tr>\n  <tr>\n    <th class=\"RowHeader\">2020-11-26<\/th>\n    <th class=\"RowHeader\">NA<\/th>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">5370<\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">5969<\/td>\n    <td class=\"Cell\"><\/td>\n  <\/tr>\n  <tr>\n    <th class=\"RowHeader\">2020-11-30<\/th>\n    <th class=\"RowHeader\">NA<\/th>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">1007<\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">1039.5<\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">1054<\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">1025<\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">269<\/td>\n  <\/tr>\n  <tr>\n    <th class=\"RowHeader\">2020-12-01<\/th>\n    <th class=\"RowHeader\">NA<\/th>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">4279<\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">4287.5<\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">4283<\/td>\n    <td class=\"Cell\" style=\"background-color: #FFEB9C; color: #9C5700; \">224<\/td>\n  <\/tr>\n  <tr>\n    <th class=\"RowHeader\">2020-12-02<\/th>\n    <th class=\"RowHeader\">NA<\/th>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\" style=\"background-color: #FFEB9C; color: #9C5700; \">204<\/td>\n  <\/tr>\n  <tr>\n    <th class=\"RowHeader\">2020-12-03<\/th>\n    <th class=\"RowHeader\">NA<\/th>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\" style=\"background-color: #FFEB9C; color: #9C5700; \">126<\/td>\n  <\/tr>\n  <tr>\n    <th class=\"RowHeader\">2020-12-04<\/th>\n    <th class=\"RowHeader\">NA<\/th>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">618<\/td>\n  <\/tr>\n  <tr>\n    <th class=\"RowHeader\">2020-12-05<\/th>\n    <th class=\"RowHeader\">NA<\/th>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">3020<\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">3028.5<\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">3527<\/td>\n    <td class=\"Cell\"><\/td>\n  <\/tr>\n  <tr>\n    <th class=\"RowHeader\">2020-12-07<\/th>\n    <th class=\"RowHeader\">NA<\/th>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">2371<\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">2392<\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">602<\/td>\n    <td class=\"Cell\" style=\"background-color: #FFEB9C; color: #9C5700; \">166<\/td>\n  <\/tr>\n  <tr>\n    <th class=\"RowHeader\">2020-12-08<\/th>\n    <th class=\"RowHeader\">NA<\/th>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">2102<\/td>\n    <td class=\"Cell\"><\/td>\n  <\/tr>\n  <tr>\n    <th class=\"RowHeader\">2020-12-09<\/th>\n    <th class=\"RowHeader\">NA<\/th>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">365<\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">375<\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\" style=\"background-color: #FFEB9C; color: #9C5700; \">149<\/td>\n  <\/tr>\n  <tr>\n    <th class=\"RowHeader\">2020-12-10<\/th>\n    <th class=\"RowHeader\">NA<\/th>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">672.5<\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">604.6<\/td>\n    <td class=\"Cell\" style=\"background-color: #C6EFCE; color: #006100; \">86<\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">1205<\/td>\n    <td class=\"Cell\" style=\"background-color: #FFC7CE; color: #9C0006; \">657<\/td>\n    <td class=\"Cell\" style=\"background-color: #FFEB9C; color: #9C5700; \">231<\/td>\n  <\/tr>\n  <tr>\n    <th class=\"RowHeader\">2020-12-11<\/th>\n    <th class=\"RowHeader\">NA<\/th>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\" style=\"background-color: #FFEB9C; color: #9C5700; \">161<\/td>\n  <\/tr>\n  <tr>\n    <th class=\"RowHeader\">2020-12-14<\/th>\n    <th class=\"RowHeader\">NA<\/th>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\"><\/td>\n    <td class=\"Cell\" style=\"background-color: #FFEB9C; color: #9C5700; \">202<\/td>\n  <\/tr>\n<\/table>","settings":[]},"evals":[],"jsHooks":[]}</script>
 
 </div>
 <div id="task-performance" class="section level2">
@@ -3170,14 +3160,14 @@ Good signal %
 <th style="text-align:left;position: sticky; top:0; background-color: #FFFFFF;">
 Date
 </th>
-<th style="text-align:right;position: sticky; top:0; background-color: #FFFFFF;">
-Block
+<th style="text-align:left;position: sticky; top:0; background-color: #FFFFFF;">
+Didn’t sleep
 </th>
 <th style="text-align:left;position: sticky; top:0; background-color: #FFFFFF;">
 Sleep latency
 </th>
 <th style="text-align:left;position: sticky; top:0; background-color: #FFFFFF;">
-Woke many time
+Woke many times
 </th>
 <th style="text-align:left;position: sticky; top:0; background-color: #FFFFFF;">
 Woke early
@@ -3190,10 +3180,10 @@ Overall
 <tbody>
 <tr>
 <td style="text-align:left;font-weight: bold;">
-NULL
+12/14/2020
 </td>
-<td style="text-align:right;font-weight: bold;">
-NA
+<td style="text-align:left;color: #D8D8D8 !important;">
+FALSE
 </td>
 <td style="text-align:left;color: #D8D8D8 !important;">
 30
@@ -3210,10 +3200,10 @@ NA
 </tr>
 <tr>
 <td style="text-align:left;font-weight: bold;">
-NULL
+12/11/2020
 </td>
-<td style="text-align:right;font-weight: bold;">
-NA
+<td style="text-align:left;color: #D8D8D8 !important;">
+FALSE
 </td>
 <td style="text-align:left;color: #D8D8D8 !important;">
 60
@@ -3230,10 +3220,10 @@ NA
 </tr>
 <tr>
 <td style="text-align:left;font-weight: bold;">
-NULL
+12/10/2020
 </td>
-<td style="text-align:right;font-weight: bold;">
-NA
+<td style="text-align:left;color: #D8D8D8 !important;">
+FALSE
 </td>
 <td style="text-align:left;color: #D8D8D8 !important;">
 36
@@ -3250,10 +3240,10 @@ NA
 </tr>
 <tr>
 <td style="text-align:left;font-weight: bold;">
-NULL
+12/09/2020
 </td>
-<td style="text-align:right;font-weight: bold;">
-NA
+<td style="text-align:left;color: #D8D8D8 !important;">
+FALSE
 </td>
 <td style="text-align:left;color: #D8D8D8 !important;">
 57
@@ -3270,10 +3260,10 @@ NA
 </tr>
 <tr>
 <td style="text-align:left;font-weight: bold;">
-NULL
+12/07/2020
 </td>
-<td style="text-align:right;font-weight: bold;">
-NA
+<td style="text-align:left;color: #D8D8D8 !important;">
+FALSE
 </td>
 <td style="text-align:left;color: #D8D8D8 !important;">
 31
@@ -3290,10 +3280,10 @@ NA
 </tr>
 <tr>
 <td style="text-align:left;font-weight: bold;">
-NULL
+12/04/2020
 </td>
-<td style="text-align:right;font-weight: bold;">
-NA
+<td style="text-align:left;color: #D8D8D8 !important;">
+FALSE
 </td>
 <td style="text-align:left;color: #D8D8D8 !important;">
 28
@@ -3310,10 +3300,10 @@ NA
 </tr>
 <tr>
 <td style="text-align:left;font-weight: bold;">
-NULL
+12/03/2020
 </td>
-<td style="text-align:right;font-weight: bold;">
-NA
+<td style="text-align:left;color: #D8D8D8 !important;">
+FALSE
 </td>
 <td style="text-align:left;color: #D8D8D8 !important;">
 65
@@ -3330,10 +3320,10 @@ NA
 </tr>
 <tr>
 <td style="text-align:left;font-weight: bold;">
-NULL
+12/02/2020
 </td>
-<td style="text-align:right;font-weight: bold;">
-NA
+<td style="text-align:left;color: #D8D8D8 !important;">
+FALSE
 </td>
 <td style="text-align:left;color: #D8D8D8 !important;">
 59
@@ -3350,10 +3340,10 @@ NA
 </tr>
 <tr>
 <td style="text-align:left;font-weight: bold;">
-NULL
+12/01/2020
 </td>
-<td style="text-align:right;font-weight: bold;">
-NA
+<td style="text-align:left;color: #D8D8D8 !important;">
+FALSE
 </td>
 <td style="text-align:left;color: #D8D8D8 !important;">
 42
@@ -3370,10 +3360,10 @@ NA
 </tr>
 <tr>
 <td style="text-align:left;font-weight: bold;">
-NULL
+11/30/2020
 </td>
-<td style="text-align:right;font-weight: bold;">
-NA
+<td style="text-align:left;color: #D8D8D8 !important;">
+FALSE
 </td>
 <td style="text-align:left;color: #D8D8D8 !important;">
 31
@@ -3390,10 +3380,10 @@ NA
 </tr>
 <tr>
 <td style="text-align:left;font-weight: bold;">
-NULL
+11/24/2020
 </td>
-<td style="text-align:right;font-weight: bold;">
-NA
+<td style="text-align:left;color: #D8D8D8 !important;">
+FALSE
 </td>
 <td style="text-align:left;color: #D8D8D8 !important;">
 40
@@ -3410,10 +3400,10 @@ NA
 </tr>
 <tr>
 <td style="text-align:left;font-weight: bold;">
-NULL
+11/23/2020
 </td>
-<td style="text-align:right;font-weight: bold;">
-NA
+<td style="text-align:left;color: #D8D8D8 !important;">
+FALSE
 </td>
 <td style="text-align:left;color: #D8D8D8 !important;">
 38
@@ -3430,10 +3420,10 @@ NA
 </tr>
 <tr>
 <td style="text-align:left;font-weight: bold;">
-NULL
+11/19/2020
 </td>
-<td style="text-align:right;font-weight: bold;">
-NA
+<td style="text-align:left;color: #D8D8D8 !important;">
+FALSE
 </td>
 <td style="text-align:left;color: #D8D8D8 !important;">
 40
@@ -3450,10 +3440,10 @@ NA
 </tr>
 <tr>
 <td style="text-align:left;font-weight: bold;">
-NULL
+11/17/2020
 </td>
-<td style="text-align:right;font-weight: bold;">
-NA
+<td style="text-align:left;color: #D8D8D8 !important;">
+FALSE
 </td>
 <td style="text-align:left;color: #D8D8D8 !important;">
 36
@@ -3470,10 +3460,10 @@ NA
 </tr>
 <tr>
 <td style="text-align:left;font-weight: bold;">
-NULL
+11/16/2020
 </td>
-<td style="text-align:right;font-weight: bold;">
-NA
+<td style="text-align:left;color: #D8D8D8 !important;">
+FALSE
 </td>
 <td style="text-align:left;color: #D8D8D8 !important;">
 26
@@ -3490,10 +3480,10 @@ NA
 </tr>
 <tr>
 <td style="text-align:left;font-weight: bold;">
-NULL
+11/15/2020
 </td>
-<td style="text-align:right;font-weight: bold;">
-NA
+<td style="text-align:left;color: #D8D8D8 !important;">
+FALSE
 </td>
 <td style="text-align:left;color: #D8D8D8 !important;">
 32
@@ -3510,10 +3500,10 @@ NA
 </tr>
 <tr>
 <td style="text-align:left;font-weight: bold;">
-NULL
+11/14/2020
 </td>
-<td style="text-align:right;font-weight: bold;">
-NA
+<td style="text-align:left;color: #D8D8D8 !important;">
+FALSE
 </td>
 <td style="text-align:left;color: #D8D8D8 !important;">
 32
@@ -3530,10 +3520,10 @@ NA
 </tr>
 <tr>
 <td style="text-align:left;font-weight: bold;">
-NULL
+11/13/2020
 </td>
-<td style="text-align:right;font-weight: bold;">
-NA
+<td style="text-align:left;color: #D8D8D8 !important;">
+FALSE
 </td>
 <td style="text-align:left;color: #D8D8D8 !important;">
 73
@@ -3550,10 +3540,10 @@ NA
 </tr>
 <tr>
 <td style="text-align:left;font-weight: bold;">
-NULL
+11/12/2020
 </td>
-<td style="text-align:right;font-weight: bold;">
-NA
+<td style="text-align:left;color: #D8D8D8 !important;">
+FALSE
 </td>
 <td style="text-align:left;color: #D8D8D8 !important;">
 72
@@ -3570,10 +3560,10 @@ NA
 </tr>
 <tr>
 <td style="text-align:left;font-weight: bold;">
-NULL
+11/11/2020
 </td>
-<td style="text-align:right;font-weight: bold;">
-NA
+<td style="text-align:left;color: #D8D8D8 !important;">
+FALSE
 </td>
 <td style="text-align:left;color: #D8D8D8 !important;">
 39
@@ -3590,10 +3580,10 @@ NA
 </tr>
 <tr>
 <td style="text-align:left;font-weight: bold;">
-NULL
+11/10/2020
 </td>
-<td style="text-align:right;font-weight: bold;">
-NA
+<td style="text-align:left;color: #D8D8D8 !important;">
+FALSE
 </td>
 <td style="text-align:left;color: #D8D8D8 !important;">
 14
@@ -3612,8 +3602,8 @@ NA
 <td style="text-align:left;font-weight: bold;">
 11/09/2020
 </td>
-<td style="text-align:right;font-weight: bold;">
-1
+<td style="text-align:left;color: #D8D8D8 !important;">
+FALSE
 </td>
 <td style="text-align:left;color: #D8D8D8 !important;">
 60
@@ -3639,9 +3629,6 @@ NA
 <tr>
 <th style="text-align:left;position: sticky; top:0; background-color: #FFFFFF;">
 Date
-</th>
-<th style="text-align:right;position: sticky; top:0; background-color: #FFFFFF;">
-Block
 </th>
 <th style="text-align:right;position: sticky; top:0; background-color: #FFFFFF;">
 RA Check
@@ -3672,12 +3659,9 @@ Energetic
 <tbody>
 <tr>
 <td style="text-align:left;font-weight: bold;">
-11/16/2020
+12/11/2020
 </td>
-<td style="text-align:right;font-weight: bold;">
-19
-</td>
-<td style="text-align:right;background-color: #C6EFCE !important;">
+<td style="text-align:right;background-color: #ffc7ce !important;">
 1
 </td>
 <td style="text-align:right;color: #D8D8D8 !important;">
@@ -3704,10 +3688,7 @@ Energetic
 </tr>
 <tr>
 <td style="text-align:left;font-weight: bold;">
-NULL
-</td>
-<td style="text-align:right;font-weight: bold;">
-NA
+12/10/2020
 </td>
 <td style="text-align:right;background-color: #C6EFCE !important;">
 1
@@ -3736,10 +3717,7 @@ NA
 </tr>
 <tr>
 <td style="text-align:left;font-weight: bold;">
-NULL
-</td>
-<td style="text-align:right;font-weight: bold;">
-NA
+12/09/2020
 </td>
 <td style="text-align:right;background-color: #C6EFCE !important;">
 1
@@ -3768,10 +3746,7 @@ NA
 </tr>
 <tr>
 <td style="text-align:left;font-weight: bold;">
-NULL
-</td>
-<td style="text-align:right;font-weight: bold;">
-NA
+12/07/2020
 </td>
 <td style="text-align:right;background-color: #C6EFCE !important;">
 1
@@ -3800,10 +3775,7 @@ NA
 </tr>
 <tr>
 <td style="text-align:left;font-weight: bold;">
-NULL
-</td>
-<td style="text-align:right;font-weight: bold;">
-NA
+12/07/2020
 </td>
 <td style="text-align:right;background-color: #C6EFCE !important;">
 1
@@ -3832,12 +3804,9 @@ NA
 </tr>
 <tr>
 <td style="text-align:left;font-weight: bold;">
-11/13/2020
+12/04/2020
 </td>
-<td style="text-align:right;font-weight: bold;">
-14
-</td>
-<td style="text-align:right;background-color: #ffc7ce !important;">
+<td style="text-align:right;background-color: #C6EFCE !important;">
 0
 </td>
 <td style="text-align:right;color: #D8D8D8 !important;">
@@ -3864,10 +3833,7 @@ NA
 </tr>
 <tr>
 <td style="text-align:left;font-weight: bold;">
-11/12/2020
-</td>
-<td style="text-align:right;font-weight: bold;">
-13
+12/01/2020
 </td>
 <td style="text-align:right;background-color: #C6EFCE !important;">
 1
@@ -3896,10 +3862,7 @@ NA
 </tr>
 <tr>
 <td style="text-align:left;font-weight: bold;">
-NULL
-</td>
-<td style="text-align:right;font-weight: bold;">
-NA
+11/30/2020
 </td>
 <td style="text-align:right;background-color: #C6EFCE !important;">
 1
@@ -3928,10 +3891,7 @@ NA
 </tr>
 <tr>
 <td style="text-align:left;font-weight: bold;">
-11/12/2020
-</td>
-<td style="text-align:right;font-weight: bold;">
-12
+11/25/2020
 </td>
 <td style="text-align:right;background-color: #C6EFCE !important;">
 1
@@ -3960,10 +3920,7 @@ NA
 </tr>
 <tr>
 <td style="text-align:left;font-weight: bold;">
-11/11/2020
-</td>
-<td style="text-align:right;font-weight: bold;">
-11
+11/23/2020
 </td>
 <td style="text-align:right;background-color: #C6EFCE !important;">
 1
@@ -3992,12 +3949,9 @@ NA
 </tr>
 <tr>
 <td style="text-align:left;font-weight: bold;">
-NULL
+11/19/2020
 </td>
-<td style="text-align:right;font-weight: bold;">
-NA
-</td>
-<td style="text-align:right;background-color: #C6EFCE !important;">
+<td style="text-align:right;background-color: #ffc7ce !important;">
 1
 </td>
 <td style="text-align:right;color: #D8D8D8 !important;">
@@ -4024,10 +3978,7 @@ NA
 </tr>
 <tr>
 <td style="text-align:left;font-weight: bold;">
-NULL
-</td>
-<td style="text-align:right;font-weight: bold;">
-NA
+11/19/2020
 </td>
 <td style="text-align:right;background-color: #C6EFCE !important;">
 1
@@ -4056,10 +4007,7 @@ NA
 </tr>
 <tr>
 <td style="text-align:left;font-weight: bold;">
-11/10/2020
-</td>
-<td style="text-align:right;font-weight: bold;">
-9
+11/17/2020
 </td>
 <td style="text-align:right;background-color: #C6EFCE !important;">
 1
@@ -4088,10 +4036,7 @@ NA
 </tr>
 <tr>
 <td style="text-align:left;font-weight: bold;">
-NULL
-</td>
-<td style="text-align:right;font-weight: bold;">
-NA
+11/16/2020
 </td>
 <td style="text-align:right;background-color: #C6EFCE !important;">
 1
@@ -4120,10 +4065,7 @@ NA
 </tr>
 <tr>
 <td style="text-align:left;font-weight: bold;">
-NULL
-</td>
-<td style="text-align:right;font-weight: bold;">
-NA
+11/16/2020
 </td>
 <td style="text-align:right;background-color: #ffc7ce !important;">
 0
@@ -4152,12 +4094,9 @@ NA
 </tr>
 <tr>
 <td style="text-align:left;font-weight: bold;">
-NULL
+11/15/2020
 </td>
-<td style="text-align:right;font-weight: bold;">
-NA
-</td>
-<td style="text-align:right;background-color: #ffc7ce !important;">
+<td style="text-align:right;background-color: #C6EFCE !important;">
 0
 </td>
 <td style="text-align:right;color: #D8D8D8 !important;">
@@ -4184,10 +4123,7 @@ NA
 </tr>
 <tr>
 <td style="text-align:left;font-weight: bold;">
-NULL
-</td>
-<td style="text-align:right;font-weight: bold;">
-NA
+11/14/2020
 </td>
 <td style="text-align:right;background-color: #ffc7ce !important;">
 0
@@ -4216,10 +4152,7 @@ NA
 </tr>
 <tr>
 <td style="text-align:left;font-weight: bold;">
-NULL
-</td>
-<td style="text-align:right;font-weight: bold;">
-NA
+11/13/2020
 </td>
 <td style="text-align:right;background-color: #C6EFCE !important;">
 1
@@ -4248,12 +4181,9 @@ NA
 </tr>
 <tr>
 <td style="text-align:left;font-weight: bold;">
-NULL
+11/13/2020
 </td>
-<td style="text-align:right;font-weight: bold;">
-NA
-</td>
-<td style="text-align:right;background-color: #ffc7ce !important;">
+<td style="text-align:right;background-color: #C6EFCE !important;">
 0
 </td>
 <td style="text-align:right;color: #D8D8D8 !important;">
@@ -4280,10 +4210,7 @@ NA
 </tr>
 <tr>
 <td style="text-align:left;font-weight: bold;">
-11/09/2020
-</td>
-<td style="text-align:right;font-weight: bold;">
-5
+11/12/2020
 </td>
 <td style="text-align:right;background-color: #C6EFCE !important;">
 1
@@ -4312,10 +4239,7 @@ NA
 </tr>
 <tr>
 <td style="text-align:left;font-weight: bold;">
-NULL
-</td>
-<td style="text-align:right;font-weight: bold;">
-NA
+11/11/2020
 </td>
 <td style="text-align:right;background-color: #C6EFCE !important;">
 1
@@ -4344,10 +4268,7 @@ NA
 </tr>
 <tr>
 <td style="text-align:left;font-weight: bold;">
-NULL
-</td>
-<td style="text-align:right;font-weight: bold;">
-NA
+11/11/2020
 </td>
 <td style="text-align:right;background-color: #C6EFCE !important;">
 1
@@ -4376,12 +4297,9 @@ NA
 </tr>
 <tr>
 <td style="text-align:left;font-weight: bold;">
-11/09/2020
+11/10/2020
 </td>
-<td style="text-align:right;font-weight: bold;">
-3
-</td>
-<td style="text-align:right;background-color: #ffc7ce !important;">
+<td style="text-align:right;background-color: #C6EFCE !important;">
 0
 </td>
 <td style="text-align:right;color: #D8D8D8 !important;">
@@ -4408,10 +4326,7 @@ NA
 </tr>
 <tr>
 <td style="text-align:left;font-weight: bold;">
-NULL
-</td>
-<td style="text-align:right;font-weight: bold;">
-NA
+11/10/2020
 </td>
 <td style="text-align:right;background-color: #C6EFCE !important;">
 1
@@ -4440,12 +4355,9 @@ NA
 </tr>
 <tr>
 <td style="text-align:left;font-weight: bold;">
-11/09/2020
+11/10/2020
 </td>
-<td style="text-align:right;font-weight: bold;">
-2
-</td>
-<td style="text-align:right;background-color: #C6EFCE !important;">
+<td style="text-align:right;background-color: #ffc7ce !important;">
 1
 </td>
 <td style="text-align:right;color: #D8D8D8 !important;">
@@ -4473,9 +4385,6 @@ NA
 <tr>
 <td style="text-align:left;font-weight: bold;">
 11/09/2020
-</td>
-<td style="text-align:right;font-weight: bold;">
-1
 </td>
 <td style="text-align:right;background-color: #C6EFCE !important;">
 1
@@ -4516,7 +4425,7 @@ NA
 
 // add bootstrap table styles to pandoc tables
 function bootstrapStylePandocTables() {
-  $('tr.odd').parent('tbody').parent('table').addClass('table table-condensed');
+  $('tr.header').parent('thead').parent('table').addClass('table table-condensed');
 }
 $(document).ready(function () {
   bootstrapStylePandocTables();
