@@ -5,6 +5,7 @@ output: html_document
 ---
 
 ```{r setup, include = FALSE}
+getwd()
 knitr::opts_chunk$set(comment = NA, tidy = FALSE, warning = FALSE, message = FALSE)
 #source("C:/Users/tshan/rl_ema_monitoring/dashboard/study_management/data_management_functions.R")
 #source("render_utils.R")
@@ -28,8 +29,8 @@ library("kableExtra")
 library("widgetframe")
 
 #getwd()
-load("../data/output_physio.Rdata")
-load("../data/output_schedule.Rdata")
+load("../site/data/output_physio.Rdata")
+load("../site/data/output_schedule.Rdata")
 
 Subject <- output$sample_info_df$ID
 Site <- output$sample_info_df$State

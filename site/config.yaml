@@ -11,11 +11,17 @@ ignoreFiles:
 - \.knit\.md$
 - \.utf8\.md$
 - \archetypes$
+taxonomies:
+  tag: tags
+  category: categories
+  subject: subjects
+  graph: graphs
 permalinks:
-  post: /:year/:month/:day/:slug/
   subjects: /:slug/
 menu:
   main:
+  - name: Manage
+    url: http://10.220.55.203:4344/#!/manage
   - name: About
     url: /about/
   - name: GitHub

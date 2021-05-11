@@ -1,20 +1,28 @@
 ---
-title: "EEG"
+title: "{{ replace .Name "-" " " | title }} EEG"
+output: html_document
+aliases:
+  - /{{ lower ( replace .Name "-" " " | title ) }}-eeg/
+  - /{{ lower ( replace .Name "-" " " | title ) }}/eeg/
+categories: ["graphs", "{{ replace .Name "-" " " | title }}", "EEG"]
+tags: ["{{ replace .Name "-" " " | title }}"]
 params:
   block: 1
-  id: "Abbegail"
+  id: "{{ replace .Name "-" " " | title }}"
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+#knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = '../../../..') # makes root dir rl_ema_monitoring
+library(kableExtra)
+library(dplyr)
+library(plotly)
 ```
-
-## R Markdown
 
 ```{r load_physio, include=FALSE}
 # need to change path to location of Rdata objects in active directory
-load("/Users/dp/Downloads/emp_physiooutput.RData")
-load("/Users/dp/Downloads/abb_proc_sched.RData") 
+load("site/data/abb_proc_sched.Rdata") 
+load("site/data/emp_physiooutput.Rdata")
 ```
 
 ```{r EEG, include=FALSE}
@@ -47,7 +55,11 @@ dq <- dq %>% filter(abs(zscore) <= 5)
 ```
 
 ```{r plot, echo=FALSE}
-ggplot(dq, aes(t0,trial,fill=zscore)) + geom_tile() + facet_wrap(~channel) + scale_x_continuous(breaks=c(0,a2f,max(dq$t0)),labels=c(-500,0,1500),name='time [ms]') +
+eeg_plot <- ggplot(dq, aes(t0,trial,fill=zscore)) + geom_tile() + facet_wrap(~channel) + scale_x_continuous(breaks=c(0,a2f,max(dq$t0)),labels=c(-500,0,1500),name='time [ms]') +
   geom_vline(xintercept = a2f, lty = "dashed", color = "#FF0000", size = 2) + 
   scale_fill_viridis(option = "plasma",begin=0,end=1)
+```
+
+```{r show, echo=FALSE}
+ggplotly(eeg_plot)
 ```

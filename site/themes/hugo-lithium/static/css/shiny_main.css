@@ -1,0 +1,22 @@
+ul {
+  background-color: #0099f9;
+    display: flex;
+  justify-content: flex-end;
+  list-style-type: none;
+}
+ul li a {
+  color: #ffffff;
+    display: block;
+  font-size: 1.6rem;
+  padding: 1.5rem 1.6rem;
+  text-decoration: none;
+  transition: all, 0.1s;
+}
+a:link, a:visited, a:hover, a:active {
+  color: #ffffff;
+    text-decoration: none;
+}
+ul li a:hover {
+  background-color: #1589d1;
+    color: #ffffff;
+}
