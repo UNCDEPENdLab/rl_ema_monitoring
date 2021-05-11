@@ -55,7 +55,6 @@ if (FALSE) {
   #####fb: list of proc'ed eeg data, near the feedback times, length of subjects
   #####*summary: list of summary data frame for each subject, used for dashboard table generation, length of subjects
   #####*sample_summary: a data.frame of all subjects, used for dashboard overall table, nrow of subjects
-  save(output,output_physio,file = "fin_output.rdata")
 }
 
 #####Session number is dependent on scheduled time. Possible 1 game per day but with 2 sessions worth of data.
@@ -280,6 +279,18 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
   #Find answer:
   form_data <- raw_single$answers
   form_data <- form_data[form_data$answer!="",]
+
+  if(nrow(raw_single$sleep)>0) {
+    tk <- form_data[rep(1,nrow(raw_single$sleep)),]
+    tk$questionnaire_type <- NA
+    tk$questionnaire_name <- "Sleep Diary"
+    tk$questionnaire_number <- (100-nrow(raw_single$sleep)):99
+    tk$question <- 0
+    tk$answer <- "sleep latency=NA, woke many times=NA, woke early=NA, overall=NA"
+    tk$answer_time <- raw_single$sleep$time
+    form_data <- rbind(form_data,tk)
+  }
+
   form_data$answer_prog <- text_proc(form_data$answer)
   fdata_sp <- split(form_data,form_data$questionnaire_name)
   #proc all the other first
@@ -317,10 +328,14 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
     }
     names(tkf)<-gsub(".","_",names(tkf),fixed = T)
     tkf$ID <- raw_single$ID
+    tkf[tkf=="NA"] <- NA
+    tkf <- tkf[order(tkf$answer_time),]
+    rownames(tkf)<-NULL
     return(tkf)
   })
-
   form_proc$`Mood Questionnaire`$v_a_distance <- sqrt((as.numeric(form_proc$`Mood Questionnaire`$Valence)^2) + (as.numeric(form_proc$`Mood Questionnaire`$Arousal)^2) )
+  form_proc$`Sleep Diary`$did_not_sleep<-is.na(form_proc$`Sleep Diary`$questionnaire_type)
+
   ##summary stats for how much they answered
   q_sum <- data.frame(ID = raw_single$ID,val_arr_dis_avg = mean(form_proc$`Mood Questionnaire`$v_a_distance,na.rm = T))
   e_sum <- data.frame(as.list(apply(form_proc$`Mood Questionnaire`[c("Anxious","Elated","Sad","Irritable","Energetic")],2,function(x){mean(as.numeric(x),na.rm = T)})))
@@ -333,6 +348,7 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
   q_sum$sleep_di_avg <- mean(unlist(s_sum),na.rm = T)
   q_sum$avg_evt_num <- mean(form_proc$`Mood Questionnaire`$number_of_events)
   q_sum$avg_sleep_evt_num <- mean(form_proc$`Sleep Diary`$number_of_events)
+  q_sum$num_no_sleep <- length(which(form_proc$`Sleep Diary`$did_not_sleep))
   q_sum$val_emo_cor <- cor(apply(form_proc$`Mood Questionnaire`[c("Anxious","Elated","Sad","Irritable","Energetic")],1,function(x){mean(as.numeric(x),na.rm = T)}),form_proc$`Mood Questionnaire`$v_a_distance)
   ###return proc_answer object###########
 
