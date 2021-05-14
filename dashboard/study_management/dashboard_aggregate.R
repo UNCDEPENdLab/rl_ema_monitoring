@@ -33,7 +33,7 @@ if (FALSE) {
   #########END########
 
   #example for proc_schedule:
-  output <- proc_schedule(schedule_df = path_info$schedule,tz=Sys.timezone(),days_limit=60,force_reproc=F)
+  output <- proc_schedule(schedule_df = path_info$schedule,tz=Sys.timezone(),days_limit=60,force_reproc=T)
   ##Output a list of :
   output$proc_data #is a list with a length equal to the number of db files, include data imported from db
   output$subj_info #is a list with a length equal to the number of subjects, include subject information on compliance
@@ -287,7 +287,7 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
     tk$question <- 0
     tk$answer <- "sleep latency=NA, woke many times=NA, woke early=NA, overall=NA"
     tk$answer_time <- raw_single$sleep$time
-    if(class(tk$answer_time)=="integer64") {
+    if(unique(class(tk$answer_time))=="integer64") {
       tk$answer_time <- ms_to_date(tk$answer_time,timezone = tz)
     }
     form_data <- rbind(form_data,tk)
