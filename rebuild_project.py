@@ -12,7 +12,9 @@ def create_arg_parser():
     # Initialize the argparser
     parser = argparse.ArgumentParser(description="Tool for setting cfg.json and conda_env, should be called from the system directly.")
     # root_name argument
-    parser.add_argument('--root_name', help='name of the designated root directory of the project', default = None)
+    parser.add_argument('--root_name', help='name of the designated root directory of the project, will change the root name', default = None)
+    # root_name argument
+    parser.add_argument('--root_dir', help='name of the designated root directory of the project', default = None)
     return parser
 
 def main():
@@ -26,7 +28,7 @@ def main():
     # rebuild the conda_env
     build_reticulate_conda('pip.txt')
     # run the build_config function
-    build_config(root_name=parsed_args.root_name)
+    build_config(rootDir=parsed_args.root_dir)
 
 # Execution of main method
 if __name__ == '__main__':
