@@ -269,7 +269,7 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
   date_sess_match_df$index[2:(nrow(date_sess_match_df))] <- split(1:(4*nrow(date_sess_match_df)), ceiling(seq_along(1:(4*nrow(date_sess_match_df)))/4))[1:(nrow(date_sess_match_df)-1)]
 
   ##For each day
-  split(info_df,as.Date(info_df$scheduled_time,tz = tz))
+  info_sp<-split(info_df,as.Date(info_df$scheduled_time,tz = tz))
 
   #update answer DF as well"
   raw_single$answers$session_number<-session_info_df$session_number[match(round(as.numeric(raw_single$answers$answer_time,0)),round(as.numeric(session_info_df$completed_time),0))]
@@ -287,6 +287,9 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
     tk$question <- 0
     tk$answer <- "sleep latency=NA, woke many times=NA, woke early=NA, overall=NA"
     tk$answer_time <- raw_single$sleep$time
+    if(class(tk$answer_time)=="integer64") {
+      tk$answer_time <- ms_to_date(tk$answer_time,timezone = tz)
+    }
     form_data <- rbind(form_data,tk)
   }
   
