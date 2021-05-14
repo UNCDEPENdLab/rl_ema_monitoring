@@ -220,4 +220,4 @@ run_ema <- function(root=NULL, dataPath=getwd(), subjects="all", pull=TRUE, sche
   }
 }
 
-run_ema(pull=FALSE, sched=FALSE, physio=FALSE, redcap=FALSE, site="/Users/shanebuckley/desktop/rl_ema_monitoring/site")
+run_ema(site="/Users/shanebuckley/desktop/rl_ema_monitoring/site") # sched=FALSE, physio=FALSE, redcap=FALSE,
