@@ -58,8 +58,8 @@ hr_gen <- output_physio$ecg$sample_summary
 HR_Average <- hr_gen$per_Good[match(Subject, hr_gen$ID)]*100
 HR_Average <- round(HR_Average, digits = 3)
 
-qxn <- output$sample_form_summary
-print(qxn)
+#qxn <- output$sample_form_summary
+#print(qxn)
 
 ID_Overview = data.table(
   ID = Subject,

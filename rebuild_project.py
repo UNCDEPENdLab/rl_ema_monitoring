@@ -2,8 +2,8 @@ import argparse
 import os
 import sys
 import json
-from rebuild_conda import build_reticulate_conda
-from rebuild_config import build_config
+from rebuild_conda_funcs import build_reticulate_conda
+from rebuild_config_funcs import build_config
 
 def create_arg_parser():
     '''

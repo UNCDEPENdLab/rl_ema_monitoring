@@ -122,7 +122,7 @@ ids <- list("abbegail") #tolower(ID_Overview$ID)
 # use paste0 to compose markdown-formatted hyperlinks
 ID_Overview$ID <- paste0("<a target='_parent' href='/",ids, "/'>", ID_Overview$ID, "</a>") # subjects/
 # create a new folder and rmd template if for each subject that hasn't been initialized
-for(id in ids) {
+#for(id in ids) {
   # if the path does not exist
   #if(dir.exists(paste0('subjects/', id)) == FALSE) {
   #  # then create the directory
@@ -133,33 +133,8 @@ for(id in ids) {
   #  # then create the directory
   #  dir.create(paste0('subjects/', id, '/graphs'))
   #}
-  curr_path <- paste0('subjects/', id)
-  # if the md and the Rmd for the subject does not exist
-  if(file.exists(paste0(curr_path, '/_index.Rmd')) == FALSE) {
-    tryCatch({
-      # then create a subject Rmd from the template
-      blogdown::hugo_cmd(paste0("new subjects/", id, " -s .."))
-    })
-    tryCatch({
-      # rename the .md file to a .Rmd (this allows Go to be used properly in archetypes)
-    file.rename(paste0(curr_path, "/_index.md"), paste0(curr_path, "/_index.Rmd"))
-    })
-  }
-  # attempt to render the subject's graph pages
-  if(file.exists(paste0(curr_path, '/plot_ecg.Rmd')) == FALSE) {
-    tryCatch({
-      # rename the .md file to a .Rmd (this allows Go to be used properly in archetypes)
-    file.rename(paste0(curr_path, '/plot_ecg.md'), paste0(curr_path, '/plot_ecg.Rmd'))
-    })
-  }
-  # attempt to render the subject's graph pages
-  if(file.exists(paste0(curr_path, '/plot_eeg.Rmd')) == FALSE) {
-    tryCatch({
-      # rename the .md file to a .Rmd (this allows Go to be used properly in archetypes)
-    file.rename(paste0(curr_path, '/plot_eeg.md'), paste0(curr_path, '/plot_eeg.Rmd'))
-    })
-  }
-}
+  
+#}
 #reticulate::use_condaenv('/Users/shanebuckley/Library/r-miniconda/envs/r-reticulate')
 # get the active subjects
 active_list <- getActiveList(root_dir="rl_ema_monitoring")

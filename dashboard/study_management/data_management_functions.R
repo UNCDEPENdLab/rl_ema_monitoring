@@ -62,20 +62,6 @@ sourceFromRoot <- function(root_dir, from_root, sourced_file, python=FALSE) {
   }
 }
 
-# function to reset the config file by running the python script directly on the system at the project root directory
-reset_cfg <- function(root_dir) {
-  # get the root directory path
-  root_path <- paste0(findRoot(root_dir), '/', root_dir)
-  # save the current working directory
-  curr_dir <- getwd()
-  # set the working dir to be the designated root
-  setwd(root_path)
-  # run the reset cfg script on the system
-  system(paste0("python rebuild_config.py --root_name ", root_dir))
-  # reset the working directory
-  setwd(curr_dir)
-}
-
 # function that goes to the root and gets the path from the cfg.json and loads .db file
 getPathFromCfg <- function(root_dir, sourced_file, keywords=NA, exclusion=NA, pattern=FALSE) {
   # get the root directory path
@@ -207,13 +193,19 @@ sourceFromCfg <- function(root_dir, sourced_file) {
 }
 
 # add the set_status functions
-#sourceFromCfg('rl_ema_monitoring','set_status_func.py') # function used for cli is: add_subject_by_status(id, status)
+sourceFromCfg('rl_ema_monitoring','set_status_func.py') # function used for cli is: add_subject_by_status(id, status)
 
 # add the add_subject functions
-#sourceFromCfg('rl_ema_monitoring', 'add_subject_func.py') # function used for cli is: add_subject(id, gmail, status, path)
+sourceFromCfg('rl_ema_monitoring', 'add_subject_func.py') # function used for cli is: add_subject(id, gmail, status, path)
 
 # add the momentum_pull functions
-#sourceFromCfg('rl_ema_monitoring', 'momentum_pull_func.py') # function used for cli is: pull_files(id, path)
+sourceFromCfg('rl_ema_monitoring', 'momentum_pull_func.py') # function used for cli is: pull_files(id, path)
+
+# add the rebuild_config function
+sourceFromCfg('rl_ema_monitoring', 'rebuild_config_funcs.py') # function used for updating the pathing info (rough file tracking)
+
+# add the redcap function
+sourceFromCfg('rl_ema_monitoring', 'RC_pull.R') # functions for REDCap implementation
 
 # function to pull the list of active subjects
 getActiveList <- function(root_dir=NULL) {
