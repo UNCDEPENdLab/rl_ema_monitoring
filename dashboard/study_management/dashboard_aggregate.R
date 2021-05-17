@@ -33,7 +33,7 @@ if (FALSE) {
   #########END########
 
   #example for proc_schedule:
-  output <- proc_schedule(schedule_df = path_info$schedule,tz=Sys.timezone(),days_limit=60,force_reproc=F)
+  output <- proc_schedule(schedule_df = path_info$schedule,tz=Sys.timezone(),days_limit=60,force_reproc=T)
   ##Output a list of :
   output$proc_data #is a list with a length equal to the number of db files, include data imported from db
   output$subj_info #is a list with a length equal to the number of subjects, include subject information on compliance
@@ -55,6 +55,7 @@ if (FALSE) {
   #####fb: list of proc'ed eeg data, near the feedback times, length of subjects
   #####*summary: list of summary data frame for each subject, used for dashboard table generation, length of subjects
   #####*sample_summary: a data.frame of all subjects, used for dashboard overall table, nrow of subjects
+  save(output,output_physio,file = "fin_output.rdata")
 }
 
 #####Session number is dependent on scheduled time. Possible 1 game per day but with 2 sessions worth of data.
@@ -240,7 +241,6 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
   },USE.NAMES = F)
 
 
-
   ##Part 0: Session Assignment:
   #### Session information data frame ####
   session_info_df <- raw_single$questionnaires
@@ -269,9 +269,7 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
   date_sess_match_df$index[2:(nrow(date_sess_match_df))] <- split(1:(4*nrow(date_sess_match_df)), ceiling(seq_along(1:(4*nrow(date_sess_match_df)))/4))[1:(nrow(date_sess_match_df)-1)]
 
   ##For each day
-  split(info_df,as.Date(info_df$scheduled_time,tz = tz))
-
-
+  info_sp<-split(info_df,as.Date(info_df$scheduled_time,tz = tz))
 
   #update answer DF as well"
   raw_single$answers$session_number<-session_info_df$session_number[match(round(as.numeric(raw_single$answers$answer_time,0)),round(as.numeric(session_info_df$completed_time),0))]
@@ -280,7 +278,7 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
   #Find answer:
   form_data <- raw_single$answers
   form_data <- form_data[form_data$answer!="",]
-
+  
   if(nrow(raw_single$sleep)>0) {
     tk <- form_data[rep(1,nrow(raw_single$sleep)),]
     tk$questionnaire_type <- NA
@@ -289,9 +287,12 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
     tk$question <- 0
     tk$answer <- "sleep latency=NA, woke many times=NA, woke early=NA, overall=NA"
     tk$answer_time <- raw_single$sleep$time
+    if(unique(class(tk$answer_time))=="integer64") {
+      tk$answer_time <- ms_to_date(tk$answer_time,timezone = tz)
+    }
     form_data <- rbind(form_data,tk)
   }
-
+  
   form_data$answer_prog <- text_proc(form_data$answer)
   fdata_sp <- split(form_data,form_data$questionnaire_name)
   #proc all the other first
@@ -334,9 +335,10 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
     rownames(tkf)<-NULL
     return(tkf)
   })
+
   form_proc$`Mood Questionnaire`$v_a_distance <- sqrt((as.numeric(form_proc$`Mood Questionnaire`$Valence)^2) + (as.numeric(form_proc$`Mood Questionnaire`$Arousal)^2) )
   form_proc$`Sleep Diary`$did_not_sleep<-is.na(form_proc$`Sleep Diary`$questionnaire_type)
-
+  
   ##summary stats for how much they answered
   q_sum <- data.frame(ID = raw_single$ID,val_arr_dis_avg = mean(form_proc$`Mood Questionnaire`$v_a_distance,na.rm = T))
   e_sum <- data.frame(as.list(apply(form_proc$`Mood Questionnaire`[c("Anxious","Elated","Sad","Irritable","Energetic")],2,function(x){mean(as.numeric(x),na.rm = T)})))
@@ -381,7 +383,7 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
   }
   # modify physio_df to have physio_df$file_path include the file name
   physio_df <- within(physio_df, file_path <- paste0(file_path, '/', file_name))
-
+  
   exp_out<-lapply(unique(physio_df$subject_id),function(IDx){
     physio_files_new <- physio_df$file_path[physio_df$subject_id==IDx]
     physio_rawcache_file <- file.path(unique(dirname(physio_df$file_path[physio_df$subject_id==IDx])),paste(IDx,"_physio_raw.rdata",sep = ""))

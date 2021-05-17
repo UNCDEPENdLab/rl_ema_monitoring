@@ -29,6 +29,7 @@ library("kableExtra")
 ```
 
 ```{r load, include = FALSE, cache=TRUE, cache.lazy=FALSE}
+
 #setwd("/Users/abbegaillovette/Documents/GitHub/rl_ema_monitoring/")
 # starting in rl_ema_monitoring/site/
 #root_dir = dirname(dirname(getwd())) #"/Users/abbegaillovette/Documents/GitHub/rl_ema_monitoring/"
