@@ -29,8 +29,8 @@ if(Sys.getenv("USER")=="dp"){
   source("/Users/abbegaillovette/Documents/GitHub/rl_ema_monitoring/ECG_Dashboard.R")
   source("/Users/abbegaillovette/Documents/GitHub/rl_ema_monitoring/dashboard/study_management/data_management_functions.R")
   source("/Users/abbegaillovette/Documents/GitHub/rl_ema_monitoring/dashboard/study_management/dashboard_aggregate.R")
-  load("/Users/abbegaillovette/Desktop/abb_proc_sched.Rdata") 
-  load("/Users/abbegaillovette/Desktop/emp_physiooutput.rdata")
+  load("/Users/abbegaillovette/Downloads/data_proc_05_12/data_proc_05_12/output_physio.Rdata") 
+  load("/Users/abbegaillovette/Downloads/data_proc_05_12/data_proc_05_12/output.Rdata")
 } else {
   stop("User not recognized")
 }
@@ -159,11 +159,15 @@ compliance_addon$days_delayed <- NULL
 compliance_addon$is_missing <- FALSE
 compliance_filtered_2 <- rbind(compliance_filtered, compliance_addon)
 
-#ema_date, ema_checklist_complete
+#line 164 (call redcap_pull via Rdata file) will need to be redone once we know how redcap integration works (with multiple subjects)
 
-#output$redcap$[variable]
+load("/Users/abbegaillovette/Documents/GitHub/rl_ema_monitoring/dashboard/report_generators/redcap_subj.Rdata")
+ema_checklist <- redcap_subj[c("Date", "Checklist Complete?")] 
 
-ema_checklist <- output$redcap[c("ema_date", "ema_checklist_complete")] 
+compliance_filtered_2$checklist <- ema_checklist$`Checklist Complete?`[match(compliance_filtered_2$scheduled_time, ema_checklist$Date)]
+print(compliance_filtered_2$checklist)
+
+compliance_unchecked <- compliance_filtered_2[compliance_filtered_2$checklist != "Yes"| is.na(compliance_filtered_2$checklist), ]
 
 #pivot table
 library("pivottabler")
@@ -174,6 +178,14 @@ compliance_pf$addRowDataGroups("scheduled_time", addTotal=FALSE)
 compliance_pf$defineCalculation(calculationName = "delayednotmissing", summariseExpression = "ifelse(is.na(mean(as.numeric(delayednotmissing), na.rm=TRUE)), 0, mean(as.numeric(delayednotmissing), na.rm=TRUE))", caption = "avg delay")
 compliance_pf$defineCalculation(calculationName = "is_missing", summariseExpression = "length(which(is_missing))", caption = "number missing")
 compliance_pf$evaluatePivot()
+
+compliance_pun <- PivotTable$new()
+compliance_pun$addData(compliance_unchecked)
+compliance_pun$addColumnDataGroups("s_type", addTotal=FALSE)
+compliance_pun$addRowDataGroups("scheduled_time", addTotal=FALSE)
+compliance_pun$defineCalculation(calculationName = "delayednotmissing", summariseExpression = "ifelse(is.na(mean(as.numeric(delayednotmissing), na.rm=TRUE)), 0, mean(as.numeric(delayednotmissing), na.rm=TRUE))", caption = "avg delay")
+compliance_pun$defineCalculation(calculationName = "is_missing", summariseExpression = "length(which(is_missing))", caption = "number missing")
+compliance_pun$evaluatePivot()
 
 # apply the green style for an average delay of between 0 and 2 hours
 cells <- compliance_pf$findCells(minValue=0, maxValue=120, includeNull=FALSE, includeNA=FALSE)
@@ -189,11 +201,16 @@ compliance_pf$setStyling(cells=cells, declarations=list("background-color"="#FFC
 ```
 
 \newline
-## Task compliance
+## Task Compliance (Unchecked)
 ```{r compliance table, echo=FALSE}
-#Compliance table
+compliance_pun$renderPivot()
+```
+
+## Task Compliance (Full)
+```{r compliance full}
 compliance_pf$renderPivot()
 ```
+
 
 \newline
 ## Task performance
