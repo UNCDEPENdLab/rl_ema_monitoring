@@ -25,10 +25,10 @@ def main():
     arg_parser = create_arg_parser()
     # Parse the args from terminal input
     parsed_args = arg_parser.parse_args(sys.argv[1:])
-    # rebuild the conda_env
-    build_reticulate_conda('pip.txt')
     # run the build_config function
     build_config(rootDir=parsed_args.root_dir)
+    # rebuild the conda_env
+    build_reticulate_conda('pip.txt')
 
 # Execution of main method
 if __name__ == '__main__':
