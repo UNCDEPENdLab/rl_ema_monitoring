@@ -243,18 +243,26 @@ def download_files(id, path, drive, fileDict, scheduleLatest):
         print('Downloading {} from GDrive ({}/{})'.format(file['title'], i, video_len))
         # initialize a file title varibale
         video_title = updateVideoName(old_name=file['title'])
-        # attempt to download the file
-        try:
-            # attempt the download
-            file.GetContentFile(path + '/Subjects/' + id + '/video/' + video_title)
-            # log that the download occured successfully
+        # This will download the files to the local machine.
+        # Remove the if/else once decided where videos will be stored.
+        if False:
+            # attempt to download the file
+            try:
+                # attempt the download
+                file.GetContentFile(path + '/Subjects/' + id + '/video/' + video_title)
+                # log that the download occured successfully
+                logDict.update({video_title: "Download Successful"})
+            # if the attempt failed
+            except:
+                # print to console that the download attempt failed
+                print("Warning: download of " + video_title + " was unsuccessfull!")
+                # log that the download occured unsuccessfully
+                logDict.update({video_title: "Download Failed"})
+        # For now, just create an empty video file with the correct name
+        else:
+            with open(path + '/Subjects/' + id + '/video/' + video_title, 'w') as fp:
+                pass
             logDict.update({video_title: "Download Successful"})
-        # if the attempt failed
-        except:
-            # print to console that the download attempt failed
-            print("Warning: download of " + video_title + " was unsuccessfull!")
-            # log that the download occured unsuccessfully
-            logDict.update({video_title: "Download Failed"})
     # return the dictionary of logs
     return logDict
 

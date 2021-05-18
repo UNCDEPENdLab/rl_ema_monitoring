@@ -15,7 +15,9 @@ if(!exists("repo_path",envir = .GlobalEnv)) {
 ##add C++11 flag for MacOS BigSur Clang & RcppArmadillo for R 4.0
 Sys.setenv("PKG_CXXFLAGS"="-std=c++11")
 
-Rcpp::sourceCpp(file.path(repo_path, "rl_ema_monitoring/data_utils/timings2samples_block_cpp.cpp"), cacheDir = getwd())
+#print(getwd())
+#Rcpp::sourceCpp(file.path(repo_path, "rl_ema_monitoring/data_utils/timings2samples_block_cpp.cpp"), cacheDir = getwd())
+Rcpp::sourceCpp("../../data_utils/timings2samples_block_cpp.cpp", cacheDir = getwd())
 
 #test case
 if(FALSE) {

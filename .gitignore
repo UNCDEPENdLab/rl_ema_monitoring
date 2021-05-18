@@ -18,3 +18,4 @@ conda-env
 *.Rdata
 /site/data/*
 /site/content/*subjects
+redcap.json
