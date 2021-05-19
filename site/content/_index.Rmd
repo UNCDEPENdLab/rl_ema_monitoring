@@ -109,11 +109,12 @@ ID_Overview = data.table(
   "Avg Rel Correct (w/ feedback)" = Avg_Experienced_Percent_Correct_Feedback,
   "EEG Average" = EEG_Average,
   "HR Average" = HR_Average,
-  "Left %" = round(output$sample_performance$side_bias, digits = 3),
+  #"Left %" = round(output$sample_performance$side_bias, digits = 3),
   "Valence/Arousal Distance from Origin" = round(qxn$val_arr_dis_avg, digits = 3),
   "Emotion Distance from 0" = round(qxn$emo_rate_avg, digits = 3),
   "Emotion/Valence Correlation" = round(qxn$val_emo_cor, digits = 3)
 )
+
 #TO ADD: REDCap Variables, Active/Inactive variable, link to individual page`
 ```
 
@@ -143,6 +144,7 @@ active_list <- getActiveList(root_dir="rl_ema_monitoring")
 Active_Overview <- subset(ID_Overview, !(ID %in% active_list))
 # make DT with only inactive subjects
 Inactive_Overview <- subset(ID_Overview, (ID %in% active_list))
+
 ```
 
 # Active Participant Overview
