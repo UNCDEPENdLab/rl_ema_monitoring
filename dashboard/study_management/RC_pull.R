@@ -21,6 +21,7 @@ redcap_pull <- function(uri=NULL, token=NULL, activeList=NULL){
   #active <- getActiveList(root_dir="rl_ema_monitoring")
   #active <- (c("30497", "2")) # replace with Shane's "getActiveList" function from data_management_functions
   active <- (c(unlist(activeList, use.names=FALSE)))
+  #active <- (c("221604", "221849"))
   metafields <- c("study_progress", "group_assign", "rl_start", "fmri_date", "week1_payment", "week2_payment",
                   "fmri_payment", "week3_payment", "week4_payment", "scan_complete", "rl_complete")
   dfy <- as.data.frame(replicate(length(metafields), as.numeric()))
@@ -37,6 +38,10 @@ redcap_pull <- function(uri=NULL, token=NULL, activeList=NULL){
                                            token=token,
                                            fields=names(redcap.vars),
                                            records=active)$data
+  events <- c("metadata_arm_1", paste0("rlema_day_", 1:28, "_arm_1"))
+  events
+  momentum %>%
+    filter(redcap_event_name %in% events) -> momentum
   momentum %>%
     mutate(group_assign=ifelse(group_assign==1, "Community", "Borderline"),
            scan_complete=ifelse(scan_complete==1, "Yes", "No"),
@@ -55,195 +60,205 @@ redcap_pull <- function(uri=NULL, token=NULL, activeList=NULL){
     group_by(record_id) %>%
     mutate(across(names(metafields), ~ dplyr::first(.))) %>%
     filter(!redcap_event_name=="metadata_arm_1") -> momentum
-  for (i in 1:nrow(momentum)) {
-    day <- stringr::str_split(momentum$redcap_event_name[i], pattern="_")[[1]][3]
-    momentum$redcap_event_name[i] <- day
-  }
-  rcmetadata <- redcap_metadata_read(redcap_uri=uri, token=token)$data
-  checkbox <- function(checkbox="registration_race") {
-    choices <- rcmetadata[rcmetadata$field_name==checkbox, "select_choices_or_calculations"]$select_choices_or_calculations
-    dfx <- REDCapR::checkbox_choices(select_choices=choices) 
-    dfx$variable <- checkbox
-    dfx$varmap <- paste0(dfx$variable, "___", dfx$id)
-    return(dfx)
-  }
-  checkboxes <- names(checkboxes)
-  map <- checkboxes
-  checkboxes <- lapply(checkboxes, checkbox)
-  x <- c()
-  y <- c()
-  for (i in 1:length(map)) {
-    if (map[i]==checkboxes[i][[1]]$variable[1]) {
-      tempdf <- momentum[which(startsWith(names(momentum), checkboxes[i][[1]]$variable[1]))]
-      tempnames <- names(tempdf)
-      for (n in 1:length(tempnames)) {
-        y <- append(y, tempnames[n])
-        tempnames[n] <- checkboxes[i][[1]]$label[n][match(tempnames[n], checkboxes[i][[1]]$varmap[n])]
-        x <- append(x, tempnames[n])
+  
+  if (nrow(momentum)!=0) {
+    for (i in 1:nrow(momentum)) {
+      day <- stringr::str_split(momentum$redcap_event_name[i], pattern="_")[[1]][3]
+      momentum$redcap_event_name[i] <- day
+    }
+    rcmetadata <- redcap_metadata_read(redcap_uri=uri, token=token)$data
+    checkbox <- function(checkbox="registration_race") {
+      choices <- rcmetadata[rcmetadata$field_name==checkbox, "select_choices_or_calculations"]
+      dfx <- REDCapR::checkbox_choices(select_choices=choices) 
+      dfx$variable <- checkbox
+      dfx$varmap <- paste0(dfx$variable, "___", dfx$id)
+      return(dfx)
+    }
+    checkboxes <- names(checkboxes)
+    map <- checkboxes
+    checkboxes <- lapply(checkboxes, checkbox)
+    x <- c()
+    y <- c()
+    for (i in 1:length(map)) {
+      if (map[i]==checkboxes[i][[1]]$variable[1]) {
+        tempdf <- momentum[which(startsWith(names(momentum), checkboxes[i][[1]]$variable[1]))]
+        tempnames <- names(tempdf)
+        for (n in 1:length(tempnames)) {
+          y <- append(y, tempnames[n])
+          tempnames[n] <- checkboxes[i][[1]]$label[n][match(tempnames[n], checkboxes[i][[1]]$varmap[n])]
+          x <- append(x, tempnames[n])
+        }
       }
     }
-  }
-  dfz <- data.frame(x, y)
-  for (j in 1:length(names(momentum))) {
-    if (names(momentum)[j] %in% dfz$y) {
-      vari <- dfz$x[which(dfz$y==names(momentum)[j])]
-      curr <- dfz$y[which(dfz$y==names(momentum)[j])]
-      names(momentum)[which(names(momentum)==curr)] <- vari
-    }
-  }
-  momentum %>% filter(!is.na(None)) -> momentum # take out this line!
-  ​
-  # OVERALL ISSUES #
-  momentum$Overall_Issues <- "x" 
-  for (k in 1:nrow(momentum)) {
-    xyz <- c()
-    temprow <- momentum[which(names(momentum) %in% checkboxes[7][[1]]$label)][k,]
-    for (z in 1:length(names(temprow))) {
-      if (temprow[z][[1]]==1) {
-        xyz <- append(xyz, names(temprow)[z])
-        xyz <- toString(xyz)
+    dfz <- data.frame(x, y)
+    for (j in 1:length(names(momentum))) {
+      if (names(momentum)[j] %in% dfz$y) {
+        vari <- dfz$x[which(dfz$y==names(momentum)[j])]
+        curr <- dfz$y[which(dfz$y==names(momentum)[j])]
+        names(momentum)[which(names(momentum)==curr)] <- vari
       }
     }
-    if (length(xyz)==0){
-      momentum$Overall_Issues[k] <- NA 
-    } else {momentum$Overall_Issues[k] <- xyz }
-  }
-  ​
-  # COMPLIANCE #
-  momentum$Compliance_Checklist <- "x"
-  for (k in 1:nrow(momentum)) {
-    xyz <- c()
-    temprow <- momentum[which(names(momentum) %in% checkboxes[1][[1]]$label)][k,]
-    for (z in 1:length(names(temprow))) {
-      if (temprow[z][[1]]==1) {
-        xyz <- append(xyz, names(temprow)[z])
-        xyz <- toString(xyz)
+    #momentum %>% filter(!is.na(None)) -> momentum # take out this line!
+    
+    # OVERALL ISSUES #
+    momentum$Overall_Issues <- "x" 
+    for (k in 1:nrow(momentum)) {
+      xyz <- c()
+      temprow <- momentum[which(names(momentum) %in% checkboxes[7][[1]]$label)][k,]
+      if (rowSums(is.na(temprow))==11) {
+        temprow[1:11] <- 0
       }
-    }
-    if (length(xyz)==0){
-      momentum$Compliance_Checklist[k] <- NA 
-    } else {momentum$Compliance_Checklist[k] <- xyz }
-  }
-  ​
-  # TASK PERFORMANCE #
-  momentum$Task_Performance_Checklist <- "x"
-  for (k in 1:nrow(momentum)) {
-    xyz <- c()
-    temprow <- momentum[which(names(momentum) %in% checkboxes[2][[1]]$label)][k,]
-    for (z in 1:length(names(temprow))) {
-      if (temprow[z][[1]]==1) {
-        xyz <- append(xyz, names(temprow)[z])
-        xyz <- toString(xyz)
+      for (z in 1:length(names(temprow))) {
+        if (temprow[z][[1]]==1) {
+          xyz <- append(xyz, names(temprow)[z])
+          xyz <- toString(xyz)
+        }
       }
+      if (length(xyz)==0){
+        momentum$Overall_Issues[k] <- NA 
+      } else {momentum$Overall_Issues[k] <- xyz}
     }
-    if (length(xyz)==0){
-      momentum$Task_Performance_Checklist[k] <- NA 
-    } else {momentum$Task_Performance_Checklist[k] <- xyz }
-  }
-  ​
-  # EEG/HR #
-  momentum$EEGHR_Checklist <- "x"
-  for (k in 1:nrow(momentum)) {
-    xyz <- c()
-    temprow <- momentum[which(names(momentum) %in% checkboxes[3][[1]]$label)][k,]
-    for (z in 1:length(names(temprow))) {
-      if (temprow[z][[1]]==1) {
-        xyz <- append(xyz, names(temprow)[z])
-        xyz <- toString(xyz)
-      } 
+    
+    # COMPLIANCE #
+    momentum$Compliance_Checklist <- "x"
+    for (k in 1:nrow(momentum)) {
+      xyz <- c()
+      temprow <- momentum[which(names(momentum) %in% checkboxes[1][[1]]$label)][k,]
+      for (z in 1:length(names(temprow))) {
+        if (temprow[z][[1]]==1) {
+          xyz <- append(xyz, names(temprow)[z])
+          xyz <- toString(xyz)
+        }
+      }
+      if (length(xyz)==0){
+        momentum$Compliance_Checklist[k] <- NA 
+      } else {momentum$Compliance_Checklist[k] <- xyz }
     }
-    if (length(xyz)==0){
-      momentum$EEGHR_Checklist[k] <- NA 
-    } else {momentum$EEGHR_Checklist[k] <- xyz }
-  }
-  ​
-  # SLEEP #
-  momentum$Sleep_Checklist <- "x"
-  for (k in 1:nrow(momentum)) {
-    xyz <- c()
-    temprow <- momentum[which(names(momentum) %in% checkboxes[4][[1]]$label)][k,]
-    for (z in 1:length(names(temprow))) {
-      if (temprow[z][[1]]==1) {
-        xyz <- append(xyz, names(temprow)[z])
-        xyz <- toString(xyz)
-      } 
+    
+    # TASK PERFORMANCE #
+    momentum$Task_Performance_Checklist <- "x"
+    for (k in 1:nrow(momentum)) {
+      xyz <- c()
+      temprow <- momentum[which(names(momentum) %in% checkboxes[2][[1]]$label)][k,]
+      for (z in 1:length(names(temprow))) {
+        if (temprow[z][[1]]==1) {
+          xyz <- append(xyz, names(temprow)[z])
+          xyz <- toString(xyz)
+        }
+      }
+      if (length(xyz)==0){
+        momentum$Task_Performance_Checklist[k] <- NA 
+      } else {momentum$Task_Performance_Checklist[k] <- xyz }
     }
-    if (length(xyz)==0){
-      momentum$Sleep_Checklist[k] <- NA 
-    } else {momentum$Sleep_Checklist[k] <- xyz }
-  }
-  ​
-  # MOOD #
-  momentum$Mood_Checklist <- "x"
-  for (k in 1:nrow(momentum)) {
-    xyz <- c()
-    temprow <- momentum[which(names(momentum) %in% checkboxes[5][[1]]$label)][k,]
-    for (z in 1:length(names(temprow))) {
-      if (temprow[z][[1]]==1) {
-        xyz <- append(xyz, names(temprow)[z])
-        xyz <- toString(xyz)
-      } 
+    
+    # EEG/HR #
+    momentum$EEGHR_Checklist <- "x"
+    for (k in 1:nrow(momentum)) {
+      xyz <- c()
+      temprow <- momentum[which(names(momentum) %in% checkboxes[3][[1]]$label)][k,]
+      for (z in 1:length(names(temprow))) {
+        if (temprow[z][[1]]==1) {
+          xyz <- append(xyz, names(temprow)[z])
+          xyz <- toString(xyz)
+        } 
+      }
+      if (length(xyz)==0){
+        momentum$EEGHR_Checklist[k] <- NA 
+      } else {momentum$EEGHR_Checklist[k] <- xyz }
     }
-    if (length(xyz)==0){
-      momentum$Mood_Checklist[k] <- NA 
-    } else {momentum$Mood_Checklist[k] <- xyz }
-  }
-  ​
-  # VIDEO #
-  momentum$Video_Checklist <- "x"
-  for (k in 1:nrow(momentum)) {
-    xyz <- c()
-    temprow <- momentum[which(names(momentum) %in% checkboxes[6][[1]]$label)][k,]
-    for (z in 1:length(names(temprow))) {
-      if (temprow[z][[1]]==1) {
-        xyz <- append(xyz, names(temprow)[z])
-        xyz <- toString(xyz)
-      } 
+    
+    # SLEEP #
+    momentum$Sleep_Checklist <- "x"
+    for (k in 1:nrow(momentum)) {
+      xyz <- c()
+      temprow <- momentum[which(names(momentum) %in% checkboxes[4][[1]]$label)][k,]
+      for (z in 1:length(names(temprow))) {
+        if (temprow[z][[1]]==1) {
+          xyz <- append(xyz, names(temprow)[z])
+          xyz <- toString(xyz)
+        } 
+      }
+      if (length(xyz)==0){
+        momentum$Sleep_Checklist[k] <- NA 
+      } else {momentum$Sleep_Checklist[k] <- xyz }
     }
-    if (length(xyz)==0){
-      momentum$Video_Checklist[k] <- NA 
-    } else {momentum$Video_Checklist[k] <- xyz }
+    
+    # MOOD #
+    momentum$Mood_Checklist <- "x"
+    for (k in 1:nrow(momentum)) {
+      xyz <- c()
+      temprow <- momentum[which(names(momentum) %in% checkboxes[5][[1]]$label)][k,]
+      for (z in 1:length(names(temprow))) {
+        if (temprow[z][[1]]==1) {
+          xyz <- append(xyz, names(temprow)[z])
+          xyz <- toString(xyz)
+        } 
+      }
+      if (length(xyz)==0){
+        momentum$Mood_Checklist[k] <- NA 
+      } else {momentum$Mood_Checklist[k] <- xyz }
+    }
+    
+    # VIDEO #
+    momentum$Video_Checklist <- "x"
+    for (k in 1:nrow(momentum)) {
+      xyz <- c()
+      temprow <- momentum[which(names(momentum) %in% checkboxes[6][[1]]$label)][k,]
+      for (z in 1:length(names(temprow))) {
+        if (temprow[z][[1]]==1) {
+          xyz <- append(xyz, names(temprow)[z])
+          xyz <- toString(xyz)
+        } 
+      }
+      if (length(xyz)==0){
+        momentum$Video_Checklist[k] <- NA 
+      } else {momentum$Video_Checklist[k] <- xyz }
+    }
+    
+    # FINAL DF CREATION #
+    names(momentum)
+    momentum %>%
+      select(ID=record_id,
+             Group=group_assign,
+             Day=redcap_event_name,
+             Date=ema_date,
+             `Study Progress`=study_progress,
+             `RL Start Date`=rl_start,
+             `EMA RA`=ema_ra_assigned,
+             `RL Complete`=rl_complete,
+             `Issues Today?`=ema_overview,
+             `Flagged?`=ema_flag,
+             `Overall Issues`=Overall_Issues,
+             `Compliance`=Compliance_Checklist,
+             `Compliance Notes`=ema_compliance_notes,
+             `Task Performance`=Task_Performance_Checklist,
+             `Task Performance Notes`=ema_task_performance_notes,
+             EEGHR=EEGHR_Checklist,
+             `EEGHR Notes`=ema_s_notes,
+             Sleep=Sleep_Checklist,
+             `Sleep Notes`=ema_rc_notes_1_v2,
+             Mood=Mood_Checklist,
+             `Mood Notes`=ema_mood_notes,
+             Video=Video_Checklist,
+             `Video Notes`=ema_video_notes,
+             `Other Issues Notes`=ema_other_notes,
+             `End of 7 Day Period?`=ema_weekcheck,
+             `Weekly Compliance`=ema_week_compliance,
+             `Weekly Threshold (85%)`=ema_weekcheck_threshold,
+             `Paid?`=ema_weekcheck_paid,
+             `Payment Notes`=ema_weekcheck_paynotes,
+             `Checklist Complete?`=ema_checklist_complete,
+             `Overall Notes`=ema_check_notes,
+             `fMRI Date`=fmri_date,
+             `Scan Complete`=scan_complete,
+             `Week 1 Payment`=week1_payment,
+             `Week 2 Payment`=week2_payment,
+             `Week 3 Payment`=week3_payment,
+             `Week 4 Payment`=week4_payment) -> final
+    
+    return(final)
+    
+  } else if (nrow(momentum)==0) { print("The RL-EMA QA checklist on RedCAP is blank for all participants in the active participants list.")
   }
-  ​
-  # FINAL DF CREATION #
-  names(momentum)
-  momentum %>%
-    select(ID=record_id,
-           Group=group_assign,
-           Day=redcap_event_name,
-           Date=ema_date,
-           `Study Progress`=study_progress,
-           `RL Start Date`=rl_start,
-           `EMA RA`=ema_ra_assigned,
-           `RL Complete`=rl_complete,
-           `Issues Today?`=ema_overview,
-           `Flagged?`=ema_flag,
-           `Overall Issues`=Overall_Issues,
-           `Compliance`=Compliance_Checklist,
-           `Compliance Notes`=ema_compliance_notes,
-           `Task Performance`=Task_Performance_Checklist,
-           `Task Performance Notes`=ema_task_performance_notes,
-           EEGHR=EEGHR_Checklist,
-           `EEGHR Notes`=ema_s_notes,
-           Sleep=Sleep_Checklist,
-           `Sleep Notes`=ema_rc_notes_1_v2,
-           Mood=Mood_Checklist,
-           `Mood Notes`=ema_mood_notes,
-           Video=Video_Checklist,
-           `Video Notes`=ema_video_notes,
-           `Other Issues Notes`=ema_other_notes,
-           `End of 7 Day Period?`=ema_weekcheck,
-           `Weekly Compliance`=ema_week_compliance,
-           `Weekly Threshold (85%)`=ema_weekcheck_threshold,
-           `Paid?`=ema_weekcheck_paid,
-           `Payment Notes`=ema_weekcheck_paynotes,
-           `Checklist Complete?`=ema_checklist_complete,
-           `Overall Notes`=ema_check_notes,
-           `fMRI Date`=fmri_date,
-           `Scan Complete`=scan_complete,
-           `Week 1 Payment`=week1_payment,
-           `Week 2 Payment`=week2_payment,
-           `Week 3 Payment`=week3_payment,
-           `Week 4 Payment`=week4_payment) -> final
-  return(final)
+  
 }
