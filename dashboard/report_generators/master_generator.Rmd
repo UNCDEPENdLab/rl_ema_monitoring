@@ -31,6 +31,7 @@ if(Sys.getenv("USER")=="dp"){
   source("/Users/abbegaillovette/Documents/GitHub/rl_ema_monitoring/dashboard/study_management/dashboard_aggregate.R")
   load("/Users/abbegaillovette/Downloads/data_proc_05_12/data_proc_05_12/output_physio.Rdata") 
   load("/Users/abbegaillovette/Downloads/data_proc_05_12/data_proc_05_12/output.Rdata")
+  #load("/Users/abbegaillovette/Desktop/abb_proc_sched_5_11.Rdata")
 } else {
   stop("User not recognized")
 }
@@ -169,7 +170,9 @@ print(compliance_filtered_2$checklist)
 
 compliance_unchecked <- compliance_filtered_2[compliance_filtered_2$checklist != "Yes"| is.na(compliance_filtered_2$checklist), ]
 
-#pivot table
+#pivot tables
+
+
 library("pivottabler")
 compliance_pf <- PivotTable$new()
 compliance_pf$addData(compliance_filtered_2)
