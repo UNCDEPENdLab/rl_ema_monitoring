@@ -105,6 +105,7 @@ proc_schedule <- function(schedule_df = NULL,days_limit=35,task_limit=56,force_r
   #####NEED MORE SUBJ DATA FOR AGGREGATION########
   sample_info <- do.call(rbind,lapply(proc_data,`[[`,"info_df"))
   performance_info <- do.call(rbind,lapply(proc_data,`[[`,"performance_info"))
+  performance_info <- performance_info[!is.na(performance_info$date),]
   sp_info_sq <- split(sample_info,sample_info$ID)
   pr_info_sq <- split(performance_info,performance_info$ID)
   sample_info$compliance <- is.na(sample_info$completed_time)
@@ -192,7 +193,7 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
                      relative_accuracy_feed = mean(as.numeric(ix[which(ix$feedback==1),]$relative_accuracy),na.rm = T),
                      abs_accurate_nofeed = mean(as.numeric(ix[which(ix$feedback==0),]$accuracy),na.rm = T),
                      relative_accuracy_nofeed = mean(as.numeric(ix[which(ix$feedback==0),]$relative_accuracy),na.rm = T),
-
+                     earning = sum(ix$outcome * 0.15,na.rm = T),
                      stringsAsFactors = F)
 
 
