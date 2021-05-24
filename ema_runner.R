@@ -73,6 +73,12 @@
 #     Path to where the directory hosting the hugo site is located.
 #     default:
 #
+#   force_proc:
+#     Whether or not to force reprocessing.
+#     default: False -> do not reprocess
+#     other: TRUE -> reprocess
+#     note: Should run a force if data structure changes
+#
 ####################################
 
 # import dependent packages
@@ -89,7 +95,7 @@ source("../../ECG_Dashboard2.R")
 source("../../EEG_Dashboard.R")
 
 # main function to be run
-run_ema <- function(root=NULL, dataPath=getwd(), subjects="all", pull=TRUE, sched=TRUE, physio=TRUE, redcap=TRUE, nthreads=4, output=NULL, render=TRUE, site=NULL) {
+run_ema <- function(root=NULL, dataPath=getwd(), subjects="all", pull=TRUE, sched=TRUE, physio=TRUE, redcap=TRUE, nthreads=4, output=NULL, render=TRUE, site=NULL, force_proc=FALSE, force_reload=FALSE) {
   # SET ROOT
   ## Need to refactor the repo first ##
   #if(is.null(root) != TRUE) {
@@ -128,11 +134,12 @@ run_ema <- function(root=NULL, dataPath=getwd(), subjects="all", pull=TRUE, sche
     for(subj in active) {
       pull_files(id=subj, path=dataPath)
     }
-    # find the root path
-    root_path <- paste0(findRoot(root), '/', root)
-    # update path information
-    build_config(rootDir=root_path)
   }
+  
+  # find the root path
+  root_path <- paste0(findRoot(root), '/', root)
+  # update path information
+  build_config(rootDir=root_path)
   
   # GET DATA SUMMARY
   path_info <- get_ema_subject_metadata(root_dir = root)
@@ -142,17 +149,18 @@ run_ema <- function(root=NULL, dataPath=getwd(), subjects="all", pull=TRUE, sche
   if(redcap == TRUE) {
     print("Running REDCap data pull...")
     # Get the credentials (standard path for now)
+    
     creds <- get_redcap_creds(cred_path="../../data/redcap.json")
     # Load the data
-    redcap_data <<- redcap_pull(uri=creds$uri, token=creds$token, active=active)
+    redcap_data <<- "Hello" #redcap_pull(uri=creds$uri, token=creds$token, active=active)
   }
   
   # GET SCHED DATA
   if(sched == TRUE) {
     #print(path_info$schedule)
-    print("Running schedule and physio calculation/aggregation...")
+    print("Running schedule calculation/aggregation...")
     # Run schedule
-    output <<- proc_schedule(schedule_df = path_info$schedule,tz=Sys.timezone(),days_limit=60,force_reproc=F)
+    output <<- proc_schedule(schedule_df = path_info$schedule,tz=Sys.timezone(),days_limit=60,force_reproc=force_proc)
     # Run REDCap merging into "output"
     output$redcap <<- redcap_data
     # Save the schedule output
@@ -165,7 +173,7 @@ run_ema <- function(root=NULL, dataPath=getwd(), subjects="all", pull=TRUE, sche
   if(physio == TRUE){
     print("Running physio calculation/aggregation...")
     # Run physio
-    output_physio <<- proc_physio(physio_df = path_info$physio,sch_pro_output=output, tz="EST",thread=nthreads,force_reload=FALSE,force_reproc=FALSE,
+    output_physio <<- proc_physio(physio_df = path_info$physio,sch_pro_output=output, tz="EST",thread=nthreads,force_reload=force_reload,force_reproc=force_proc,
                                   eeg_sample_rate=256.03, sd_times=10, eeg_pre=500,eeg_post=1500, #EEG options
                                   ecg_sample_rate = 100, HRstep = 10, ecg_pre=1000,ecg_post=10000 #ECG options
     )
@@ -220,4 +228,6 @@ run_ema <- function(root=NULL, dataPath=getwd(), subjects="all", pull=TRUE, sche
   }
 }
 
-run_ema(site="/Users/shanebuckley/desktop/rl_ema_monitoring/site") # sched=FALSE, physio=FALSE, redcap=FALSE,
+#run_ema(pull=FALSE, sched=TRUE, physio=FALSE, redcap=FALSE, force_proc=TRUE, nthreads = 1, site="/Users/shanebuckley/desktop/rl_ema_monitoring/site", render=FALSE) # , force_reload=TRUE
+run_ema(force_proc=TRUE, force_reload=TRUE, nthreads = 4, site="/Users/shanebuckley/desktop/rl_ema_monitoring/site") # , force_reload=TRUE
+

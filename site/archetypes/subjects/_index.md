@@ -1,17 +1,24 @@
 ---
+output: html_document
+params:
+  id: "{{ replace .Name "-" " " | title }}"
+---
+
+---
 title: "{{ replace .Name "-" " " | title }}"
 output: html_document
 categories: ["subjects"]
 tags: ["{{ replace .Name "-" " " | title }}"]
-params:
-  id: "{{ replace .Name "-" " " | title }}"
 ---
+
+# Report {.tabset}
 
 ```{r setup, include=FALSE}
 #knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_knit$set(root.dir = '../../../..') # makes root dir rl_ema_monitoring
 library(kableExtra)
 library(dplyr)
+library("RcppArmadillo")
 ```
 
 ```{r source, include=FALSE, }
@@ -25,8 +32,11 @@ source("dashboard/study_management/dashboard_aggregate.R")
 
 ```{r load, include=FALSE}
 #Not sure how subject-specific processed schedule file data and processed physio file data will be passed to this Rmd, so just loading in local RData objects and manually accessing a single subject's data for now
-load("site/data/output_schedule.Rdata") 
-load("site/data/output_physio.Rdata")
+#load("site/data/output_schedule.Rdata") 
+getwd()
+load("site/data/output_physio.Rdata") #../../../../
+load("site/data/output_schedule.Rdata") #../../../../
+
 perf <- filter(output$subj_performance,ID==params$id)
 proc_sched <- output$proc_data[[params$id]]
 info <- output$subj_info[[params$id]]
@@ -121,56 +131,82 @@ hr_ordered <- transmute(hr_ordered, "Date"=Date, "Block"=Block, "Good signal %"=
 ```
 
 ```{r compliance, include=FALSE}
-compliance <-info[c("scheduled_time","delay","type", "session_number")]
-compliance$scheduled_time <- as.Date(compliance$scheduled_time)
-compliance$delay <- round(as.numeric(compliance$delay), digits = 0)
-compliance$s_type[compliance$type=="trials"] <- "Behavioral Game"
-compliance$s_type[compliance$type=="questionnaires"] <- sapply(info$spec[compliance$type=="questionnaires"],`[[`,3)
-compliance$session_number <- as.character(compliance$session_number)
-compliance$delay <- round(compliance$delay)
+#compliance <-info[c("scheduled_time","delay","type", "duration")]
+#compliance$scheduled_time <- as.Date(compliance$scheduled_time)
+#compliance$delay <- round(as.numeric(compliance$delay), digits = 0)
+#compliance$s_type[compliance$type=="trials"] <- "Behavioral Game"
+#compliance$s_type[compliance$type=="questionnaires"] <- #sapply(info$spec[compliance$type=="questionnaires"],`[[`,3)
+#compliance$delay <- round(compliance$delay)
 
 #filters out NA/incomplete/upcoming data
-compliance_filtered <- compliance %>% filter(!is.na(s_type))
-compliance_filtered <- compliance_filtered %>% filter(!is.na(delay))
-print(compliance_filtered)
+#compliance_filtered <- compliance %>% filter(!is.na(s_type))
 
-wide_compliance <- compliance_filtered %>% pivot_wider(
-  names_from = s_type,
-  values_from = delay
-)
-print(wide_compliance)
+#compliance_filtered$is_missing <- is.na(compliance_filtered$duration)|compliance_filtered$delay>=1440
+#compliance_filtered$delayednotmissing <- ifelse(compliance_filtered$is_missing, NA, compliance_filtered$delay)
+
+#compliance_addon <- compliance_filtered[compliance_filtered$is_missing, ]
+
+#compliance_addon$days_delayed <- floor(compliance_addon$delay/1440)
+
+#compliance_addon$scheduled_time <- compliance_addon$scheduled_time + (compliance_addon$days_delayed)
+
+#compliance_addon$delayednotmissing <- compliance_addon$delay - (compliance_addon$days_delayed * 1440)
+
+#compliance_addon$days_delayed <- NULL
+#compliance_addon$is_missing <- FALSE
+#compliance_filtered_2 <- rbind(compliance_filtered, compliance_addon)
+
+#line 164 (call redcap_pull via Rdata file) will need to be redone once we know how redcap integration works (with multiple subjects)
+
+#load("/Users/abbegaillovette/Documents/GitHub/rl_ema_monitoring/dashboard/report_generators/redcap_subj.Rdata")
+#ema_checklist <- redcap_subj[c("Date", "Checklist Complete?")] 
+
+#compliance_filtered_2$checklist <- ema_checklist$`Checklist Complete?`[match(compliance_filtered_2$scheduled_time, ema_checklist$Date)]
+#print(compliance_filtered_2$checklist)
+
+#compliance_unchecked <- compliance_filtered_2[compliance_filtered_2$checklist != "Yes"| is.na(compliance_filtered_2$checklist), ]
 
 #pivot table
-library("pivottabler")
-compliance_pf <- PivotTable$new()
-compliance_pf$addData(compliance_filtered)
-compliance_pf$addColumnDataGroups("s_type", addTotal=FALSE)
-compliance_pf$addRowDataGroups("scheduled_time", addTotal=FALSE)
-compliance_pf$addRowDataGroups("session_number", addTotal=FALSE)
-compliance_pf$defineCalculation(calculationName = "delay", summariseExpression = "mean(as.numeric(delay), na.rm=TRUE)")
-compliance_pf$evaluatePivot()
+#library("pivottabler")
+#compliance_pf <- PivotTable$new()
+#compliance_pf$addData(compliance_filtered_2)
+#compliance_pf$addColumnDataGroups("s_type", addTotal=FALSE)
+#compliance_pf$addRowDataGroups("scheduled_time", addTotal=FALSE)
+#compliance_pf$defineCalculation(calculationName = "delayednotmissing", summariseExpression = "ifelse(is.na(mean(as.numeric(delayednotmissing), na.rm=TRUE)), 0, mean(as.numeric(delayednotmissing), na.rm=TRUE))", caption = "avg delay")
+#compliance_pf$defineCalculation(calculationName = "is_missing", summariseExpression = "length(which(is_missing))", caption = "number missing")
+#compliance_pf$evaluatePivot()
+
+#compliance_pun <- PivotTable$new()
+#compliance_pun$addData(compliance_unchecked)
+#compliance_pun$addColumnDataGroups("s_type", addTotal=FALSE)
+#compliance_pun$addRowDataGroups("scheduled_time", addTotal=FALSE)
+#compliance_pun$defineCalculation(calculationName = "delayednotmissing", summariseExpression = "ifelse(is.na(mean(as.numeric(delayednotmissing), na.rm=TRUE)), 0, mean(as.numeric(delayednotmissing), na.rm=TRUE))", caption = "avg delay")
+#compliance_pun$defineCalculation(calculationName = "is_missing", summariseExpression = "length(which(is_missing))", caption = "number missing")
+#compliance_pun$evaluatePivot()
 
 # apply the green style for an average delay of between 0 and 2 hours
-cells <- compliance_pf$findCells(minValue=0, maxValue=120, includeNull=FALSE, includeNA=FALSE)
-compliance_pf$setStyling(cells=cells, declarations=list("background-color"="#C6EFCE", "color"="#006100"))
+#cells <- compliance_pf$findCells(minValue=0, maxValue=120, includeNull=FALSE, includeNA=FALSE)
+#compliance_pf$setStyling(cells=cells, declarations=list("background-color"="#C6EFCE", "color"="#006100"))
 
 # apply the yellow style for an average delay of between 2 and 4 hours
-cells <- compliance_pf$findCells(minValue=121, maxValue=240, includeNull=FALSE, includeNA=FALSE)
-compliance_pf$setStyling(cells=cells, declarations=list("background-color"="#FFEB9C", "color"="#9C5700"))
+#cells <- compliance_pf$findCells(minValue=121, maxValue=240, includeNull=FALSE, includeNA=FALSE)
+#compliance_pf$setStyling(cells=cells, declarations=list("background-color"="#FFEB9C", "color"="#9C5700"))
 
 # apply the red style for an average delay of 4 hours or greater
-cells <- compliance_pf$findCells(minValue=241, includeNull=FALSE, includeNA=FALSE)
-compliance_pf$setStyling(cells=cells, declarations=list("background-color"="#FFC7CE", "color"="#9C0006"))
+#cells <- compliance_pf$findCells(minValue=241, includeNull=FALSE, includeNA=FALSE)
+#compliance_pf$setStyling(cells=cells, declarations=list("background-color"="#FFC7CE", "color"="#9C0006"))
 ```
 
-\newline
-## Task compliance
+## Task Compliance (Unchecked)
 ```{r compliance table, echo=FALSE}
-#Compliance table
-compliance_pf$renderPivot()
+#compliance_pun$renderPivot()
 ```
 
-\newline
+## Task Compliance (Full)
+```{r compliance full}
+#compliance_pf$renderPivot()
+```
+
 ## Task performance
 
 ```{r perf table, echo=FALSE}
@@ -187,9 +223,8 @@ kbl(task) %>%
   column_spec(8, color=ifelse(task[,8] >= 67 | task[,8] < 67, "#D8D8D8","black"))
 ```
 
-
-\newline
 ## EEG
+
 ```{r two, echo=FALSE}
 #EEG table
 kbl(eeg_col_named) %>%
@@ -203,8 +238,8 @@ kbl(eeg_col_named) %>%
   column_spec(7, color=if_else(eeg_col_named[7]>70, "#D8D8D8", "black"))
 ```
 
-\newline
 ## HR
+
 ```{r hr perf, echo=FALSE}
 #HR table
 kbl(hr_ordered) %>%
@@ -214,9 +249,9 @@ kbl(hr_ordered) %>%
   column_spec(3, background=if_else(hr_ordered[3]>90, "#C6EFCE", "#ffc7ce"))
 ```
 
-\newline
 ## Sleep diary
-```{r diary table, echo=FALSE}
+
+```{r diary table, warning=FALSE, echo=FALSE}
 #Sleep diary table
 kbl(diary) %>%
   kable_styling(fixed_thead = T) %>%
@@ -228,9 +263,9 @@ kbl(diary) %>%
   column_spec(6, color=if_else(output$sample_form_summary$sleep_di_avg > 50, "#D8D8D8", "black"))
 ```
 
-\newline
 ## Mood questionnaire
-```{r mood table, echo=FALSE}
+
+```{r mood table, warning=FALSE, echo=FALSE}
 #Mood table
 #Will need to change the figure for val_arr_dis_avg when we figure out that threshold
 kbl(mood) %>%
