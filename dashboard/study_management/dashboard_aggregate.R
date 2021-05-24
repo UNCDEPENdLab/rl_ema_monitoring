@@ -415,7 +415,7 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
       load(physio_proc_file)
       output$new_data <- FALSE
       if(save_lite) {
-        output <- output[c("new_data","ID","eeg_summary", "eeg_ov","ecg_summary", "ecg_ov")]
+        output <- output[c("new_data","ID","eeg_fb","eeg_summary", "eeg_ov","ecg_fb","ecg_summary", "ecg_ov")]
         output$lite <- TRUE
       } else {
         output$lite <- FALSE
@@ -469,8 +469,8 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
 
     if(save_lite) {
       output <- list(new_data=TRUE,ID=IDx,lite=T,
-                     eeg_summary = eeg_summary, eeg_ov = eeg_ov,
-                     ecg_summary = ecg_summary, ecg_ov = ecg_ov)
+                     eeg_fb = eeg_fb,eeg_summary = eeg_summary, eeg_ov = eeg_ov,
+                     ecg_fb = ecg_fb,ecg_summary = ecg_summary, ecg_ov = ecg_ov)
 
       return(output)
     } else {
@@ -484,7 +484,7 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
   if(save_lite) {
     nax <- c("fb","summary")
   } else {
-    nax <- c("raw","proc","fb","summary")
+    nax <- c("proc","fb","summary")
   }
 
   IDlist <- unique(physio_df$subject_id)
