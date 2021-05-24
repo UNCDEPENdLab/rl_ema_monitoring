@@ -130,8 +130,7 @@ ID_Overview = data.table(
   "Emotion Distance from 0" = round(qxn$emo_rate_avg, digits = 3),
   "Emotion/Valence Correlation" = round(qxn$val_emo_cor, digits = 3)
 )
-
-#TO ADD: REDCap Variables, link to individual page`
+#need to add total earnings from Games here
 ```
 
 ```{r active_split, echo=FALSE, warning=FALSE, dependson="load"}
