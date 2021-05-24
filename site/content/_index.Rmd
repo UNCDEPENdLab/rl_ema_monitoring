@@ -9,7 +9,7 @@ knitr::opts_knit$set(comment = NA, tidy = FALSE, warning = FALSE, message = FALS
 getwd()
 #source("C:/Users/tshan/rl_ema_monitoring/dashboard/study_management/data_management_functions.R")
 #source("render_utils.R")
-library(pacman)
+library("pacman")
 p_load(DT, dplyr, htmltools, tidyr, ggplot2, plotly, widgetframe, readr)
 #loads libraries and sets working directory to the root ./rl_ema_monitoring
 library("data.table")
@@ -40,6 +40,7 @@ library("kableExtra")
 #source(file.path(root_dir,"EEG_Dashboard.R"))
 #root_dir = dirname(dirname(getwd()))
 #source(file.path(root_dir,"ECG_Dashboard.R"))
+
 getwd()
 source("../../dashboard/study_management/data_management_functions.R")
 #root_dir = dirname(dirname(getwd()))
@@ -49,6 +50,7 @@ source("../../EEG_Dashboard.R")
 #root_dir = dirname(dirname(getwd()))
 source("../../ECG_Dashboard.R")
 #root_dir = dirname(dirname(getwd()))
+source("/Users/abbegaillovette/Documents/GitHub/rl_ema_monitoring/dashboard/study_management/RC_pull.R")
 #getwd()
 root_dir = "../../data/Subjects"
 path_info<-lapply(c("schedule","physio","video"),function(dj){
@@ -79,6 +81,15 @@ Subject <- output$sample_info_df$ID
 Site <- output$sample_info_df$State
 Group <- output$sample_info_df$study_group
 Overall_Compliance <- round(output$sample_info_df$compliance, digits= 3)
+rl_start <- output$redcap$rl_start
+RA <- output$redcap$ema_ra_assigned
+fmri_date <- output$redcap$fmri_date
+scan_complete <- output$redcap$scan_complete
+rl_complete <- output$redcap$rl_complete
+current_date <- Sys.Date()
+day_sub <- difftime(current_date, rl_start, units = "days")
+day_in_rl_ema <- (day_sub + 1)
+days_in_rl <- ifelse(day_in_rl_ema>35,"Past 35 days/Protocol Complete",day_in_rl_ema)
 
 #Games % Stats
 Avg_Objective_Percent_Correct_No_Feedback <- output$sample_performance$abs_accurate_nofeed
@@ -102,6 +113,11 @@ ID_Overview = data.table(
   ID = Subject,
   Site = Site,
   Group = Group,
+  RA = RA,
+  "RL-EMA Start Date" = rl_start,
+  "Current Day in Protocol" = days_in_rl,
+  "fMRI date" = fmri_date,
+  "fMRI completed" = scan_complete,
   "Overall Compliance" = Overall_Compliance,
   "Avg Obj Correct (no feedback)" = Avg_Objective_Percent_Correct_No_Feedback,
   "Avg Obj Correct (w/ feedback)" = Avg_Objective_Percent_Correct_Feedback,
@@ -114,8 +130,7 @@ ID_Overview = data.table(
   "Emotion Distance from 0" = round(qxn$emo_rate_avg, digits = 3),
   "Emotion/Valence Correlation" = round(qxn$val_emo_cor, digits = 3)
 )
-
-#TO ADD: REDCap Variables, Active/Inactive variable, link to individual page`
+#need to add total earnings from Games here
 ```
 
 ```{r active_split, echo=FALSE, warning=FALSE, dependson="load"}
