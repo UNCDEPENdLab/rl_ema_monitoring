@@ -124,7 +124,7 @@ eeg_epochs_around_feedback <- function(EEG_data,pre=500,post=1500,sample_rate=NU
   ch3_a2f <- matrix(NA,nrow=length(fbt),ncol=pre+post+1);
   ch4_a2f <- matrix(NA,nrow=length(fbt),ncol=pre+post+1);
 
-  for (i in 1:length(fbt)){
+  for (i in 7950:length(fbt)){
     fbt0 <- which(rrt>fbt[i])
     if (length(fbt0)>0){
       if (fbt0[1]>1){
@@ -132,6 +132,8 @@ eeg_epochs_around_feedback <- function(EEG_data,pre=500,post=1500,sample_rate=NU
       } else {
         ind <- NULL
       }
+    } else {
+      ind <- NULL # 2021-05-24 AndyP, was recycling ind from last trial if length(fbt0)==0
     }
     dL <- pre+1+post
     aL <- length(ind)
@@ -149,11 +151,16 @@ eeg_epochs_around_feedback <- function(EEG_data,pre=500,post=1500,sample_rate=NU
     Td <- Td + dL
     Ta <- Ta + aL
 
-    if (aL > 0){
-      ch1_a2f[i,] <- c(Ch1[ind],addpost)
-      ch2_a2f[i,] <- c(Ch2[ind],addpost)
-      ch3_a2f[i,] <- c(Ch3[ind],addpost)
-      ch4_a2f[i,] <- c(Ch4[ind],addpost)
+    if (aL > 0 & !is.null(addpost)){
+      ch1_a2f[i,] <- c(Ch1[ind],1:addpost) # 2021-05-24 AndyP corrected addpost bug addpost -> 1:addpost
+      ch2_a2f[i,] <- c(Ch2[ind],1:addpost)
+      ch3_a2f[i,] <- c(Ch3[ind],1:addpost)
+      ch4_a2f[i,] <- c(Ch4[ind],1:addpost)
+    } else if (aL >0 & is.null(addpost)){
+      ch1_a2f[i,] <- c(Ch1[ind]) # 2021-05-24 AndyP corrected addpost bug
+      ch2_a2f[i,] <- c(Ch2[ind])
+      ch3_a2f[i,] <- c(Ch3[ind])
+      ch4_a2f[i,] <- c(Ch4[ind])
     }
   }
   ch1_a2f <- as.data.frame(ch1_a2f)
