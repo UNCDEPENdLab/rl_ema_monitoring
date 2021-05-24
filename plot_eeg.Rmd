@@ -1,8 +1,8 @@
 ---
 title: "EEG"
 params:
-  block: 1
-  id: "Abbegail"
+  block: 10
+  id: "221849"
 ---
 
 ```{r setup, include=FALSE}
@@ -26,13 +26,18 @@ library(viridis)
 df <- output_physio$eeg$fb
 df <- df[[params$id]]
 a2f <- round(ncol(df$ch1)/4) # default times are -500 to 1500 ms for EEG
-y <- rep(seq(1,nrow(df$ch1),length.out=nrow(df$ch1)),4)
+# y <- rep(seq(1,nrow(df$ch1),length.out=nrow(df$ch1)),4)
 name <- names(df)
 dq <- rbind(df[[name[1]]],df[[name[[2]]]],df[[name[3]]],df[[name[4]]]) # concatenate channels 1-4
 ##temporary code for truncating the schedule output so that it matches the size of the physio output
-output$proc_data[[params$id]]$raw_data$trials <- output$proc_data[[params$id]]$raw_data$trials[1:756,]
+# output$proc_data[[params$id]]$raw_data$trials <- output$proc_data[[params$id]]$raw_data$trials[1:756,] # this doesn't work AndyP 2021-05-24
+trials <- output$proc_data[[params$id]]$raw_data$trials$trial
+trials <- trials[-c(which(is.na(output$proc_data[[params$id]]$raw_data$trials$choice)))]
+blocks <- output$proc_data[[params$id]]$raw_data$trials$block
+blocks <- blocks[-c(which(is.na(output$proc_data[[params$id]]$raw_data$trials$choice)))]
+blocks <- rep(blocks,4)
+trials <- rep(trials,4)
 ##
-dq <- dq %>% mutate(trial=y, block=rep(output$proc_data[[params$id]]$raw_data$trials$block,4)) %>% filter(block==params$block) %>% select(-block) #add a trial column, then select only trials corresponding to the block designated by params$block
 nT = nrow(dq)/4
 dq <- dq %>% mutate(channel=case_when(
   as.numeric(rownames(dq)) <= nT ~ 1,
@@ -40,6 +45,7 @@ dq <- dq %>% mutate(channel=case_when(
   as.numeric(rownames(dq)) <= nT*3 & as.numeric(rownames(dq)) > nT*2  ~ 3,
   as.numeric(rownames(dq)) > nT*3  ~ 4
 ))
+dq <- dq %>% mutate(trial=trials, blocks=blocks) %>% filter(blocks==params$block)  #add a trial column, then select only trials corresponding to the block designated by params$block, Fixed AndyP 2021-05-24
 dq <- dq %>% pivot_longer(cols=starts_with("V"),names_to="t", values_to="V")
 dq <- dq %>% mutate(t0=as.numeric(substr(t,2,nchar(t))))
 dq <- dq %>% mutate(zscore=(V-mean(V,na.rm=TRUE))/sd(V,na.rm=TRUE))
