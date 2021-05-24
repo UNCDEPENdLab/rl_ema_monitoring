@@ -308,6 +308,8 @@ ecg_epochs_around_feedback <- function(ECG_data,fbt,pre=1000,post=10000,sample_r
       } else {
         ind <- NULL
       }
+    } else {
+      ind <- NULL # 2021-05-24 AndyP
     }
     dL <- pre+1+post
     aL <- length(ind)
@@ -325,8 +327,10 @@ ecg_epochs_around_feedback <- function(ECG_data,fbt,pre=1000,post=10000,sample_r
     Td <- Td + dL
     Ta <- Ta + aL
 
-    if (aL > 0){
-      ch1_a2f[i,1:length(ind)] <- Ch1[ind]
+    if (aL > 0 & !is.null(addpost)){
+      ch1_a2f[i,1:length(ind)] <- c(Ch1[ind],1:addpost) # 2021-05-24 AndyP
+    } else if (aL > 0 & is.null(addpost)){
+      ch1_a2f[i,1:length(ind)] <- c(Ch1[ind])
     }
   }
   ch1_a2f <- as.data.frame(ch1_a2f)

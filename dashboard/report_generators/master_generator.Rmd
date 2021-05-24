@@ -5,15 +5,21 @@ output: html_document
 
 # Individual Participant Page {.tabset}
 ```{r}
-load("/Users/abbegaillovette/Desktop/ema_proc_05_19/output_physio.Rdata")
-load("/Users/abbegaillovette/Desktop/ema_proc_05_19/output_schedule.Rdata")
+ load("/Users/abbegaillovette/Desktop/ema_proc_05_19/output_physio.Rdata")
+  load("/Users/abbegaillovette/Desktop/ema_proc_05_19/output_schedule.Rdata")
+
 ```
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(kableExtra)
 library(dplyr)
-library("RcppArmadillo")
+library("reticulate")
+library("rjson")
+#library("RcppArmadillo")
+library("RSQLite")
+library("tinsel")
+library("REDCapR")
 if(Sys.getenv("USER")=="dp"){
   knitr::opts_knit$set(root.dir = '~/Downloads/rl_ema_monitoring', repo_path = '~/Downloads/')
   repo_path <- "~/Downloads"
@@ -33,7 +39,7 @@ if(Sys.getenv("USER")=="dp"){
   source("/Users/abbegaillovette/Documents/GitHub/rl_ema_monitoring/ECG_Dashboard.R")
   source("/Users/abbegaillovette/Documents/GitHub/rl_ema_monitoring/dashboard/study_management/data_management_functions.R")
   source("/Users/abbegaillovette/Documents/GitHub/rl_ema_monitoring/dashboard/study_management/dashboard_aggregate.R")
-
+ 
 } else {
   stop("User not recognized")
 }
