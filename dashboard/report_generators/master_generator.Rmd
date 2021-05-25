@@ -1,14 +1,11 @@
 ---
 title: Subject report
 output: html_document
+params:
+  id: "Abbegail"
 ---
 
 # Individual Participant Page {.tabset}
-```{r}
- load("/Users/abbegaillovette/Desktop/ema_proc_05_19/output_physio.Rdata")
-  load("/Users/abbegaillovette/Desktop/ema_proc_05_19/output_schedule.Rdata")
-
-```
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -38,6 +35,8 @@ if(Sys.getenv("USER")=="dp"){
   source("/Users/abbegaillovette/Documents/GitHub/rl_ema_monitoring/ECG_Dashboard.R")
   source("/Users/abbegaillovette/Documents/GitHub/rl_ema_monitoring/dashboard/study_management/data_management_functions.R")
   source("/Users/abbegaillovette/Documents/GitHub/rl_ema_monitoring/dashboard/study_management/dashboard_aggregate.R")
+  load("/Users/abbegaillovette/Desktop/ema_proc_05_19/output_physio.Rdata")
+  load("/Users/abbegaillovette/Desktop/ema_proc_05_19/output_schedule.Rdata")
 } else {
   stop("User not recognized")
 }
@@ -46,12 +45,12 @@ if(Sys.getenv("USER")=="dp"){
 
 ```{r load, include=FALSE}
 #Not sure how subject-specific processed schedule file data and processed physio file data will be passed to this Rmd, so just loading in local RData objects and manually accessing a single subject's data for now
-perf <- filter(output$subj_performance,ID=="Abbegail") %>% filter(!is.na(date))
+perf <- filter(output$subj_performance,ID==params$id) %>% filter(!is.na(date))
 proc_sched <- output$proc_data$'Abbegail'
 info <- output$subj_info$'Abbegail'
 eeg <- output_physio$eeg$summary$'Abbegail'
 hr <- output_physio$ecg$summary$'Abbegail'
-checklist <- output$redcap %>% filter(ID=="Abbegail") %>% select(`Checklist Complete?`,Date)
+checklist <- output$redcap %>% filter(ID==params$id) %>% select(`Checklist Complete?`,Date)
 checklist$Date <- as.character(checklist$Date)
 perf$date <- as.character(perf$date)
 
@@ -89,7 +88,7 @@ mood$Date <- as.character(mood$Date)
 mood <- left_join(mood,checklist, by="Date")
 mood$Date <- lapply(mood$Date,date_format) #format appropriately
 
-mood_check <- output$redcap %>% filter(ID=="Abbegail") %>% select(`Mood`,Date)
+mood_check <- output$redcap %>% filter(ID==params$id) %>% select(`Mood`,Date)
 mood_check$Date <- as.character(mood_check$Date)
 mood$Date <- as.character(mood$Date)
 
