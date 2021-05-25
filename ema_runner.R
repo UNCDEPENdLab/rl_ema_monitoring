@@ -91,6 +91,7 @@ setwd("dashboard/study_management")
 ## Currently set to load dependent function from the same directory ##
 source("data_management_functions.R")
 source("dashboard_aggregate.R")
+source("render_utils.R")
 source("../../ECG_Dashboard2.R")
 source("../../EEG_Dashboard.R")
 
@@ -107,18 +108,19 @@ run_ema <- function(root=NULL, dataPath=getwd(), subjects="all", pull=TRUE, sche
     sched = TRUE
   }
   # handle that sched depends on redcap
-  if(sched == TRUE) {
-    redcap = TRUE
-  }
+  #if(sched == TRUE) {
+  #  redcap = TRUE
+  #}
   # Currently overrides the data directory to known test machine path
-  dataPath = "/Users/shanebuckley/desktop/rl_ema_monitoring/data"
+  dataPath <- "/Users/shanebuckley/desktop/rl_ema_monitoring/data"
   # Currently overrides root to be rl_ema_monitoring
-  root = "rl_ema_monitoring"
+  root <- "rl_ema_monitoring"
   # Get the list of active subjects (statically set for now)
   active <- getActiveList(root_dir = root)
   # get the list of subjects to run
-  if(subjects == "all") {
-    subjects <- active
+  if(subjects != "all") {
+    #@subjects <- active
+    active <- subjects
   }
   ## TODO: Implement to get output subjects as subjects within the input list and flagged as active
   #else {
@@ -152,7 +154,7 @@ run_ema <- function(root=NULL, dataPath=getwd(), subjects="all", pull=TRUE, sche
     
     creds <- get_redcap_creds(cred_path="../../data/redcap.json")
     # Load the data
-    redcap_data <<- "Hello" #redcap_pull(uri=creds$uri, token=creds$token, active=active)
+    redcap_data <<- redcap_pull(uri=creds$uri, token=creds$token, active=active)
   }
   
   # GET SCHED DATA
@@ -162,7 +164,9 @@ run_ema <- function(root=NULL, dataPath=getwd(), subjects="all", pull=TRUE, sche
     # Run schedule
     output <<- proc_schedule(schedule_df = path_info$schedule,tz=Sys.timezone(),days_limit=60,force_reproc=force_proc)
     # Run REDCap merging into "output"
-    output$redcap <<- redcap_data
+    if(redcap == TRUE) {
+      output$redcap <- redcap_data
+    }
     # Save the schedule output
     print("Saving the schedule results...")
     save(output, file=paste0(dataPath, '/output_schedule.Rdata'))
@@ -188,6 +192,10 @@ run_ema <- function(root=NULL, dataPath=getwd(), subjects="all", pull=TRUE, sche
     tryCatch(
       {
         print(paste0("Making page for ", new_subj, "..."))
+        addPage(page_archetype="subjects", 
+                            page_name=new_subj, 
+                            source_path=paste0(site) 
+        )
       }
     )
   }
@@ -229,5 +237,5 @@ run_ema <- function(root=NULL, dataPath=getwd(), subjects="all", pull=TRUE, sche
 }
 
 #run_ema(pull=FALSE, sched=TRUE, physio=FALSE, redcap=FALSE, force_proc=TRUE, nthreads = 1, site="/Users/shanebuckley/desktop/rl_ema_monitoring/site", render=FALSE) # , force_reload=TRUE
-run_ema(force_proc=TRUE, force_reload=TRUE, nthreads = 4, site="/Users/shanebuckley/desktop/rl_ema_monitoring/site") # , force_reload=TRUE
-
+run_ema(redcap=TRUE, render=FALSE, pull=FALSE, sched=FALSE, physio=FALSE, force_proc=TRUE, force_reload=TRUE, nthreads = 4, site="/Users/shanebuckley/desktop/rl_ema_monitoring/site") # , force_reload=TRUE
+#subjects=list("221604", "221849"),
