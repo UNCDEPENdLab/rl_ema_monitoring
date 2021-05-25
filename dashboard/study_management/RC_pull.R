@@ -48,9 +48,6 @@ redcap_pull <- function(uri=NULL, token=NULL, activeList=NULL){
            rl_complete=ifelse(rl_complete==1, "Yes", "No"),
            ema_overview=ifelse(ema_overview==1, "Yes", "No"),
            ema_flag=ifelse(ema_flag==1, "Yes", "No"),
-           ema_weekcheck=ifelse(ema_weekcheck==1, "Yes", "No"),
-           ema_weekcheck_threshold=ifelse(ema_weekcheck_threshold==1, "Yes", "No"),
-           ema_weekcheck_paid=ifelse(ema_weekcheck_paid==1, "Yes", "No"),
            ema_checklist_complete=ifelse(ema_checklist_complete==1, "Yes", "No")) -> momentum
   study_progress <- data.frame(value=1:9,
                                label=c("Scheduling", "Screening", "Baseline Interviews", "Cognitive Assessments/SR",
@@ -69,7 +66,7 @@ redcap_pull <- function(uri=NULL, token=NULL, activeList=NULL){
     rcmetadata <- redcap_metadata_read(redcap_uri=uri, token=token)$data
     checkbox <- function(checkbox="registration_race") {
       choices <- rcmetadata[rcmetadata$field_name==checkbox, "select_choices_or_calculations"]
-      dfx <- REDCapR::checkbox_choices(select_choices=choices) 
+      dfx <- REDCapR::checkbox_choices(select_choices=as.character(choices)) 
       dfx$variable <- checkbox
       dfx$varmap <- paste0(dfx$variable, "___", dfx$id)
       return(dfx)
@@ -242,11 +239,6 @@ redcap_pull <- function(uri=NULL, token=NULL, activeList=NULL){
              Video=Video_Checklist,
              `Video Notes`=ema_video_notes,
              `Other Issues Notes`=ema_other_notes,
-             `End of 7 Day Period?`=ema_weekcheck,
-             `Weekly Compliance`=ema_week_compliance,
-             `Weekly Threshold (85%)`=ema_weekcheck_threshold,
-             `Paid?`=ema_weekcheck_paid,
-             `Payment Notes`=ema_weekcheck_paynotes,
              `Checklist Complete?`=ema_checklist_complete,
              `Overall Notes`=ema_check_notes,
              `fMRI Date`=fmri_date,

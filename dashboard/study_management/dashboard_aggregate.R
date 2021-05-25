@@ -43,7 +43,8 @@ if (FALSE) {
 
   #example for proc_physio:
   ##!!!!Must first proc the schedule data as physio uses the trial level data to generate percentage;
-  output_physio <- proc_physio(physio_df = path_info$physio,sch_pro_output=output, tz="EST",thread=4,force_reload=FALSE,force_reproc=FALSE,
+  output_physio <- proc_physio(physio_df = path_info$physio,sch_pro_output=output, tz="EST",thread=4,
+                               force_reload=FALSE,force_reproc=FALSE,save_lite=F,
                                eeg_sample_rate=256.03, sd_times=10, eeg_pre=500,eeg_post=1500, #EEG options
                                ecg_sample_rate = 100, HRstep = 10, ecg_pre=1000,ecg_post=10000 #ECG options
                                )
@@ -104,10 +105,11 @@ proc_schedule <- function(schedule_df = NULL,days_limit=35,task_limit=56,force_r
   #####NEED MORE SUBJ DATA FOR AGGREGATION########
   sample_info <- do.call(rbind,lapply(proc_data,`[[`,"info_df"))
   performance_info <- do.call(rbind,lapply(proc_data,`[[`,"performance_info"))
+  performance_info <- performance_info[!is.na(performance_info$date),]
   sp_info_sq <- split(sample_info,sample_info$ID)
   pr_info_sq <- split(performance_info,performance_info$ID)
   sample_info$compliance <- is.na(sample_info$completed_time)
-  overall_info<-cbind(aggregate(compliance ~ ID,data = sample_info,FUN = mean),do.call(plyr::rbind.fill,lapply(raw_data,`[[`,"subject")))
+  overall_info<-cbind(aggregate(compliance ~ ID,data = sample_info[which(sample_info$scheduled_time <= Sys.Date()),],FUN = mean),do.call(plyr::rbind.fill,lapply(raw_data,`[[`,"subject")))
   overall_info$completed_session <- aggregate(session_number ~ ID,data = sample_info[!is.na(sample_info$completed_time),],FUN = max)$session_number
 
   pr_info_subjwise <-  do.call(rbind,lapply(proc_data,`[[`,"performance_overall"))
@@ -191,7 +193,7 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
                      relative_accuracy_feed = mean(as.numeric(ix[which(ix$feedback==1),]$relative_accuracy),na.rm = T),
                      abs_accurate_nofeed = mean(as.numeric(ix[which(ix$feedback==0),]$accuracy),na.rm = T),
                      relative_accuracy_nofeed = mean(as.numeric(ix[which(ix$feedback==0),]$relative_accuracy),na.rm = T),
-
+                     earning = sum(ix$outcome * 0.15,na.rm = T),
                      stringsAsFactors = F)
 
 
@@ -278,7 +280,7 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
   #Find answer:
   form_data <- raw_single$answers
   form_data <- form_data[form_data$answer!="",]
-  
+
   if(nrow(raw_single$sleep)>0) {
     tk <- form_data[rep(1,nrow(raw_single$sleep)),]
     tk$questionnaire_type <- NA
@@ -292,7 +294,7 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
     }
     form_data <- rbind(form_data,tk)
   }
-  
+
   form_data$answer_prog <- text_proc(form_data$answer)
   fdata_sp <- split(form_data,form_data$questionnaire_name)
   #proc all the other first
@@ -338,7 +340,7 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
 
   form_proc$`Mood Questionnaire`$v_a_distance <- sqrt((as.numeric(form_proc$`Mood Questionnaire`$Valence)^2) + (as.numeric(form_proc$`Mood Questionnaire`$Arousal)^2) )
   form_proc$`Sleep Diary`$did_not_sleep<-is.na(form_proc$`Sleep Diary`$questionnaire_type)
-  
+
   ##summary stats for how much they answered
   q_sum <- data.frame(ID = raw_single$ID,val_arr_dis_avg = mean(form_proc$`Mood Questionnaire`$v_a_distance,na.rm = T))
   e_sum <- data.frame(as.list(apply(form_proc$`Mood Questionnaire`[c("Anxious","Elated","Sad","Irritable","Energetic")],2,function(x){mean(as.numeric(x),na.rm = T)})))
@@ -373,7 +375,8 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
               ID=raw_single$ID))
 }
 ####Proc physio
-proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4, force_reload=FALSE,force_reproc=FALSE,
+proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4,
+                        force_reload=FALSE,force_reproc=FALSE,save_lite=F,
                         eeg_sample_rate=256.03, sd_times=10, eeg_pre=500,eeg_post=1500, #EEG options
                         ecg_sample_rate = 100, HRstep = 10, ecg_pre=1000,ecg_post=10000 #ECG options
                         ) {
@@ -383,7 +386,7 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
   }
   # modify physio_df to have physio_df$file_path include the file name
   physio_df <- within(physio_df, file_path <- paste0(file_path, '/', file_name))
-  
+
   exp_out<-lapply(unique(physio_df$subject_id),function(IDx){
     physio_files_new <- physio_df$file_path[physio_df$subject_id==IDx]
     physio_rawcache_file <- file.path(unique(dirname(physio_df$file_path[physio_df$subject_id==IDx])),paste(IDx,"_physio_raw.rdata",sep = ""))
@@ -412,6 +415,12 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
       message("Loading processed physio data for: ",IDx)
       load(physio_proc_file)
       output$new_data <- FALSE
+      if(save_lite) {
+        output <- output[c("new_data","ID","eeg_fb","eeg_summary", "eeg_ov","ecg_fb","ecg_summary", "ecg_ov")]
+        output$lite <- TRUE
+      } else {
+        output$lite <- FALSE
+      }
       return(output)
     }
 
@@ -453,14 +462,32 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
     ecg_summary <- ecg_summary[order(names(ecg_summary))]
     ecg_ov <- aggregate(per_Good ~ ID,data = ecg_summary,FUN = mean,na.rm=T)
     ecg_ov$worst_allblocks <- min(ecg_summary$per_Good)
-    output <- list(new_data=TRUE,ID=IDx,
+
+    output <- list(new_data=TRUE,ID=IDx,lite=F,
                    eeg_proc = eeg_raw,eeg_fb = eeg_fb, eeg_summary = eeg_summary, eeg_ov = eeg_ov,
                    ecg_proc = ecg_raw,ecg_fb = ecg_fb, ecg_summary = ecg_summary, ecg_ov = ecg_ov)
     save(output,file = physio_proc_file)
-    return(output)
-  })
 
-  nax <- c("raw","proc","fb","summary")
+    if(save_lite) {
+      output <- list(new_data=TRUE,ID=IDx,lite=T,
+                     eeg_fb = eeg_fb,eeg_summary = eeg_summary, eeg_ov = eeg_ov,
+                     ecg_fb = ecg_fb,ecg_summary = ecg_summary, ecg_ov = ecg_ov)
+
+      return(output)
+    } else {
+      return(output)
+    }
+
+
+
+
+  })
+  if(save_lite) {
+    nax <- c("fb","summary")
+  } else {
+    nax <- c("proc","fb","summary")
+  }
+
   IDlist <- unique(physio_df$subject_id)
 
   output_fin<-lapply(c("eeg","ecg"),function(ay){

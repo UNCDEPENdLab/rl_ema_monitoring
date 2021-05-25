@@ -4,12 +4,22 @@ output: html_document
 ---
 
 # Individual Participant Page {.tabset}
+```{r}
+ load("/Users/abbegaillovette/Desktop/ema_proc_05_19/output_physio.Rdata")
+  load("/Users/abbegaillovette/Desktop/ema_proc_05_19/output_schedule.Rdata")
+
+```
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(kableExtra)
 library(dplyr)
-library("RcppArmadillo")
+library("reticulate")
+library("rjson")
+#library("RcppArmadillo")
+library("RSQLite")
+library("tinsel")
+library("REDCapR")
 if(Sys.getenv("USER")=="dp"){
   knitr::opts_knit$set(root.dir = '~/Downloads/rl_ema_monitoring', repo_path = '~/Downloads/')
   repo_path <- "~/Downloads"
@@ -28,10 +38,6 @@ if(Sys.getenv("USER")=="dp"){
   source("/Users/abbegaillovette/Documents/GitHub/rl_ema_monitoring/ECG_Dashboard.R")
   source("/Users/abbegaillovette/Documents/GitHub/rl_ema_monitoring/dashboard/study_management/data_management_functions.R")
   source("/Users/abbegaillovette/Documents/GitHub/rl_ema_monitoring/dashboard/study_management/dashboard_aggregate.R")
-  load("/Users/abbegaillovette/Downloads/data_proc_05_12/data_proc_05_12/output_physio.Rdata") 
-  load("/Users/abbegaillovette/Downloads/data_proc_05_12/data_proc_05_12/output.Rdata")
-  load("/Users/abbegaillovette/Documents/GitHub/rl_ema_monitoring/dashboard/report_generators/redcap_subj.Rdata")
-  #load("/Users/abbegaillovette/Desktop/abb_proc_sched_5_11.Rdata")
 } else {
   stop("User not recognized")
 }
@@ -223,8 +229,8 @@ compliance_pun$defineCalculation(calculationName = "is_missing", summariseExpres
 compliance_pun$evaluatePivot()
 
 # apply the green style for an average delay of between 0 and 2 hours
-cells <- compliance_pf$findCells(minValue=0, maxValue=120, includeNull=FALSE, includeNA=FALSE)
-compliance_pf$setStyling(cells=cells, declarations=list("background-color"="#C6EFCE", "color"="#006100"))
+#cells <- compliance_pf$findCells(minValue=0, maxValue=120, includeNull=FALSE, includeNA=FALSE)
+#compliance_pf$setStyling(cells=cells, declarations=list("background-color"="#C6EFCE", "color"="#006100"))
 
 # apply the yellow style for an average delay of between 2 and 4 hours
 cells <- compliance_pf$findCells(minValue=121, maxValue=240, includeNull=FALSE, includeNA=FALSE)
@@ -277,7 +283,6 @@ kbl(task) %>%
   column_spec(7, color=ifelse(task[,7] > 1400, "#E6E6E6","black")) %>%
   column_spec(8, color=ifelse(task[,8] >= 67 | task[,8] < 67, "#D8D8D8","black"))
 ```
-
 
 \newline
 ## EEG

@@ -11,10 +11,12 @@ opt = parse_args(OptionParser(option_list=option_list))
 
 # boolean for if the site is being served locally or not
 serve_local <- FALSE
-if (opt$host == '127.0. 0.1') {
+if (opt$host == '127.0.0.1') {
   serve_local <- TRUE
 }
 
+# set blogdown to not use LiveReload to rerender .Rmd files
+options(blogdown.knit.on_save = FALSE)
 # start blogdown
 blogdown::serve_site(daemon=TRUE, port=opt$port, host=opt$host) 
 
