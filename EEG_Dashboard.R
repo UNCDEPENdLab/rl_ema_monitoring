@@ -124,7 +124,7 @@ eeg_epochs_around_feedback <- function(EEG_data,pre=500,post=1500,sample_rate=NU
   ch3_a2f <- matrix(NA,nrow=length(fbt),ncol=pre+post+1);
   ch4_a2f <- matrix(NA,nrow=length(fbt),ncol=pre+post+1);
 
-  for (i in 7950:length(fbt)){
+  for (i in 1:length(fbt)){
     fbt0 <- which(rrt>fbt[i])
     if (length(fbt0)>0){
       if (fbt0[1]>1){
