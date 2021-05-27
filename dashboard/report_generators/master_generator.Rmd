@@ -35,8 +35,8 @@ if(Sys.getenv("USER")=="dp"){
   source("/Users/abbegaillovette/Documents/GitHub/rl_ema_monitoring/ECG_Dashboard.R")
   source("/Users/abbegaillovette/Documents/GitHub/rl_ema_monitoring/dashboard/study_management/data_management_functions.R")
   source("/Users/abbegaillovette/Documents/GitHub/rl_ema_monitoring/dashboard/study_management/dashboard_aggregate.R")
-  load("/Users/abbegaillovette/Desktop/ema_proc_05_19/output_physio.Rdata")
-  load("/Users/abbegaillovette/Desktop/ema_proc_05_19/output_schedule.Rdata")
+  load("/Users/abbegaillovette/Desktop/lite_proc_05_26/output_physio.Rdata")
+  load("/Users/abbegaillovette/Desktop/lite_proc_05_26/output_schedule.Rdata")
 } else {
   stop("User not recognized")
 }
