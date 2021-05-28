@@ -10,8 +10,14 @@ library(plotly)
 
 ```{r load_physio, include=FALSE}
 # need to change path to location of Rdata objects in active directory
-load("site/data/abb_proc_sched.Rdata") 
-load("site/data/emp_physiooutput.Rdata")
+#load("site/data/abb_proc_sched.Rdata") 
+#load("site/data/emp_physiooutput.Rdata")
+# AndyP 2021-05-28 debug
+#setwd("~/Momentum/lite_proc_05_26/")
+#load("output_physio.Rdata")
+#load("output_schedule.Rdata")
+#params <- data.frame(id=1)
+#params$id <- '221604'
 # get which blocks exits
 blocks <- output_physio$eeg$summary[[params$id]]$block
 ```

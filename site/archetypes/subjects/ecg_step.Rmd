@@ -17,7 +17,7 @@ trials <- trials[-c(which(is.na(output$proc_data[[params$id]]$raw_data$trials$ch
 blocks <- output$proc_data[[params$id]]$raw_data$trials$block
 blocks <- blocks[-c(which(is.na(output$proc_data[[params$id]]$raw_data$trials$choice)))]
 
-dq <- dq %>% mutate(trial=trials, blocks=blocks) %>% filter(blocks==i)  
+df <- df %>% mutate(trial=trials, blocks=blocks) %>% filter(blocks==i)  
 
 df <- df %>% pivot_longer(cols=starts_with("V"),names_to="t", values_to="V")
 df <- df %>% mutate(t0=as.numeric(substr(t,2,nchar(t))))
