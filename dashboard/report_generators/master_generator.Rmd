@@ -116,7 +116,9 @@ task$abs_accurate_nofeed <- task$abs_accurate_nofeed*100
 task$IDe_bias <- task$IDe_bias*100
 task$mean_rt <- task$mean_rt*1000
 
-task[,-c(1,2,9,10,11)] <- round(task[,-c(1,2,9,10,11)]) #round percentages to nearest whole percent
+print(task)
+
+task[,-c(1,2,9,10,11,12)] <- round(task[,-c(1,2,9,10,11,12)]) #round percentages to nearest whole percent
 
 rownames(task) <- NULL
 
