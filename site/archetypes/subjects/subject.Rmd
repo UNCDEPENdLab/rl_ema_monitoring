@@ -11,19 +11,44 @@ library("RcppArmadillo")
 
 ```{r source, include=FALSE, }
 #knitr::opts_chunk$set(root.dir = '../../..')
-source("EEG_Dashboard.R")
-source("ECG_Dashboard.R")
-source("dashboard/study_management/data_management_functions.R")
-source("dashboard/study_management/dashboard_aggregate.R")
+if(Sys.getenv("USER")=="dp"){
+  knitr::opts_knit$set(root.dir = '~/Downloads/rl_ema_monitoring', repo_path = '~/Downloads/')
+  repo_path <- "~/Downloads"
+  root_dir <- "~/Downloads/rl_ema_monitoring"
+  source("~/Downloads/rl_ema_monitoring/EEG_Dashboard.R")
+  source("~/Downloads/rl_ema_monitoring/ECG_Dashboard.R")
+  source("~/Downloads/rl_ema_monitoring/dashboard/study_management/data_management_functions.R")
+  source("~/Downloads/rl_ema_monitoring/dashboard/study_management/dashboard_aggregate.R")
+  load("/Users/dp/Downloads/lite_proc_05_26/output_schedule.Rdata")
+  load("/Users/dp/Downloads/lite_proc_05_26/output_physio.Rdata")
+} else if (Sys.getenv("USER")=="abbegaillovette"){
+  knitr::opts_knit$set(root.dir = '/Users/abbegaillovette/Documents/GitHub/rl_ema_monitoring', repo_path = '/Users/abbegaillovette/Documents/GitHub/')
+  repo_path <<- "/Users/abbegaillovette/Documents/GitHub/"
+  root_dir='/Users/abbegaillovette/Documents/GitHub/rl_ema_monitoring'
+  source("/Users/abbegaillovette/Documents/GitHub/rl_ema_monitoring/EEG_Dashboard.R")
+  source("/Users/abbegaillovette/Documents/GitHub/rl_ema_monitoring/ECG_Dashboard.R")
+  source("/Users/abbegaillovette/Documents/GitHub/rl_ema_monitoring/dashboard/study_management/data_management_functions.R")
+  source("/Users/abbegaillovette/Documents/GitHub/rl_ema_monitoring/dashboard/study_management/dashboard_aggregate.R")
+  load("/Users/abbegaillovette/Desktop/lite_proc_05_26/output_physio.Rdata")
+  load("/Users/abbegaillovette/Desktop/lite_proc_05_26/output_schedule.Rdata")
+} else {
+  source("EEG_Dashboard.R")
+  source("ECG_Dashboard.R")
+  source("dashboard/study_management/data_management_functions.R")
+  source("dashboard/study_management/dashboard_aggregate.R")
+  getwd()
+  load("site/data/output_physio.Rdata") #../../../../
+  load("site/data/output_schedule.Rdata")
+}
+
 
 ```
 
 ```{r load, include=FALSE}
 #Not sure how subject-specific processed schedule file data and processed physio file data will be passed to this Rmd, so just loading in local RData objects and manually accessing a single subject's data for now
 #load("site/data/output_schedule.Rdata") 
-getwd()
-load("site/data/output_physio.Rdata") #../../../../
-load("site/data/output_schedule.Rdata") #../../../../
+
+ #../../../../
 
 perf <- filter(output$subj_performance,ID==params$id)
 proc_sched <- output$proc_data[[params$id]]
