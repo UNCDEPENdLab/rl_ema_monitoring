@@ -54,6 +54,7 @@ if(Sys.getenv("USER")=="dp"){
 
 ```{r load, include=FALSE}
 #Not sure how subject-specific processed schedule file data and processed physio file data will be passed to this Rmd, so just loading in local RData objects and manually accessing a single subject's data for now
+
 perf <- filter(output$subj_performance,ID==params$id) %>% filter(!is.na(date))
 proc_sched <- output$proc_data[[params$id]]
 info <- output$subj_info[[params$id]]
@@ -82,13 +83,21 @@ diary <- left_join(diary,checklist, by="Date")
 diary$Date <- lapply(diary$Date,date_format) #format appropriately
 insomnia_ratio <- output$sample_form_summary$num_no_sleep/nrow(diary) #this will be used to determine the color of the font in the "Didn't sleep" column
 
+diary_check <- output$redcap %>% filter(ID==params$id) %>% select(`Sleep`,`Sleep Notes`,Date)
+diary_check$Date <- as.character(diary_check$Date)
+diary$Date <- as.character(diary$Date)
+diary <- left_join(diary, diary_check, by="Date")#adding RA check columns
+
+diary <- arrange(diary, -row_number()) #make the most recent block come first
 #this will be used to determine the color of the font of the sleep quality ratings
 sl_di_avg_row <- filter(output$sample_form_summary, ID==params$id)
 sleep_dist <- sl_di_avg_row$sleep_di_avg
 
-#diary$did_not_sleep <- FALSE
-diary <- transmute(diary, "Date"=Date, "Didn't sleep"=did_not_sleep, "Sleep latency"=sleep_latency, "Woke many times"=woke_many_times, "Woke early"=woke_early, "Overall"=overall)
-diary <- arrange(diary, -row_number()) #make the most recent block come first
+diary_unchecked <- filter(diary,`Checklist Complete?`=="No")
+diary_unchecked <- transmute(diary_unchecked, "Date"=Date, "Problems"=Sleep, "Notes"=`Sleep Notes`, "Didn't sleep"=did_not_sleep, "Sleep latency"=sleep_latency, "Woke many times"=woke_many_times, "Woke early"=woke_early, "Overall"=overall)
+diary <- transmute(diary, "Date"=Date,"Problems"=Sleep, "Notes"=`Sleep Notes`, "Didn't sleep"=did_not_sleep, "Sleep latency"=sleep_latency, "Woke many times"=woke_many_times, "Woke early"=woke_early, "Overall"=overall)
+
+
 ```
 
 ```{r mood, include=FALSE}
@@ -131,8 +140,18 @@ for(i in (nrow(task)-1):1){
   task$c_earn[i] <- task$earning[i] + task$c_earn[i+1]
 }
 
+#TEMPORARY: adding in an intox response with a very early start time to make sure that all blocks match. This will not be necessary with real data, when there will be an intox response preceding every block.
+temp <- data.frame("time"=1504931510000,"answer"="Yes")
+output$proc_data[[params$id]]$raw_data$drugs_check <- rbind(output$proc_data[[params$id]]$raw_data$drugs_check,temp)
+
 #create intoxication column
-#intoxication <- output$proc_data[[params$id]]$raw_data$drugs_check
+raw_s_data <- output$proc_data[[params$id]]$raw_data$sessions
+block_times <- as.numeric(raw_s_data$start_time_ms)
+raw_s_data$intox <- lapply(block_times, get_intox_resp, id=params$id)
+intox_df <- select(raw_s_data, block, intox)
+
+#join column to task df
+task <- left_join(task, intox_df, by="block")
 
 task$abs_accurate_feed <- task$abs_accurate_feed*100
 task$relative_accuracy_feed <- task$relative_accuracy_feed*100
@@ -147,8 +166,8 @@ task[,c(3:8)] <- round(task[,c(3:8)]) #round percentages to nearest whole percen
 rownames(task) <- NULL
 
 task_unchecked <- filter(task,`Checklist Complete?`=="No")
-task_unchecked <- transmute(task_unchecked, "Date"=Date, "Block"=block, "Objective % correct (feed.)"=abs_accurate_feed, "Experienced % correct (feed.)"=relative_accuracy_feed, "Objective % correct (no feed.)"=abs_accurate_nofeed, "Experienced % correct (no feed.)"=relative_accuracy_nofeed, "RT(ms)"=mean_rt, "Left %"=IDe_bias, "Cumulative earnings"=c_earn)
-task <- transmute(task, "Date"=Date, "Block"=block, "Objective % correct (feed.)"=abs_accurate_feed, "Experienced % correct (feed.)"=relative_accuracy_feed, "Objective % correct (no feed.)"=abs_accurate_nofeed, "Experienced % correct (no feed.)"=relative_accuracy_nofeed, "RT(ms)"=mean_rt, "Left %"=IDe_bias, "Cumulative earnings"=c_earn)
+task_unchecked <- transmute(task_unchecked, "Date"=Date, "Block"=block, "Objective % correct (feed.)"=abs_accurate_feed, "Experienced % correct (feed.)"=relative_accuracy_feed, "Objective % correct (no feed.)"=abs_accurate_nofeed, "Experienced % correct (no feed.)"=relative_accuracy_nofeed, "RT(ms)"=mean_rt, "Left %"=IDe_bias, "Intoxicated?"=intox, "Cumulative earnings"=c_earn)
+task <- transmute(task, "Date"=Date, "Block"=block, "Objective % correct (feed.)"=abs_accurate_feed, "Experienced % correct (feed.)"=relative_accuracy_feed, "Objective % correct (no feed.)"=abs_accurate_nofeed, "Experienced % correct (no feed.)"=relative_accuracy_nofeed, "RT(ms)"=mean_rt, "Left %"=IDe_bias, "Intoxicated?" = intox, "Cumulative earnings"=c_earn)
 ```
 
 ```{r eeg, include=FALSE}
@@ -194,6 +213,18 @@ hr_ordered$per_Good <- round(hr_ordered$per_Good)
 hr_unchecked <- filter(hr_ordered, checklist=="No")
 hr_ordered <- transmute(hr_ordered, "Date"=Date, "Block"=Block, "Good signal %"=per_Good) 
 hr_unchecked <- transmute(hr_unchecked, "Date"=Date, "Block"=Block, "Good signal %"=per_Good) 
+```
+
+```{r video, include=FALSE}
+video <- output$redcap %>% filter(ID==params$id) %>% select(`Video`,`Video Notes`,Date)
+video$Date <- lapply(video$Date,date_format) %>% as.character(.)#format appropriately
+video <- left_join(video,checklist,by="Date")
+video$links <- "" #temporarily manually adding columns for video hyperlink
+
+video_unchecked <- filter(video,`Checklist Complete?`=="No")
+
+video_unchecked <- transmute(video_unchecked, "Date"= Date, "Problems" = `Video`, "Notes" = `Video Notes`, "Video" = links)
+video <- transmute(video, "Date"=Date, "Problems" = `Video`, "Notes" = `Video Notes`, "Video" = links)
 ```
 
 ```{r compliance, include=FALSE}
@@ -380,7 +411,8 @@ compliance_pf$renderPivot()
 #### Unchecked
 ```{r perf table un, echo=FALSE, warning=FALSE}
 #Task performance table
-kbl(task_unchecked) %>%
+if(nrow(task_unchecked) > 0){
+  kbl(task_unchecked) %>%
   kable_styling(fixed_thead = T) %>%
   column_spec(1, bold = T) %>%
   column_spec(2, bold = T) %>%
@@ -389,12 +421,15 @@ kbl(task_unchecked) %>%
   column_spec(5, color=ifelse(task_unchecked[,5] > 55 | is.na(task_unchecked[,5]), "#D8D8D8", "black")) %>%
   column_spec(6, color=ifelse(task_unchecked[,6] > 55 | is.na(task_unchecked[,6]), "#D8D8D8","black")) %>%
   column_spec(7, color=ifelse(task_unchecked[,7] > 1400, "#E6E6E6","black")) %>%
-  column_spec(8, color=ifelse(task_unchecked[,8] >= 67 | task_unchecked[,8] < 67, "#D8D8D8","black"))
+  column_spec(8, color=ifelse(task_unchecked[,8] >= 67 | task_unchecked[,8] < 67, "#D8D8D8","black")) %>%
+  column_spec(9, color=ifelse(task_unchecked[,9] == "No", "#D8D8D8","black"))
+}
 ```
 
 #### All blocks
 ```{r perf table, echo=FALSE, warning=FALSE}
-kbl(task) %>%
+if(nrow(task) > 0){
+  kbl(task) %>%
   kable_styling(fixed_thead = T) %>%
   column_spec(1, bold = T) %>%
   column_spec(2, bold = T) %>%
@@ -403,7 +438,9 @@ kbl(task) %>%
   column_spec(5, color=ifelse(task[,5] > 55 | is.na(task[,5]), "#D8D8D8", "black")) %>%
   column_spec(6, color=ifelse(task[,6] > 55 | is.na(task[,6]), "#D8D8D8","black")) %>%
   column_spec(7, color=ifelse(task[,7] > 1400, "#E6E6E6","black")) %>%
-  column_spec(8, color=ifelse(task[,8] >= 67 | task[,8] < 67, "#D8D8D8","black"))
+  column_spec(8, color=ifelse(task[,8] >= 67 | task[,8] < 67, "#D8D8D8","black")) %>%
+  column_spec(9, color=ifelse(task[,9] == "No", "#D8D8D8","black"))
+}
 ```
 
 \newline
@@ -411,7 +448,8 @@ kbl(task) %>%
 #### Unchecked
 ```{r two, echo=FALSE, warning=FALSE}
 #EEG table
-kbl(eeg_unchecked) %>%
+if(nrow(eeg_unchecked) > 0){
+  kbl(eeg_unchecked) %>%
   kable_styling(fixed_thead = T) %>%
   column_spec(1, bold = T) %>%
   column_spec(2, bold = T) %>%
@@ -420,11 +458,13 @@ kbl(eeg_unchecked) %>%
   column_spec(5, color=if_else(eeg_unchecked[5]>70, "#D8D8D8", "black")) %>%
   column_spec(6, color=if_else(eeg_unchecked[6]>70, "#D8D8D8", "black")) %>%
   column_spec(7, color=if_else(eeg_unchecked[7]>70, "#D8D8D8", "black"))
+}
 ```
 
 #### All blocks
 ```{r full, echo=FALSE, warning=FALSE}
-kbl(eeg_col_named) %>%
+if(nrow(eeg_col_named) > 0){
+  kbl(eeg_col_named) %>%
   kable_styling(fixed_thead = T) %>%
   column_spec(1, bold = T) %>%
   column_spec(2, bold = T) %>%
@@ -433,6 +473,7 @@ kbl(eeg_col_named) %>%
   column_spec(5, color=if_else(eeg_col_named[5]>70, "#D8D8D8", "black")) %>%
   column_spec(6, color=if_else(eeg_col_named[6]>70, "#D8D8D8", "black")) %>%
   column_spec(7, color=if_else(eeg_col_named[7]>70, "#D8D8D8", "black"))
+}
 ```
 
 \newline
@@ -440,35 +481,60 @@ kbl(eeg_col_named) %>%
 #### Unchecked
 ```{r unch hr, echo=FALSE, warning=FALSE}
 #HR table
-kbl(hr_unchecked) %>%
+if(nrow(hr_unchecked) > 0){
+  kbl(hr_unchecked) %>%
   kable_styling(fixed_thead = T) %>%
   column_spec(1, bold = T) %>%
   column_spec(2, bold = T) %>%
   column_spec(3, background=if_else(hr_unchecked[3]>90, "#C6EFCE", "#ffc7ce"))
+}
 ```
 
 #### All blocks
 ```{r hr table, echo=FALSE, warning=FALSE}
-kbl(hr_ordered) %>%
+if(nrow(hr_ordered) > 0){
+  kbl(hr_ordered) %>%
   kable_styling(fixed_thead = T) %>%
   column_spec(1, bold = T) %>%
   column_spec(2, bold = T) %>%
   column_spec(3, background=if_else(hr_ordered[3]>90, "#C6EFCE", "#ffc7ce"))
+}
 ```
 
 
 \newline
-### Sleep diary
-```{r diary table, echo=FALSE, warning=FALSE}
+### Sleep diary {.tabset}
+#### Unchecked
+```{r diary unchecked table, echo=FALSE, warning=FALSE}
 #Sleep diary table
-kbl(diary) %>%
+if(nrow(diary_unchecked) > 0){
+  kbl(diary_unchecked) %>%
   kable_styling(fixed_thead = T) %>%
   column_spec(1, bold = T) %>%
-  column_spec(2, color=if_else(insomnia_ratio < .2, "#D8D8D8", "black")) %>%
-  column_spec(3, color=if_else(sleep_dist > 50, "#D8D8D8", "black")) %>%
-  column_spec(4, color=if_else(sleep_dist > 50, "#D8D8D8", "black")) %>%
+  column_spec(2, background=if_else(is.na(diary_unchecked[2]), "#C6EFCE", "#ffc7ce")) %>%
+  column_spec(3, background=if_else(is.na(diary_unchecked[3]), "#C6EFCE", "#ffc7ce")) %>%
+  column_spec(4, color=if_else(insomnia_ratio < .2, "#D8D8D8", "black")) %>%
   column_spec(5, color=if_else(sleep_dist > 50, "#D8D8D8", "black")) %>%
-  column_spec(6, color=if_else(sleep_dist > 50, "#D8D8D8", "black"))
+  column_spec(6, color=if_else(sleep_dist > 50, "#D8D8D8", "black")) %>%
+  column_spec(7, color=if_else(sleep_dist > 50, "#D8D8D8", "black")) %>%
+  column_spec(8, color=if_else(sleep_dist > 50, "#D8D8D8", "black"))
+}
+```
+
+#### All blocks
+```{r diary table, echo=FALSE, warning=FALSE}
+if(nrow(diary) > 0){
+  kbl(diary) %>%
+  kable_styling(fixed_thead = T) %>%
+  column_spec(1, bold = T) %>%
+  column_spec(2, background=if_else(is.na(diary[2]), "#C6EFCE", "#ffc7ce")) %>%
+  column_spec(3, background=if_else(is.na(diary[3]), "#C6EFCE", "#ffc7ce")) %>%
+  column_spec(4, color=if_else(insomnia_ratio < .2, "#D8D8D8", "black")) %>%
+  column_spec(5, color=if_else(sleep_dist > 50, "#D8D8D8", "black")) %>%
+  column_spec(6, color=if_else(sleep_dist > 50, "#D8D8D8", "black")) %>%
+  column_spec(7, color=if_else(sleep_dist > 50, "#D8D8D8", "black")) %>%
+  column_spec(8, color=if_else(sleep_dist > 50, "#D8D8D8", "black"))
+}
 ```
 
 \newline
@@ -477,7 +543,8 @@ kbl(diary) %>%
 ```{r mood unchecked, echo=FALSE, warning=FALSE}
 #Mood table
 #Will need to change the figure for val_arr_dis_avg when we figure out that threshold
-kbl(mood_unchecked) %>%
+if(nrow(mood_unchecked) > 0){
+  kbl(mood_unchecked) %>%
   kable_styling(fixed_thead = T) %>%
   column_spec(1, bold = T) %>%
   column_spec(2, background=if_else(is.na(mood_unchecked[2]), "#C6EFCE", "#ffc7ce")) %>%
@@ -489,13 +556,15 @@ kbl(mood_unchecked) %>%
   column_spec(8, color=if_else(val_avg > 50, "#D8D8D8", "black")) %>%
   column_spec(9, color=if_else(val_avg > 50, "#D8D8D8", "black")) %>%
   column_spec(10, color=if_else(val_avg > 50, "#D8D8D8", "black"))
+}
 ```
 
 #### All blocks
 ```{r mood table, echo=FALSE, warning=FALSE}
 #Mood table
 #Will need to change the figure for val_arr_dis_avg when we figure out that threshold
-kbl(mood) %>%
+if(nrow(mood) > 0){
+  kbl(mood) %>%
   kable_styling(fixed_thead = T) %>%
   column_spec(1, bold = T) %>%
   column_spec(2, background=if_else(is.na(mood[2]), "#C6EFCE", "#ffc7ce")) %>%
@@ -507,9 +576,32 @@ kbl(mood) %>%
   column_spec(8, color=if_else(val_avg > 50, "#D8D8D8", "black")) %>%
   column_spec(9, color=if_else(val_avg > 50, "#D8D8D8", "black")) %>%
   column_spec(10, color=if_else(val_avg > 50, "#D8D8D8", "black"))
-```
+}
 ```
 
+\newline
+### Videos {.tabset}
+#### Unchecked
+```{r video unchecked, echo=FALSE, warning=FALSE}
+if(nrow(video_unchecked) > 0){
+  kbl(video_unchecked) %>%
+  kable_styling(fixed_thead = T) %>%
+  column_spec(1, bold = T) %>%
+  column_spec(2, background=if_else(is.na(video_unchecked[2]), "#C6EFCE", "#ffc7ce")) %>%
+  column_spec(3, background=if_else(is.na(video_unchecked[3]), "#C6EFCE", "#ffc7ce"))
+}
+```
+
+#### All blocks
+```{r video table, echo=FALSE, warning=FALSE}
+if(nrow(video) > 0){
+  kbl(video) %>%
+    kable_styling(fixed_thead = T) %>%
+    column_spec(1, bold = T) %>%
+    column_spec(2, background=if_else(is.na(video[2]), "#C6EFCE", "#ffc7ce")) %>%
+    column_spec(3, background=if_else(is.na(video[3]), "#C6EFCE", "#ffc7ce"))
+}
+```
 
 
 

@@ -641,9 +641,18 @@ refresh_ema_cache <- function(
   #cat(log_result, file=log_file, sep="\n") #something along these lines
   #return(log_result) #as a data.frame or other summary object
 }
+#function to reformat dates from how they appear in the db file to a more readable format
 date_format <- function(dt=NULL){
   year <- str_extract(dt,"\\d{4}")
   month <- str_extract(dt,"-\\d{2}-") %>% str_extract("\\d{2}")
   day <- str_extract(dt,"\\d{2}$")
   return(paste0(month,"/",day,"/",year))
 }
+
+#function to match responses to intoxication questions to the blocks they preceded
+get_intox_resp <- function(block_time=NULL,id=NULL){
+  preceding_responses <- filter(output$proc_data[[id]]$raw_data$drugs_check, time < block_time) #grab only intox questions completed before the block started
+  most_recent_time <- filter(preceding_responses, time==max(preceding_responses$time)) #find the most recent of these times in order to identify the intox question completed right before the block
+  return(most_recent_time$answer)
+}
+
