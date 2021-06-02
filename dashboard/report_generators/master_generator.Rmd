@@ -5,7 +5,7 @@ params:
   id: "Abbegail"
 ---
 
-# Individual Participant Page {.tabset}
+# Individual Participant Page
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -17,6 +17,7 @@ library("rjson")
 library("RSQLite")
 library("tinsel")
 library("REDCapR")
+library("data.table")
 if(Sys.getenv("USER")=="dp"){
   knitr::opts_knit$set(root.dir = '~/Downloads/rl_ema_monitoring', repo_path = '~/Downloads/')
   repo_path <- "~/Downloads"
@@ -35,6 +36,8 @@ if(Sys.getenv("USER")=="dp"){
   source("/Users/abbegaillovette/Documents/GitHub/rl_ema_monitoring/ECG_Dashboard.R")
   source("/Users/abbegaillovette/Documents/GitHub/rl_ema_monitoring/dashboard/study_management/data_management_functions.R")
   source("/Users/abbegaillovette/Documents/GitHub/rl_ema_monitoring/dashboard/study_management/dashboard_aggregate.R")
+  source("/Users/abbegaillovette/Documents/GitHub/rl_ema_monitoring/dashboard/study_management/RC_pull.R")
+  load("/Users/abbegaillovette/Documents/GitHub/rl_ema_monitoring/dashboard/report_generators/redcap_subj.Rdata")
   load("/Users/abbegaillovette/Desktop/lite_proc_05_26/output_physio.Rdata")
   load("/Users/abbegaillovette/Desktop/lite_proc_05_26/output_schedule.Rdata")
 } else {
@@ -228,6 +231,12 @@ compliance_pun$addRowDataGroups("scheduled_time", addTotal=FALSE)
 compliance_pun$defineCalculation(calculationName = "delayednotmissing", summariseExpression = "ifelse(is.na(mean(as.numeric(delayednotmissing), na.rm=TRUE)), 0, mean(as.numeric(delayednotmissing), na.rm=TRUE))", caption = "avg delay")
 compliance_pun$defineCalculation(calculationName = "is_missing", summariseExpression = "length(which(is_missing))", caption = "number missing")
 compliance_pun$evaluatePivot()
+cells <- compliance_pun$findCells(minValue=121, maxValue=240, includeNull=FALSE, includeNA=FALSE)
+compliance_pun$setStyling(cells=cells, declarations=list("background-color"="#FFEB9C", "color"="#9C5700"))
+
+# apply the red style for an average delay of 4 hours or greater
+cells <- compliance_pf$findCells(minValue=241, includeNull=FALSE, includeNA=FALSE)
+compliance_pf$setStyling(cells=cells, declarations=list("background-color"="#FFC7CE", "color"="#9C0006"))
 
 # apply the green style for an average delay of between 0 and 2 hours
 #cells <- compliance_pf$findCells(minValue=0, maxValue=120, includeNull=FALSE, includeNA=FALSE)
@@ -241,21 +250,113 @@ compliance_pf$setStyling(cells=cells, declarations=list("background-color"="#FFE
 cells <- compliance_pf$findCells(minValue=241, includeNull=FALSE, includeNA=FALSE)
 compliance_pf$setStyling(cells=cells, declarations=list("background-color"="#FFC7CE", "color"="#9C0006"))
 ```
+\newline
+## Overview
+```{r, echo = FALSE, warning=FALSE}
+root_dir = "../../data/Subjects"
+path_info<-lapply(c("schedule","physio","video"),function(dj){
+  list_id <- list.dirs(path = root_dir,recursive = F,full.names = F)
+  if(dj == "video") {
+    pat = ".*.mp4"
+  } else {
+    pat = ".db"
+  }
+  do.call(rbind,lapply(list_id,function(idx){
+    db_files<-list.files(file.path(root_dir,idx,dj),pattern = pat,full.names = T,recursive = F,include.dirs = F)
+    if(length(db_files)>0){
+      dx<-data.frame(subject_id=idx,file_path=db_files,stringsAsFactors = F)
+      return(dx)
+    } else {
+      return(NULL)
+    }
+  }))
+})
+
+names(path_info) <- c("schedule","physio","video")
+
+# change this to just the regular data folder instead of site data later
+
+Subject <- output$sample_info_df$ID
+Site <- output$sample_info_df$State
+Group <- output$sample_info_df$study_group
+Overall_Compliance <- round(output$sample_info_df$compliance, digits= 3)
+rl_start <- output$redcap$rl_start
+RA <- output$redcap$ema_ra_assigned
+fmri_date <- output$redcap$fmri_date
+scan_complete <- output$redcap$scan_complete
+rl_complete <- output$redcap$rl_complete
+current_date <- Sys.Date()
+day_sub <- difftime(current_date, rl_start, units = "days")
+day_in_rl_ema <- (day_sub + 1)
+days_in_rl <- ifelse(day_in_rl_ema>35,"Past 35 days/Protocol Complete",day_in_rl_ema)
+
+#Games % Stats
+Avg_Objective_Percent_Correct_No_Feedback <- output$sample_performance$abs_accurate_nofeed
+Avg_Objective_Percent_Correct_No_Feedback <- round(Avg_Objective_Percent_Correct_No_Feedback, digits = 3)
+Avg_Objective_Percent_Correct_Feedback <- output$sample_performance$abs_accurate_feed
+Avg_Objective_Percent_Correct_Feedback <- round(Avg_Objective_Percent_Correct_Feedback, digits = 3)
+Avg_Experienced_Percent_Correct_No_Feedback <- output$sample_performance$relative_accuracy_nofeed
+Avg_Experienced_Percent_Correct_No_Feedback <- round(Avg_Experienced_Percent_Correct_No_Feedback, digits = 3)
+Avg_Experienced_Percent_Correct_Feedback <- output$sample_performance$relative_accuracy_feed
+Avg_Experienced_Percent_Correct_Feedback <- round(Avg_Experienced_Percent_Correct_Feedback, digits = 3)
+#Add EEG Avg Here (named EEG_Average)
+EEG_Average <- output_physio$eeg$sample_summary$avg_allCh[match(output$sample_info_df$ID, output_physio$eeg$sample_summary$ID)]
+EEG_Average <- round(EEG_Average, digits = 3)
+#Add HR Avg Here (named HR_Average)
+hr_gen <- output_physio$ecg$sample_summary
+HR_Average <- hr_gen$per_Good[match(Subject, hr_gen$ID)]*100
+HR_Average <- round(HR_Average, digits = 3)
+qxn <- output$sample_form_summary
+#print(qxn)
+ID_Overview = data.table(
+  ID = Subject,
+  Site = Site,
+  Group = Group,
+  RA = RA,
+  "RL-EMA Start Date" = rl_start,
+  "Current Day in Protocol" = days_in_rl,
+  "fMRI date" = fmri_date,
+  "fMRI completed" = scan_complete,
+  "Overall Compliance" = Overall_Compliance,
+  "Avg Obj Correct (no feedback)" = Avg_Objective_Percent_Correct_No_Feedback,
+  "Avg Obj Correct (w/ feedback)" = Avg_Objective_Percent_Correct_Feedback,
+  "Avg Rel Correct (no feedback)" = Avg_Experienced_Percent_Correct_No_Feedback,
+  "Avg Rel Correct (w/ feedback)" = Avg_Experienced_Percent_Correct_Feedback,
+  "EEG Average" = EEG_Average,
+  "HR Average" = HR_Average,
+  #"Left %" = round(output$sample_performance$side_bias, digits = 3),
+  "Valence/Arousal Distance from Origin" = round(qxn$val_arr_dis_avg, digits = 3),
+  "Emotion Distance from 0" = round(qxn$emo_rate_avg, digits = 3),
+  "Emotion/Valence Correlation" = round(qxn$val_emo_cor, digits = 3)
+)
+Individual_Overview <- filter(ID_Overview, ID=="Abbegail")
+
+kbl(Individual_Overview) %>%
+  kable_styling(fixed_thead = T)
+
+```
+
+
+## Individual Areas
+
 
 \newline
-## Task Compliance (Unchecked)
+
+### Task Compliance {.tabset}
+
+#### Unchecked
 ```{r compliance table, echo=FALSE}
 compliance_pun$renderPivot()
 ```
 
-## Task Compliance (Full)
+#### All 
 ```{r compliance full, echo=FALSE}
 compliance_pf$renderPivot()
 ```
 
 
 \newline
-## Task performance
+### Task performance {.tabset}
 #### Unchecked
 ```{r perf table un, echo=FALSE, warning=FALSE}
 #Task performance table
@@ -286,7 +387,7 @@ kbl(task) %>%
 ```
 
 \newline
-## EEG
+### EEG {.tabset}
 #### Unchecked
 ```{r two, echo=FALSE, warning=FALSE}
 #EEG table
@@ -315,7 +416,7 @@ kbl(eeg_col_named) %>%
 ```
 
 \newline
-## HR
+### HR {.tabset}
 #### Unchecked
 ```{r unch hr, echo=FALSE, warning=FALSE}
 #HR table
@@ -337,7 +438,7 @@ kbl(hr_ordered) %>%
 
 
 \newline
-## Sleep diary
+### Sleep diary
 ```{r diary table, echo=FALSE, warning=FALSE}
 #Sleep diary table
 kbl(diary) %>%
@@ -351,7 +452,7 @@ kbl(diary) %>%
 ```
 
 \newline
-## Mood questionnaire
+### Mood questionnaire {.tabset}
 #### Unchecked
 ```{r mood unchecked, echo=FALSE, warning=FALSE}
 #Mood table
