@@ -22,7 +22,7 @@ redcap_pull <- function(uri=NULL, token=NULL, activeList=NULL){
   #active <- (c("30497", "2")) # replace with Shane's "getActiveList" function from data_management_functions
   active <- (c(unlist(activeList, use.names=FALSE)))
   #active <- (c("221604", "221849"))
-  metafields <- c("study_progress", "group_assign", "rl_start", "fmri_date", "week1_payment", "week2_payment",
+  metafields <- c("study_progress", "group_assign", "rl_start", "ema_ra_assigned", "fmri_date", "week1_payment", "week2_payment",
                   "fmri_payment", "week3_payment", "week4_payment", "scan_complete", "rl_complete")
   dfy <- as.data.frame(replicate(length(metafields), as.numeric()))
   names(dfy) <- metafields
