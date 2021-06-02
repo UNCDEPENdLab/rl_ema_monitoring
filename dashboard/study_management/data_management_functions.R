@@ -193,19 +193,19 @@ sourceFromCfg <- function(root_dir, sourced_file) {
 }
 
 # add the set_status functions
-#sourceFromCfg('rl_ema_monitoring','set_status_func.py') # function used for cli is: add_subject_by_status(id, status)
+sourceFromCfg('rl_ema_monitoring','set_status_func.py') # function used for cli is: add_subject_by_status(id, status)
 
 # add the add_subject functions
-#sourceFromCfg('rl_ema_monitoring', 'add_subject_func.py') # function used for cli is: add_subject(id, gmail, status, path)
+sourceFromCfg('rl_ema_monitoring', 'add_subject_func.py') # function used for cli is: add_subject(id, gmail, status, path)
 
 # add the momentum_pull functions
-#sourceFromCfg('rl_ema_monitoring', 'momentum_pull_func.py') # function used for cli is: pull_files(id, path)
+sourceFromCfg('rl_ema_monitoring', 'momentum_pull_func.py') # function used for cli is: pull_files(id, path)
 
 # add the rebuild_config function
-#sourceFromCfg('rl_ema_monitoring', 'rebuild_config_funcs.py') # function used for updating the pathing info (rough file tracking)
+sourceFromCfg('rl_ema_monitoring', 'rebuild_config_funcs.py') # function used for updating the pathing info (rough file tracking)
 
 # add the redcap function
-#sourceFromCfg('rl_ema_monitoring', 'RC_pull.R') # functions for REDCap implementation
+sourceFromCfg('rl_ema_monitoring', 'RC_pull.R') # functions for REDCap implementation
 
 # function to pull the list of active subjects
 getActiveList <- function(root_dir=NULL) {

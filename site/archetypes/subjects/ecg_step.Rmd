@@ -1,0 +1,33 @@
+
+`r paste0("## Block ", toString(i))`
+
+```{r include=FALSE}
+library(ggplot2)
+library(tidyverse)
+library(viridis)
+
+# plot for individual subject iS out of a cached physio file
+df <- output_physio$ecg$fb
+df <- data.frame(df[[params$id]])
+
+a2f <- round(ncol(df)/6) # default times are -1000 to 10000 ms for ECG
+y <- rep(seq(1,nrow(df),length.out=nrow(df)),1)
+trials <- output$proc_data[[params$id]]$raw_data$trials$trial
+trials <- trials[-c(which(is.na(output$proc_data[[params$id]]$raw_data$trials$choice)))]
+blocks <- output$proc_data[[params$id]]$raw_data$trials$block
+blocks <- blocks[-c(which(is.na(output$proc_data[[params$id]]$raw_data$trials$choice)))]
+
+df <- df %>% mutate(trial=trials, blocks=blocks) %>% filter(blocks==i)  
+
+df <- df %>% pivot_longer(cols=starts_with("X"),names_to="t", values_to="V")
+df <- df %>% mutate(t0=as.numeric(substr(t,2,nchar(t))))
+df <- df %>% group_by(t0) %>% summarize(mean = mean(V, na.rm = TRUE), st_err=var(V,na.rm=TRUE)/sqrt(length(V)-sum(is.na(V))))
+```
+
+```{r echo=FALSE}
+ecg_plot <- ggplot(df, aes(x=t0,y=mean)) + geom_line() + geom_point() + geom_ribbon(aes(ymin = mean-st_err, ymax = mean+st_err), linetype=2, alpha=0.1) + scale_x_continuous(breaks=c(0,a2f,max(df$t0)),labels=c(-1000,0,100000),name='time [ms]') + geom_vline(xintercept = a2f, lty = "dashed", color = "#FF0000", size = 2)
+```
+
+```{r echo=FALSE}
+ggplotly(ecg_plot)
+```
