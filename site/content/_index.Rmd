@@ -78,14 +78,22 @@ load("../data/output_physio.Rdata")
 load("../data/output_schedule.Rdata")
 
 Subject <- output$sample_info_df$ID
+Subject <- head(Subject, 1)
 Site <- output$sample_info_df$State
+Site <- head(Site, 1)
 Group <- output$sample_info_df$study_group
+Group <- head(Group, 1)
 Overall_Compliance <- round(output$sample_info_df$compliance, digits= 3)
 rl_start <- output$redcap$rl_start
+rl_start <- head(rl_start, 1)
 RA <- output$redcap$ema_ra_assigned
+RA <- head(RA, 1)
 fmri_date <- output$redcap$fmri_date
+fmri_date <- head(fmri_date, 1)
 scan_complete <- output$redcap$scan_complete
+scan_complete <- head(scan_complete,1)
 rl_complete <- output$redcap$rl_complete
+rl_complete <- head(rl_complete, 1)
 current_date <- Sys.Date()
 day_sub <- difftime(current_date, rl_start, units = "days")
 day_in_rl_ema <- (day_sub + 1)
