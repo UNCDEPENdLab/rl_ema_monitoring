@@ -74,26 +74,18 @@ path_info<-lapply(c("schedule","physio","video"),function(dj){
 names(path_info) <- c("schedule","physio","video")
 
 # change this to just the regular data folder instead of site data later
-load("../data/output_physio.Rdata")
-load("../data/output_schedule.Rdata")
+rc_for_overview <- head(rc, 1)
 
-Subject <- output$sample_info_df$ID
+Subject <- rc_for_overview$ID
 Subject <- head(Subject, 1)
-Site <- output$sample_info_df$State
-Site <- head(Site, 1)
-Group <- output$sample_info_df$study_group
-Group <- head(Group, 1)
+Site <- head(rc_for_overview$State,1)
+Group <- head(rc_for_overview$Group,1)
 Overall_Compliance <- round(output$sample_info_df$compliance, digits= 3)
-rl_start <- output$redcap$rl_start
-rl_start <- head(rl_start, 1)
-RA <- output$redcap$ema_ra_assigned
-RA <- head(RA, 1)
-fmri_date <- output$redcap$fmri_date
-fmri_date <- head(fmri_date, 1)
-scan_complete <- output$redcap$scan_complete
-scan_complete <- head(scan_complete,1)
-rl_complete <- output$redcap$rl_complete
-rl_complete <- head(rl_complete, 1)
+rl_start <- head(rc_for_overview$`RL Start Date`,1)
+RA <- head(rc_for_overview$`EMA RA`,1)
+fmri_date <- head(rc_for_overview$`fMRI Date`,1)
+scan_complete <- head(rc_for_overview$`Scan Complete`,1)
+rl_complete <- head(rc_for_overview$rl_complete,1)
 current_date <- Sys.Date()
 day_sub <- difftime(current_date, rl_start, units = "days")
 day_in_rl_ema <- (day_sub + 1)
@@ -116,7 +108,27 @@ hr_gen <- output_physio$ecg$sample_summary
 HR_Average <- hr_gen$per_Good[match(Subject, hr_gen$ID)]*100
 HR_Average <- round(HR_Average, digits = 3)
 qxn <- output$sample_form_summary
-print(qxn)
+#print(qxn)
+ID_Overview = data.table(
+  ID = Subject,
+  Site = Site,
+  Group = Group,
+  RA = RA,
+  "RL-EMA Start Date" = rl_start,
+  "Current Day in Protocol" = days_in_rl,
+  "fMRI date" = fmri_date,
+  "fMRI completed" = scan_complete,
+  "Overall Compliance" = Overall_Compliance,
+  "Avg Obj Correct (no feedback)" = Avg_Objective_Percent_Correct_No_Feedback,
+  "Avg Obj Correct (w/ feedback)" = Avg_Objective_Percent_Correct_Feedback,
+  "Avg Rel Correct (no feedback)" = Avg_Experienced_Percent_Correct_No_Feedback,
+  "Avg Rel Correct (w/ feedback)" = Avg_Experienced_Percent_Correct_Feedback,
+  "EEG Average" = EEG_Average,
+  "HR Average" = HR_Average,
+  #"Left %" = round(output$sample_performance$side_bias, digits = 3),
+  "Valence/Arousal Distance from Origin" = round(qxn$val_arr_dis_avg, digits = 3),
+  "Emotion Distance from 0" = round(qxn$emo_rate_avg, digits = 3),
+  "Emotion/Valence Correlation" = round(qxn$val_emo_cor, digits = 3)
 ID_Overview = data.table(
   ID = Subject,
   Site = Site,
