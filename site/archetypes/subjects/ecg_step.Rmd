@@ -25,9 +25,27 @@ df <- df %>% group_by(t0) %>% summarize(mean = mean(V, na.rm = TRUE), st_err=var
 ```
 
 ```{r echo=FALSE}
-ecg_plot <- ggplot(df, aes(x=t0,y=mean)) + geom_line() + geom_point() + geom_ribbon(aes(ymin = mean-st_err, ymax = mean+st_err), linetype=2, alpha=0.1) + scale_x_continuous(breaks=c(0,a2f,max(df$t0)),labels=c(-1000,0,100000),name='time [ms]') + geom_vline(xintercept = a2f, lty = "dashed", color = "#FF0000", size = 2)
+# path to save the image to
+#getwd()
+site <- "/Users/shanebuckley/Desktop/rl_ema_monitoring/site"
+# find a way to feed in the site agnostic to system later ^
+#site <- "../../.."
+fpath <- paste0("static/static/subjects/", params$id)
+# create the directory if it doesn't exist
+dir.create(path=paste0(site, "/static/static/subjects/", params$id), showWarnings = FALSE)
+# save the graph as an image file
+fig_name = paste0("ecg_plot_", toString(i), ".png")
+# if the file doesn't exist
+if (!file.exists(paste0(site, "/", fpath, "/", fig_name))) {
+  ecg_plot <- ggplot(df, aes(x=t0,y=mean)) + geom_line() + geom_point() + geom_ribbon(aes(ymin = mean-st_err, ymax = mean+st_err), linetype=2, alpha=0.1) + scale_x_continuous(breaks=c(0,a2f,max(df$t0)),labels=c(-1000,0,100000),name='time [ms]') + geom_vline(xintercept = a2f, lty = "dashed", color = "#FF0000", size = 2)
+  # save the image
+  plotly::orca(p=ecg_plot, file=paste0("site/", fpath, "/", fig_name))
+}
 ```
 
 ```{r echo=FALSE}
-ggplotly(ecg_plot)
+#ggplotly(ecg_plot)
+a <- paste0("/static/subjects/", params$id, "/ecg_plot_", toString(i), ".png")
+a <- noquote(a)
+blogdown::shortcode("graph_link", a) # 
 ```

@@ -10,11 +10,11 @@ library(plotly)
 
 ```{r load_physio, include=FALSE}
 # need to change path to location of output_physio.Rdata in active directory
-getwd()
-load("site/data/abb_proc_sched.Rdata") 
-load("site/data/emp_physiooutput.Rdata")
+#getwd()
+load("site/data/output_schedule.Rdata") 
+load("site/data/output_physio.Rdata")
 # get which blocks exits
-blocks <- output_physio$eeg$summary[[params$id]]$block
+blocks <- output_physio$ecg$summary[[params$id]]$block
 ```
 
 # Graphs by Block {.tabset .tabset-fade}
@@ -22,7 +22,9 @@ blocks <- output_physio$eeg$summary[[params$id]]$block
 ```{r runall, include=FALSE}
 out <- NULL
 for (i in blocks) {
-  out <- c(out, knitr::knit_child('ecg_step.Rmd'))
+  try({
+    out <- c(out, knitr::knit_child('ecg_step.Rmd'))
+  })
 }
 ```
 

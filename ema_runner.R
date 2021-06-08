@@ -79,6 +79,11 @@
 #     other: TRUE -> reprocess
 #     note: Should run a force if data structure changes
 #
+#   save_lite:
+#     Whether or not to include raw data in physio processing output
+#     default: FALSE -> includes raw data
+#     other: TRUE -> excludes raw data
+#
 ####################################
 
 # import dependent packages
@@ -96,7 +101,7 @@ source("../../ECG_Dashboard2.R")
 source("../../EEG_Dashboard.R")
 
 # main function to be run
-run_ema <- function(root=NULL, dataPath=getwd(), subjects="all", pull=TRUE, sched=TRUE, physio=TRUE, redcap=TRUE, nthreads=4, output=NULL, render=TRUE, site=NULL, force_proc=FALSE, force_reload=FALSE) {
+run_ema <- function(root=NULL, dataPath=getwd(), subjects="all", pull=TRUE, sched=TRUE, physio=TRUE, redcap=TRUE, nthreads=4, output=NULL, render=TRUE, site=NULL, force_proc=FALSE, force_reload=FALSE, save_lite=FALSE) {
   # SET ROOT
   ## Need to refactor the repo first ##
   #if(is.null(root) != TRUE) {
@@ -157,27 +162,26 @@ run_ema <- function(root=NULL, dataPath=getwd(), subjects="all", pull=TRUE, sche
     redcap_data <<- redcap_pull(uri=creds$uri, token=creds$token, active=active)
   }
   
-  # GET SCHED DATA
-  if(sched == TRUE) {
+  run_sched <- function() {
     #print(path_info$schedule)
     print("Running schedule calculation/aggregation...")
     # Run schedule
-    output <<- proc_schedule(schedule_df = path_info$schedule,tz=Sys.timezone(),days_limit=60,force_reproc=force_proc)
+    output <- proc_schedule(schedule_df = path_info$schedule,tz=Sys.timezone(),days_limit=60,force_reproc=force_proc)
     # Run REDCap merging into "output"
     if(redcap == TRUE) {
       output$redcap <- redcap_data
     }
+    #output <<- output_sched
     # Save the schedule output
     print("Saving the schedule results...")
     save(output, file=paste0(dataPath, '/output_schedule.Rdata'))
+    return(output)
   }
   
-  # GET PHYSIO DATA
-  ## Note currently possible because schedule and physio are not fully decoupled ##
-  if(physio == TRUE){
+  run_physio <- function(output=NULL) {
     print("Running physio calculation/aggregation...")
     # Run physio
-    output_physio <<- proc_physio(physio_df = path_info$physio,sch_pro_output=output, tz="EST",thread=nthreads,force_reload=force_reload,force_reproc=force_proc,
+    output_physio <- proc_physio(physio_df = path_info$physio,sch_pro_output=output, tz="EST",thread=nthreads,force_reload=force_reload,force_reproc=force_proc, save_lite=save_lite,
                                   eeg_sample_rate=256.03, sd_times=10, eeg_pre=500,eeg_post=1500, #EEG options
                                   ecg_sample_rate = 100, HRstep = 10, ecg_pre=1000,ecg_post=10000 #ECG options
     )
@@ -186,56 +190,66 @@ run_ema <- function(root=NULL, dataPath=getwd(), subjects="all", pull=TRUE, sche
     save(output_physio, file=paste0(dataPath, '/output_physio.Rdata'))
   }
   
-  
-  # Make a new page on the site for these subjects
-  for(new_subj in output$newdata_IDs) {
-    tryCatch(
-      {
-        print(paste0("Making page for ", new_subj, "..."))
-        addPage(page_archetype="subjects", 
-                            page_name=new_subj, 
-                            source_path=paste0(site) 
-        )
-      }
-    )
-  }
-  # RENDER THE SITE
-  if(render == TRUE) {
-    setwd(paste0(site, '/content'))
-    # render the home page
-    
-    # render any subjects
-    for(id in active) {
-      curr_path <- paste0('subjects/', id)
-      # if the md and the Rmd for the subject does not exist
-      if(file.exists(paste0(curr_path, '/_index.Rmd')) == FALSE) {
-        tryCatch({
-          # then create a subject Rmd from the template
-          blogdown::hugo_cmd(paste0("new subjects/", id, " -s .."))
-        })
-        tryCatch({
-          # rename the .md file to a .Rmd (this allows Go to be used properly in archetypes)
-          file.rename(paste0(curr_path, "/_index.md"), paste0(curr_path, "/_index.Rmd"))
-        })
-      }
-      # attempt to render the subject's graph pages
-      if(file.exists(paste0(curr_path, '/plot_ecg.Rmd')) == FALSE) {
-        tryCatch({
-          # rename the .md file to a .Rmd (this allows Go to be used properly in archetypes)
-          file.rename(paste0(curr_path, '/plot_ecg.md'), paste0(curr_path, '/plot_ecg.Rmd'))
-        })
-      }
-      # attempt to render the subject's graph pages
-      if(file.exists(paste0(curr_path, '/plot_eeg.Rmd')) == FALSE) {
-        tryCatch({
-          # rename the .md file to a .Rmd (this allows Go to be used properly in archetypes)
-          file.rename(paste0(curr_path, '/plot_eeg.md'), paste0(curr_path, '/plot_eeg.Rmd'))
-        })
-      }
+  # GET SCHED DATA
+  if(sched == TRUE) {
+    output <- run_sched()
+    if(physio == TRUE){
+      # GET PHYSIO DATA
+      output <<- output
+      run_physio(output=output)
     }
   }
+  
+  # Make a new page on the site for these subjects
+  #for(new_subj in output$newdata_IDs) {
+  #  tryCatch(
+  #    {
+  #      print(paste0("Making page for ", new_subj, "..."))
+  #      addPage(page_archetype="subjects", 
+  #                          page_name=new_subj, 
+  #                          source_path=paste0(site) 
+  #      )
+  #    }
+  #  )
+  #}
+  
+  # RENDER THE SITE
+  #if(render == TRUE) {
+  #  setwd(paste0(site, '/content'))
+  #  # render the home page
+  #  
+  #  # render any subjects
+  #  for(id in active) {
+  #    curr_path <- paste0('subjects/', id)
+  #    # if the md and the Rmd for the subject does not exist
+  #    if(file.exists(paste0(curr_path, '/_index.Rmd')) == FALSE) {
+  #      tryCatch({
+  #        # then create a subject Rmd from the template
+  #        blogdown::hugo_cmd(paste0("new subjects/", id, " -s .."))
+  #      })
+  #      tryCatch({
+  #        # rename the .md file to a .Rmd (this allows Go to be used properly in archetypes)
+  #        file.rename(paste0(curr_path, "/_index.md"), paste0(curr_path, "/_index.Rmd"))
+  #      })
+  #    }
+  #    # attempt to render the subject's graph pages
+  #    if(file.exists(paste0(curr_path, '/plot_ecg.Rmd')) == FALSE) {
+  #      tryCatch({
+  #        # rename the .md file to a .Rmd (this allows Go to be used properly in archetypes)
+  #        file.rename(paste0(curr_path, '/plot_ecg.md'), paste0(curr_path, '/plot_ecg.Rmd'))
+  #      })
+  #    }
+  #    # attempt to render the subject's graph pages
+  #    if(file.exists(paste0(curr_path, '/plot_eeg.Rmd')) == FALSE) {
+  #      tryCatch({
+  #        # rename the .md file to a .Rmd (this allows Go to be used properly in archetypes)
+  #        file.rename(paste0(curr_path, '/plot_eeg.md'), paste0(curr_path, '/plot_eeg.Rmd'))
+  #      })
+  #    }
+  #  }
+  #}
 }
 
 #run_ema(pull=FALSE, sched=TRUE, physio=FALSE, redcap=FALSE, force_proc=TRUE, nthreads = 1, site="/Users/shanebuckley/desktop/rl_ema_monitoring/site", render=FALSE) # , force_reload=TRUE
-run_ema(redcap=TRUE, render=FALSE, pull=FALSE, sched=FALSE, physio=FALSE, force_proc=TRUE, force_reload=TRUE, nthreads = 4, site="/Users/shanebuckley/desktop/rl_ema_monitoring/site") # , force_reload=TRUE
+run_ema(redcap=TRUE, save_lite=TRUE, render=FALSE, pull=TRUE, sched=TRUE, physio=TRUE, force_proc=TRUE, force_reload=TRUE, nthreads = 4, site="/Users/shanebuckley/desktop/rl_ema_monitoring/site") # , force_reload=TRUE
 #subjects=list("221604", "221849"),
