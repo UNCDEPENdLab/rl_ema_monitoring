@@ -1,0 +1,47 @@
+baseurl: http://michaelhallquist.com/dashboard/
+languageCode: en-us
+title: Momentum
+theme: hugo-lithium
+googleAnalytics: ''
+disqusShortname: ''
+CanonifyURLs: true
+ignoreFiles:
+- \.Rmd$
+- \.Rmarkdown$
+- _cache$
+- \.knit\.md$
+- \.utf8\.md$
+- \archetypes$
+taxonomies:
+  tag: tags
+  category: categories
+  subject: subjects
+  graph: graphs
+permalinks:
+  subjects: /:slug/
+menu:
+  main:
+  - name: Manage
+    url: http://10.220.55.203:4344/#!/manage
+  - name: About
+    url: /about/
+  - name: GitHub
+    url: https://github.com/UNCDEPENdLab/rl_ema_monitoring
+  - name: Momentum
+    url: https://en.wikipedia.org/wiki/Behavioral_momentum
+params:
+  MathJaxCDN: //cdnjs.cloudflare.com/ajax/libs
+  MathJaxVersion: 2.7.5
+  description: A website built through Hugo and blogdown.
+  favicon: favicon.ico
+  highlightjsCDN: //cdnjs.cloudflare.com/ajax/libs
+  highlightjsLang:
+  - r
+  - yaml
+  highlightjsTheme: github
+  highlightjsVersion: 9.12.0
+  logo:
+    alt: Logo
+    height: 50
+    url: Momentum_Logo.png
+    width: 50

@@ -1,4 +1,3 @@
-
 `r paste0("## Block ", toString(i))`
 
 ```{r include=FALSE}
@@ -19,12 +18,12 @@ blocks <- blocks[-c(which(is.na(output$proc_data[[params$id]]$raw_data$trials$ch
 
 df <- df %>% mutate(trial=trials, blocks=blocks) %>% filter(blocks==i)  
 
-df <- df %>% pivot_longer(cols=starts_with("X"),names_to="t", values_to="V")
+df <- df %>% pivot_longer(cols=starts_with("X"),names_to="t", values_to="X")
 df <- df %>% mutate(t0=as.numeric(substr(t,2,nchar(t))))
-df <- df %>% group_by(t0) %>% summarize(mean = mean(V, na.rm = TRUE), st_err=var(V,na.rm=TRUE)/sqrt(length(V)-sum(is.na(V))))
+df <- df %>% dplyr::group_by(t0) %>% dplyr::summarize(mean = mean(X, na.rm = TRUE), st_err=var(X,na.rm=TRUE)/sqrt(length(X)-sum(is.na(X))))
 ```
 
-```{r echo=FALSE}
+```{r echo=FALSE, include=FALSE}
 # path to save the image to
 #getwd()
 site <- "/Users/shanebuckley/Desktop/rl_ema_monitoring/site"
@@ -37,10 +36,13 @@ dir.create(path=paste0(site, "/static/static/subjects/", params$id), showWarning
 fig_name = paste0("ecg_plot_", toString(i), ".png")
 # if the file doesn't exist
 if (!file.exists(paste0(site, "/", fpath, "/", fig_name))) {
-  ecg_plot <- ggplot(df, aes(x=t0,y=mean)) + geom_line() + geom_point() + geom_ribbon(aes(ymin = mean-st_err, ymax = mean+st_err), linetype=2, alpha=0.1) + scale_x_continuous(breaks=c(0,a2f,max(df$t0)),labels=c(-1000,0,100000),name='time [ms]') + geom_vline(xintercept = a2f, lty = "dashed", color = "#FF0000", size = 2)
+  # create the plot
+  ecg_plot <- NULL
+  try(
+    ecg_plot <- ggplot(df, aes(x=t0,y=mean)) + geom_line() + geom_point() + geom_ribbon(aes(ymin = mean-st_err, ymax = mean+st_err), linetype=2, alpha=0.1) + scale_x_continuous(breaks=c(0,a2f,max(df$t0)),labels=c(-1000,0,100000),name='time [ms]') + geom_vline(xintercept = a2f, lty = "dashed", color = "#FF0000", size = 2), silent=TRUE)
   # save the image
   plotly::orca(p=ecg_plot, file=paste0("site/", fpath, "/", fig_name))
-}
+}   
 ```
 
 ```{r echo=FALSE}

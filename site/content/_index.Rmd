@@ -135,7 +135,10 @@ ID_Overview = data.table(
 
 ```{r active_split, echo=FALSE, warning=FALSE, dependson="load"}
 pacman::p_load(reticulate)
-ids <- tolower(ID_Overview$ID) # list("abbegail")
+# render locally
+#ids <- tolower(ID_Overview$ID) # list("abbegail")
+# render on Michael's server
+ids <- paste0("dashboard/", tolower(ID_Overview$ID)) # list("abbegail")
 # use paste0 to compose markdown-formatted hyperlinks
 ID_Overview$ID <- paste0("<a target='_parent' href='/",ids, "/'>", ID_Overview$ID, "</a>") # subjects/
 # create a new folder and rmd template if for each subject that hasn't been initialized
