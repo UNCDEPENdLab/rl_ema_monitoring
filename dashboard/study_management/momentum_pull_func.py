@@ -186,12 +186,14 @@ def get_pull_files(id, path, drive):
     # Return the list of files to pull
     return pull_dict
 
-def download_files(id, path, drive, fileDict, scheduleLatest):
+def download_files(id, path, drive, fileDict, scheduleLatest, clinical_path, clinical_url):
     '''
     Method for downloading the files.
     '''    
     # initialize the dictionary of logged results for each file
     logDict = dict()
+    # initiate a dictionary for storing the video url paths
+    videoDict =dict()
     # Attempt to Download the schedule file NOTE: this may need updated => is the schedule file constantly appended to?
     print('Downloading the updated schedule file from GDrive:')
     # Move old schedule file to archive if it exists
@@ -259,14 +261,46 @@ def download_files(id, path, drive, fileDict, scheduleLatest):
                 # log that the download occured unsuccessfully
                 logDict.update({video_title: "Download Failed"})
         # For now, just create an empty video file with the correct name
-        else:
+        elif False:
             with open(path + '/Subjects/' + id + '/video/' + video_title, 'w') as fp:
                 pass
             logDict.update({video_title: "Download Successful"})
+        # Test for download of files to OneDrive, create empty files with names
+        elif False:
+            # Make the directory if it does not exist
+            try:
+                os.mkdir(clinical_path + '/' + id)
+            except:
+                pass
+            # Make the test file
+            with open(clinical_path + '/' + id + '/' + video_title, 'w') as fp:
+                pass
+            logDict.update({video_title: "Download Successful"})
+        # Pull actual video from GDrive to OneDrive
+        else:
+            # Make the directory if it does not exist
+            try:
+                os.mkdir(clinical_path + '/' + id)
+            except:
+                pass
+            # attempt to download the file
+            try:
+                # attempt the download
+                file.GetContentFile(clinical_path + '/' + id + '/' + video_title)
+                # log that the download occured successfully
+                logDict.update({video_title: "Download Successful"})
+                videoDict.update({video_title: clinical_url + '/' + id + '/' + video_title})
+            # if the attempt failed
+            except:
+                # print to console that the download attempt failed
+                print("Warning: download of " + video_title + " was unsuccessfull!")
+                # log that the download occured unsuccessfully
+                logDict.update({video_title: "Download Failed"})
+                videoDict.update({video_title: "NA"})
     # return the dictionary of logs
-    return logDict
+    return [logDict, videoDict]
 
-def update_json(id, path, fileDict, scheduleLatest, logDict):
+def update_json(id, path, fileDict, scheduleLatest, logDict, videoPathDict):
     '''
     Method for updating a subject's json file.
     '''
@@ -289,7 +323,7 @@ def update_json(id, path, fileDict, scheduleLatest, logDict):
         # update the physio files
         old_json_dict["subject"]["files"]["physio"].extend(physioList)
         # get a list of the titles of the video files
-        videoList = [{"file_name": updateVideoName(x['title']), "datetime_of_pull": now, "pull_log": logDict[updateVideoName(x['title'])]} for x in fileDict["video"]]
+        videoList = [{"file_name": updateVideoName(x['title']), "datetime_of_pull": now, "pull_log": logDict[updateVideoName(x['title'])], "saved_to": videoPathDict[updateVideoName(x['title'])]} for x in fileDict["video"]]
         # update the video files
         old_json_dict["subject"]["files"]["video"].extend(videoList)
         # set the variable out of this scope to feed in for writing
@@ -337,7 +371,7 @@ def get_schedule_name_system(id, path):
     # otherwise, return the file name
     return db_files[0]
 
-def pull_files(id, path):
+def pull_files(id, path, clinical_path, clinical_url):
     '''
     Method for pulling data from the given Google Drive and updates the subjects json file.
     '''
@@ -352,8 +386,10 @@ def pull_files(id, path):
     # if there are files to be download
     if files2pull != None:
         # Pull the files
-        logs = download_files(id=id, path=path, drive=drive, fileDict=files2pull, scheduleLatest=current_schedule)
+        pull_results = download_files(id=id, path=path, drive=drive, fileDict=files2pull, scheduleLatest=current_schedule, clinical_path=clinical_path, clinical_url=clinical_url)
+        logs = pull_results[0]
+        video_paths = pull_results[1]
         # Update the name of the current schedule file
         current_schedule = get_schedule_name_system(id=id, path=path)
         # Update the subject's json file
-        update_json(id=id, path=path, fileDict=files2pull, scheduleLatest=current_schedule, logDict=logs)
+        update_json(id=id, path=path, fileDict=files2pull, scheduleLatest=current_schedule, logDict=logs, videoPathDict=video_paths)
