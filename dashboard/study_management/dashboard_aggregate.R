@@ -121,6 +121,37 @@ proc_schedule <- function(schedule_df = NULL,days_limit=35,task_limit=56,force_r
               sample_form_summary = q_summary))
 }
 
+calcu_func<- function(trials_1,stimuli) {
+  trials_1 <- trials_1[which(!is.na(trials_1$choice)),]
+  for (i in 1:length(trials_1$block)){
+    trials_1$rank1[i]=stimuli$rank[trials_1$stim1[i]+1]
+    trials_1$rank2[i]=stimuli$rank[trials_1$stim2[i]+1]
+    trials_1$accuracy[i]=((trials_1$rank1[i]>trials_1$rank2[i])&&(trials_1$choice[i]==0)||(trials_1$rank1[i]<trials_1$rank2[i])&&(trials_1$choice[i]==1))
+    if (trials_1$rank1[i]==trials_1$rank2[i])
+      trials_1$accuracy[i]=NA
+  }
+  ##Accuracy relative to probabilities that were experienced (constantly updating until an image switches to its no-feedback phase)##
+  trials_1$relative_stim1=rep(NaN, nrow(trials_1))
+  trials_1$relative_stim2=rep(NaN, nrow(trials_1))
+  for (i in 2:nrow(trials_1)){
+    trials_1$relative_stim1[i]=mean(trials_1$outcome[which(trials_1$stim1==trials_1$stim1[i]&trials_1$choice==0&trials_1$feedback==1&((trials_1$trial<trials_1$trial[i]&trials_1$block==trials_1$block[i])|trials_1$block<trials_1$block[i])|trials_1$stim2==trials_1$stim1[i]&trials_1$choice==1&trials_1$feedback==1&((trials_1$trial<trials_1$trial[i]&trials_1$block==trials_1$block[i])|trials_1$block<trials_1$block[i]))])
+    trials_1$relative_stim2[i]=mean(trials_1$outcome[which(trials_1$stim1==trials_1$stim2[i]&trials_1$choice==0&trials_1$feedback==1&((trials_1$trial<trials_1$trial[i]&trials_1$block==trials_1$block[i])|trials_1$block<trials_1$block[i])|trials_1$stim2==trials_1$stim2[i]&trials_1$choice==1&trials_1$feedback==1&((trials_1$trial<trials_1$trial[i]&trials_1$block==trials_1$block[i])|trials_1$block<trials_1$block[i]))])
+  }
+  trials_1$relative_accuracy=NA
+  index=which(!is.nan(trials_1$relative_stim1)&!is.nan(trials_1$relative_stim2))
+
+  #accuracy according to experienced probabilities (differences of less than 10% between probabilties are omitted)
+  for (i in index){
+    trials_1$relative_accuracy[i]=((trials_1$relative_stim1[i]>trials_1$relative_stim2[i]+0.1)&&(trials_1$choice[i]==0)||(trials_1$relative_stim1[i]+0.1<trials_1$relative_stim2[i])&&(trials_1$choice[i]==1))
+    if (((abs(trials_1$relative_stim1[i]-trials_1$relative_stim2[i])<0.1)&&(abs(trials_1$relative_stim2[i]-trials_1$relative_stim1[i]))<0.1))
+      trials_1$relative_accuracy[i]=NA
+  }
+
+
+  return(trials_1)
+
+}
+
 proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz="EST") {
   #print(raw_single$ID)
 
@@ -144,49 +175,26 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
   for (tx in time_vars) {
     raw_single$trials[[tx]] <- ms_to_date(raw_single$trials[[tx]],timezone = tz)
   }
-  trials_1<-raw_single$trials
 
-  ##Accuracy
-  for (i in 1:nrow(trials_1)){
-    if(is.na(trials_1$choice[i])) {next}
-    trials_1$rank1[i]=raw_single$stimuli$rank[trials_1$stim1[i]+1]
-    trials_1$rank2[i]=raw_single$stimuli$rank[trials_1$stim2[i]+1]
-    trials_1$accuracy[i]=((trials_1$rank1[i]>trials_1$rank2[i])&&(trials_1$choice[i]==0)||(trials_1$rank1[i]<trials_1$rank2[i])&&(trials_1$choice[i]==1))
-    if (trials_1$rank1[i]==trials_1$rank2[i])
-      trials_1$accuracy[i]=NA
-  }
-  trials_1$accuracy[is.na(trials_1$choice)]<-NA
-  ##Accuracy relative to probabilities that were experienced (constantly updating until an image switches to its no-feedback phase)##
 
-  trials_1$relative_stim1=rep(NaN, nrow(trials_1))
-  trials_1$relative_stim2=rep(NaN, nrow(trials_1))
-  for (i in 2:nrow(trials_1)){
-    trials_1$relative_stim1[i]=mean(trials_1$outcome[which(trials_1$stim1==trials_1$stim1[i]&trials_1$choice==0&trials_1$feedback==1&((trials_1$trial<trials_1$trial[i]&trials_1$block==trials_1$block[i])|trials_1$block<trials_1$block[i])|trials_1$stim2==trials_1$stim1[i]&trials_1$choice==1&trials_1$feedback==1&((trials_1$trial<trials_1$trial[i]&trials_1$block==trials_1$block[i])|trials_1$block<trials_1$block[i]))])
-    trials_1$relative_stim2[i]=mean(trials_1$outcome[which(trials_1$stim1==trials_1$stim2[i]&trials_1$choice==0&trials_1$feedback==1&((trials_1$trial<trials_1$trial[i]&trials_1$block==trials_1$block[i])|trials_1$block<trials_1$block[i])|trials_1$stim2==trials_1$stim2[i]&trials_1$choice==1&trials_1$feedback==1&((trials_1$trial<trials_1$trial[i]&trials_1$block==trials_1$block[i])|trials_1$block<trials_1$block[i]))])
-  }
-  trials_1$relative_accuracy=NA
-  index=which(!is.nan(trials_1$relative_stim1)&!is.nan(trials_1$relative_stim2))
+  trials_df<-calcu_accuracy(trials_1=raw_single$trials,stimuli=raw_single$stimuli)
 
-  #accuracy according to experienced probabilities (differences of less than 10% between probabilties are omitted)
-  for (i in index){
-    trials_1$relative_accuracy[i]=((trials_1$relative_stim1[i]>trials_1$relative_stim2[i]+0.1)&&(trials_1$choice[i]==0)||(trials_1$relative_stim1[i]+0.1<trials_1$relative_stim2[i])&&(trials_1$choice[i]==1))
-    if (((abs(trials_1$relative_stim1[i]-trials_1$relative_stim2[i])<0.1)&&(abs(trials_1$relative_stim2[i]-trials_1$relative_stim1[i]))<0.1))
-      trials_1$relative_accuracy[i]=NA
-  }
   #get RT
-  trials_1$rt <- as.numeric(difftime(trials_1$choice_time,trials_1$stim_time,units = "secs"))
+  trials_df$rt <- as.numeric(difftime(trials_df$choice_time,trials_df$stim_time,units = "secs"))
 
-  info_by_block<-lapply(split(trials_1,trials_1$block),function(ix){
+  info_by_block<-lapply(split(trials_df,trials_df$block),function(ix){
+    print(unique(ix$block))
     #Compliance:
     rx<-ix[1,c("block","scheduled_time")]
     rx$start_time <- ix$stim_time[1]
-    rx$completed_time <- ix$feedback_time[nrow(ix)]
+    #adding max here to show that possible 2 repsonse time? idk; change down below as well
+    rx$completed_time <- max(ix$feedback_time)
     rx$duration <- difftime(rx$completed_time,rx$start_time,units = "mins")
     rx$delay <- difftime(rx$start_time,rx$scheduled_time,units = "mins")
 
     ##Performance data:
     px <- data.frame(block=unique(ix$block),
-                     date=unique(as.Date(ix$feedback_time)),
+                     date=max(as.Date(ix$feedback_time)),
                      IDe_bias=mean(ix$choice,na.rm = T),
                      mean_rt = mean(ix$rt,na.rm = T),
                      abs_accurate_feed = mean(as.numeric(ix[which(ix$feedback==1),]$accuracy),na.rm = T),
@@ -214,15 +222,34 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
   trial_info_df<-trial_info_df[c("scheduled_time","start_time","completed_time","duration","delay","spec")]
   trial_info_df$type <- "trials"
 
+
+
+  if (max(trials_1$block)>14){
+    pr_info_by_block$bad <- NA
+    pr_info_by_block$bad[6:nrow(pr_info_by_block)] <- (pr_info_by_block$relative_accuracy_feed<0.7)[6:nrow(pr_info_by_block)]
+    percentage_last_ten<-as.numeric(which(pr_info_by_block$bad[(nrow(pr_info_by_block)-9):nrow(pr_info_by_block)])*10)
+    percentage_last_ten<-ifelse(length(percentage_last_ten)<1,0,percentage_last_ten)
+
+    if (percentage_last_ten>20){
+      mean_RT_low_performance=mean(pr_info_by_block$mean_rt[which(pr_info_by_block$bad & c(rep(FALSE,(nrow(pr_info_by_block)-10)),rep(TRUE,10)))])
+      mean_side_bias_low_performance=mean(pr_info_by_block$IDe_bias[which(pr_info_by_block$bad & c(rep(FALSE,(nrow(pr_info_by_block)-10)),rep(TRUE,10)))])
+    } else {
+      mean_RT_low_performance <- NA
+      mean_side_bias_low_performance <- NA
+    }
+  }
   px_overall <- data.frame(ID=raw_single$ID,
                            IDe_bias=mean(trials_1$choice,na.rm = T),
                            mean_rt = mean(trials_1$rt,na.rm = T),
-                           abs_accurate_overall = mean(as.numeric(trials_1$accuracy),na.rm = T),
-                           relative_accuracy_overall = mean(as.numeric(trials_1$relative_accuracy),na.rm = T),
-                           abs_accurate_feed = mean(as.numeric(trials_1[which(trials_1$feedback==1),]$accuracy),na.rm = T),
-                           relative_accuracy_feed = mean(as.numeric(trials_1[which(trials_1$feedback==1),]$relative_accuracy),na.rm = T),
-                           abs_accurate_nofeed = mean(as.numeric(trials_1[which(trials_1$feedback==0),]$accuracy),na.rm = T),
-                           relative_accuracy_nofeed = mean(as.numeric(trials_1[which(trials_1$feedback==0),]$relative_accuracy),na.rm = T),
+                           abs_accurate_overall = mean(c(pr_info_by_block$abs_accurate_feed,pr_info_by_block$abs_accurate_nofeed),na.rm = T),
+                           relative_accuracy_overall = mean(c(pr_info_by_block$relative_accuracy_feed,pr_info_by_block$relative_accuracy_nofeed),na.rm = T),
+                           abs_accurate_feed = mean(pr_info_by_block$abs_accurate_feed,na.rm = T),
+                           relative_accuracy_feed = mean(pr_info_by_block$relative_accuracy_feed,na.rm = T),
+                           abs_accurate_nofeed = mean(pr_info_by_block$abs_accurate_nofeed,na.rm = T),
+                           relative_accuracy_nofeed = mean(pr_info_by_block$relative_accuracy_nofeed,na.rm = T),
+                           percentage_last_ten=percentage_last_ten,
+                           mean_RT_low_performance=mean_RT_low_performance,
+                           mean_side_bias_low_performance=mean_side_bias_low_performance,
                            stringsAsFactors = F)
 
   ##Part II: questionnaires:
@@ -359,7 +386,7 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
 
 
   pr_info_by_block$ID <- raw_single$ID
-  raw_single$trials <- trials_1
+  raw_single$trials <- trials_df
 
   output <- list(raw_data=raw_single,
                  info_df = info_df,
