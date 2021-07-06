@@ -121,7 +121,7 @@ proc_schedule <- function(schedule_df = NULL,days_limit=35,task_limit=56,force_r
               sample_form_summary = q_summary))
 }
 
-calcu_func<- function(trials_1,stimuli) {
+calcu_accuracy<- function(trials_1,stimuli) {
   trials_1 <- trials_1[which(!is.na(trials_1$choice)),]
   for (i in 1:length(trials_1$block)){
     trials_1$rank1[i]=stimuli$rank[trials_1$stim1[i]+1]
@@ -224,7 +224,7 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
 
 
 
-  if (max(trials_1$block)>14){
+  if (max(trials_df$block)>14){
     pr_info_by_block$bad <- NA
     pr_info_by_block$bad[6:nrow(pr_info_by_block)] <- (pr_info_by_block$relative_accuracy_feed<0.7)[6:nrow(pr_info_by_block)]
     percentage_last_ten<-as.numeric(which(pr_info_by_block$bad[(nrow(pr_info_by_block)-9):nrow(pr_info_by_block)])*10)
@@ -239,8 +239,8 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
     }
   }
   px_overall <- data.frame(ID=raw_single$ID,
-                           IDe_bias=mean(trials_1$choice,na.rm = T),
-                           mean_rt = mean(trials_1$rt,na.rm = T),
+                           IDe_bias=mean(trials_df$choice,na.rm = T),
+                           mean_rt = mean(trials_df$rt,na.rm = T),
                            abs_accurate_overall = mean(c(pr_info_by_block$abs_accurate_feed,pr_info_by_block$abs_accurate_nofeed),na.rm = T),
                            relative_accuracy_overall = mean(c(pr_info_by_block$relative_accuracy_feed,pr_info_by_block$relative_accuracy_nofeed),na.rm = T),
                            abs_accurate_feed = mean(pr_info_by_block$abs_accurate_feed,na.rm = T),
