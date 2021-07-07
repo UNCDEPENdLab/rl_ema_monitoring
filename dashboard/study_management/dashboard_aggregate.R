@@ -108,9 +108,9 @@ proc_schedule <- function(schedule_df = NULL,days_limit=35,task_limit=56,force_r
   performance_info <- performance_info[!is.na(performance_info$date),]
   sp_info_sq <- split(sample_info,sample_info$ID)
   pr_info_sq <- split(performance_info,performance_info$ID)
-  sample_info$compliance <- is.na(sample_info$completed_time)
+  sample_info$compliance <- !is.na(sample_info$completed_time)
   overall_info<-cbind(aggregate(compliance ~ ID,data = sample_info[which(sample_info$scheduled_time <= Sys.Date()),],FUN = mean),do.call(plyr::rbind.fill,lapply(raw_data,`[[`,"subject")))
-  overall_info$completed_session <- aggregate(session_number ~ ID,data = sample_info[!is.na(sample_info$completed_time),],FUN = max)$session_number
+  #overall_info$completed_session <- aggregate(session_number ~ ID,data = sample_info[!is.na(sample_info$completed_time),],FUN = max)$session_number
 
   pr_info_subjwise <-  do.call(rbind,lapply(proc_data,`[[`,"performance_overall"))
   q_summary <-  do.call(rbind,lapply(proc_data,`[[`,"form_summary"))
@@ -124,10 +124,11 @@ proc_schedule <- function(schedule_df = NULL,days_limit=35,task_limit=56,force_r
 calcu_accuracy<- function(trials_1,stimuli) {
   trials_1 <- trials_1[which(!is.na(trials_1$choice)),]
   for (i in 1:length(trials_1$block)){
+    trials_1$stim2[trials_1$stim2 < 0] <- NA
     trials_1$rank1[i]=stimuli$rank[trials_1$stim1[i]+1]
     trials_1$rank2[i]=stimuli$rank[trials_1$stim2[i]+1]
     trials_1$accuracy[i]=((trials_1$rank1[i]>trials_1$rank2[i])&&(trials_1$choice[i]==0)||(trials_1$rank1[i]<trials_1$rank2[i])&&(trials_1$choice[i]==1))
-    if (trials_1$rank1[i]==trials_1$rank2[i])
+    if (is.na(trials_1$rank2[i]) || trials_1$rank1[i]==trials_1$rank2[i])
       trials_1$accuracy[i]=NA
   }
   ##Accuracy relative to probabilities that were experienced (constantly updating until an image switches to its no-feedback phase)##
@@ -166,9 +167,6 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
     }
   }
   message("Processing schedule file for: ",raw_single$ID)
-  ###NO TIMEZONE INFORMATION!!!!Using EST at the moment;
-  raw_single$sessions$start_timestamp<-lubridate::parse_date_time(raw_single$sessions$start_timestamp,"%b $d, %Y %I:%M:%S %p",tz = tz)
-  raw_single$sessions$stop_timestamp<-lubridate::parse_date_time(raw_single$sessions$stop_timestamp,"%b $d, %Y %I:%M:%S %p",tz=tz)
 
   ###Part I: Trial
   time_vars <- c("scheduled_time","stim_time","choice_time","feedback_time")
@@ -183,7 +181,7 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
   trials_df$rt <- as.numeric(difftime(trials_df$choice_time,trials_df$stim_time,units = "secs"))
 
   info_by_block<-lapply(split(trials_df,trials_df$block),function(ix){
-    print(unique(ix$block))
+    #print(unique(ix$block))
     #Compliance:
     rx<-ix[1,c("block","scheduled_time")]
     rx$start_time <- ix$stim_time[1]
@@ -211,13 +209,8 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
   pr_info_by_block <- do.call(rbind,lapply(info_by_block,`[[`,"performance"))
   #Process compliance
   trial_info_df<-merge(raw_single$sessions,tr_info_by_block,by = "block",all = T)
-  #trial_info_df$session_number<-match(round(as.numeric(trial_info_df$scheduled_time),0),unique(round(as.numeric(trial_info_df$scheduled_time),0)))
   trial_info_df<-trial_info_df[,-grep("_ms",names(trial_info_df))]
   trial_info_df$spec <-unlist(apply(trial_info_df[c("block","start_trial","last_trial")],1,list),recursive = F)
-
-  #assign session number to each of the different type of data:
-  #trials_1$session_number<-trial_info_df$session_number[match(trials_1$block,trial_info_df$block)]
-  #pr_info_by_block$session_number<-trial_info_df$session_number[match(pr_info_by_block$block,trial_info_df$block)]
 
   trial_info_df<-trial_info_df[c("scheduled_time","start_time","completed_time","duration","delay","spec")]
   trial_info_df$type <- "trials"
@@ -287,18 +280,39 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
   rownames(info_df) <- NULL
   rownames(pr_info_by_block) <- NULL
 
+  ###Filter out entries after data pulled:
+  info_df <- info_df[which(difftime(info_df$scheduled_time,raw_single$data_mtime) <= 0),]
+
   ##Get start date:
-  startdate <- as.Date(info_df$scheduled_time[1])
-  ##Set start date stuff to be session 0
-  info_df$session_number[as.Date(info_df$scheduled_time) == startdate] <- 0
-  ##do a date session match:
-  date_sess_match_df <- data.frame(date=unique(as.Date(info_df$scheduled_time)),days=unique(as.Date(info_df$scheduled_time)) - startdate,stringsAsFactors = F)
-  date_sess_match_df <- date_sess_match_df[date_sess_match_df$days<=days_limit,]
-  date_sess_match_df$index <- NA
-  date_sess_match_df$index[2:(nrow(date_sess_match_df))] <- split(1:(4*nrow(date_sess_match_df)), ceiling(seq_along(1:(4*nrow(date_sess_match_df)))/4))[1:(nrow(date_sess_match_df)-1)]
+  startdate <- as.Date(info_df$scheduled_time[1],tz = tz)
+  info_df$days <- difftime(as.Date(info_df$scheduled_time,tz = tz),startdate,units = "day")
+
+  #clean up:
+  info_df <- info_df[!duplicated(round(info_df$scheduled_time)),]
+  info_df$type[info_df$type=="questionnaires"] <- as.character(sapply(info_df$spec[info_df$type=="questionnaires"],`[[`,3))
+  info_df$spec <- NULL
 
   ##For each day
-  info_sp<-split(info_df,as.Date(info_df$scheduled_time,tz = tz))
+  info_sp<-split(info_df,info_df$days)
+
+  #hard code this for now, an expected events and corresponding number for each day:
+  expected_df <- data.frame(type = c("Sleep Diary","Mood Questionnaire","Daily recording","trials","5m Resting State"),
+                            num = c(1,3,1,2,2),stringsAsFactors = F)
+
+
+  info_df<-rbind(info_sp[[1]],do.call(rbind,lapply(info_sp[2:length(info_sp)],function(ifp){
+    for(i in 1:nrow(expected_df)) {
+      if(length(which(ifp$type == expected_df$type[i])) != expected_df$num[i]) {
+        toadd <- expected_df$num[i] - length(which(ifp$type == expected_df$type[i]))
+        arg <- as.list(rep(NA,toadd+1))
+        arg[[1]] <- ifp
+        ifp <- do.call(rbind,arg)
+        ifp[(nrow(ifp)-toadd+1):nrow(ifp),c("type","ID","days")] <- data.frame(type=expected_df$type[i],ID=ifp$ID[1],days=ifp$days[1])
+      }
+    }
+    return(ifp)
+  })))
+
 
   #update answer DF as well"
   raw_single$answers$session_number<-session_info_df$session_number[match(round(as.numeric(raw_single$answers$answer_time,0)),round(as.numeric(session_info_df$completed_time),0))]
@@ -326,8 +340,16 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
   fdata_sp <- split(form_data,form_data$questionnaire_name)
   #proc all the other first
   form_proc <- lapply(fdata_sp,function(tkd){
-    if(unique(tkd$questionnaire_name) %in% c("Mood Questionnaire","Sleep Diary")) {
+    #print(unique(tkd$questionnaire_name))
+    if(unique(tkd$questionnaire_name) %in% c("Mood Questionnaire","Sleep Diary","End questionnaire")) {
       evt_q_index <- ifelse(unique(tkd$questionnaire_name) == "Mood Questionnaire",2,1)
+      if(unique(tkd$questionnaire_name) == "Mood Questionnaire") {
+        evt_q_index <- 2
+      } else if (unique(tkd$questionnaire_name) == "Sleep Diary") {
+        evt_q_index <- 1
+      } else {
+        evt_q_index <- 99
+      }
       tkf<-do.call(rbind,lapply(split(tkd,tkd$questionnaire_number),function(mda){
         mdb<-do.call(cbind,lapply(mda$answer_prog[mda$question!=evt_q_index],as.data.frame))
         if(evt_q_index %in% mda$question) {
@@ -367,7 +389,11 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
 
   form_proc$`Mood Questionnaire`$v_a_distance <- sqrt((as.numeric(form_proc$`Mood Questionnaire`$Valence)^2) + (as.numeric(form_proc$`Mood Questionnaire`$Arousal)^2) )
   form_proc$`Sleep Diary`$did_not_sleep<-is.na(form_proc$`Sleep Diary`$questionnaire_type)
-
+  if(!is.null(form_proc$`End questionnaire`)) {
+    names(form_proc$`End questionnaire`)[grepl("X[[i]]",names(form_proc$`End questionnaire`),fixed = T)] <- paste0("V",1:length(which(grepl("X[[i]]",names(form_proc$`End questionnaire`),fixed = T))))
+    form_proc$`End questionnaire`$event_df <- NULL
+    form_proc$`End questionnaire`$number_of_events <- NULL
+  }
   ##summary stats for how much they answered
   q_sum <- data.frame(ID = raw_single$ID,val_arr_dis_avg = mean(form_proc$`Mood Questionnaire`$v_a_distance,na.rm = T))
   e_sum <- data.frame(as.list(apply(form_proc$`Mood Questionnaire`[c("Anxious","Elated","Sad","Irritable","Energetic")],2,function(x){mean(as.numeric(x),na.rm = T)})))
@@ -555,12 +581,14 @@ text_proc <- function(input_text = NULL) {
   output_ls <- as.list(rep(NA,length(input_text)))
   ###Get the video string:
   ###It could be faster to not use index, however, some gsub might work differently
+  type_indx[nchar(input_text)==1] <- "single_digit"
   type_indx[grepl(".mp4",input_text,fixed = T)] <- "video"
   type_indx[grepl("\t",input_text,fixed = T)] <- "tx1"
   type_indx[grepl(", ",input_text,fixed = T)] <- "tx2"
   type_indx[grepl("\n",input_text,fixed = T)] <- "ls1"
   type_indx[grepl("category=",input_text,fixed = T)] <-"ls2"
 
+  output_ls[type_indx=="single_digit"]<-as.numeric(input_text[type_indx=="single_digit"])
   output_ls[type_indx=="video"]<-sapply(input_text[type_indx=="video"],list,USE.NAMES = F)
   output_ls[type_indx=="tx1"]<-lapply(strsplit(input_text[type_indx=="tx1"],"\t"),split_n_name)
   output_ls[type_indx=="tx2"]<-lapply(strsplit(input_text[type_indx=="tx2"],", "),split_n_name)
@@ -569,7 +597,19 @@ text_proc <- function(input_text = NULL) {
   })
   input_text[type_indx=="ls2"] <- gsub("\ncategory=","/NTcategory=",input_text[type_indx=="ls2"],fixed=T)
   output_ls[type_indx=="ls2"]<-lapply(strsplit(input_text[type_indx=="ls2"],"/NT"),function(x){
-    lapply(strsplit(gsub("\n",":",x),","),split_n_name)
+    ##fix some description punchuation problem with ,
+    lapply(strsplit(gsub("\n",":",x),","),function(x){
+      #toclean:
+      xi <-which(!grepl("=",x))
+      if(length(xi)>0){
+        for (i in xi){
+          x[i-1] <- paste(x[i-1],x[i],sep = ", ")
+        }
+        x <- x[-xi]
+      }
+
+      split_n_name(x)
+    })
   })
   if(any(is.na(type_indx))) {
     message("Unsupported string input")
