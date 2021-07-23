@@ -9,8 +9,12 @@ def create_arg_parser():
     parser = argparse.ArgumentParser(description='Tool for pulling subject data into a project.')
     # id argument
     parser.add_argument('--id', help='the subject id', default = None, required=True)
-    # id argument
-    parser.add_argument('--path', help='path to the subject data directory', default = None, required=False)
+    # path argument
+    parser.add_argument('--path', help='path to the subject ema data directory', default = None, required=False)
+    # clinical user path argument
+    parser.add_argument('--clinical_path', help='path to the subject video data directory', default = None, required=False)
+    # clinical user path argument
+    parser.add_argument('--clinical_url', help='url to the subject video data directory', default = None, required=False)
     # gmail argument
     #parser.add_argument('--gmail', help='the gmail associated with the subjects phone and google drive', default = None, required=True)
     # return the parser object
@@ -32,7 +36,7 @@ def main():
     if parsed_args.path != None:
         currDir = parsed_args.path
     # Pull the data and update the subject's json file
-    pull_files(id=id, path=currDir)
+    pull_files(id=id, path=currDir, clinical_path=parsed_args.clinical_path, clinical_url=parsed_args.clinical_url)
 
 # Execution of main method
 if __name__ == '__main__':
