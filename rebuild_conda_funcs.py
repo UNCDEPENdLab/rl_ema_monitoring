@@ -32,19 +32,28 @@ def findReticulatePath():
         # clean up the string to remove special characters
         retPath = retPath.split('\\n')[0]
         retPath = retPath.strip()
-    
-    # return the path to the reticulate conda environment
+    # return the path to the reticulate conda 
+    if "r-reticulate" not in retPath:
+        retPath = "r-reticulate"
     return retPath
 
 # method to install pip into a reticulate conda environment
 def reticulateInstallPip(reticulatePath):
+    retPath = reticulatePath
+    if retPath == None:
+        retPath = 'r-reticulate'
     # create the string for the system call
-    sys_call = "conda install -p {retPath} pip -y".format(retPath=reticulatePath)
+    sys_call = "conda install -p {retPath} pip -y".format(retPath=retPath)
     # run a system call to download pip to the environment
     os.system(sys_call)
 
 # methdo to install a list of python packages inot a reticulate conda environment
 def reticulatePipInstall(reticulatePath, dependListFile):
+    retPath = reticulatePath
+    n_or_p = 'p'
+    if '/' not in retPath:
+        retPath = 'r-reticulate'
+        n_or_p = 'n'
     # initialize the variable for the package list
     packages = None
     # load the package names from the text file as a list
@@ -56,7 +65,7 @@ def reticulatePipInstall(reticulatePath, dependListFile):
     # for each dependecy
     for package in packages:
         # create the string for the system call
-        sys_call = "conda run -p {retPath} pip install {pack}".format(retPath=reticulatePath, pack=package)
+        sys_call = "conda run -{x} {retPath} pip install {pack}".format(x=n_or_p, retPath=retPath, pack=package)
         # run a system call to download pip package to the environment
         os.system(sys_call)
 
@@ -79,3 +88,4 @@ def build_reticulate_conda(dependListFile):
     reticulateInstallPip(retPath)
     # attempt to install packages from pip
     reticulatePipInstall(retPath, dependListFile)
+    

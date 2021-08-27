@@ -64,6 +64,7 @@ if (FALSE) {
 
 #####Functions:
 load_db <- function(dbpath,table_names=NULL) {
+  print(dbpath)
   dbdata = dbConnect(SQLite(), dbpath)
   all_table_names <- dbListTables(dbdata)
   if(is.null(table_names)){
@@ -92,7 +93,7 @@ ms_to_date <- function(ms, t0="1970-01-01", timezone=Sys.timezone()) {
 proc_schedule <- function(schedule_df = NULL,days_limit=35,task_limit=56,force_reproc=FALSE,tz="EST") {
   #load in data using shane's function
   raw_data <- lapply(1:nrow(schedule_df),function(i){
-    dbpath <- paste0(schedule_df$file_path[[i]], '/', schedule_df$file_name[[i]])
+    dbpath <- schedule_df$file_path[[i]] # paste0(schedule_df$file_path[[i]], '/', schedule_df$file_name[[i]])
     db_raw <- load_db(dbpath=dbpath,table_names = NULL)
     db_raw$ID <- schedule_df$subject_id[[i]]
     db_raw$data_mtime <- lubridate::as_datetime(file.info(schedule_df$file_path[[i]])$mtime,tz=tz)
@@ -240,10 +241,10 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
                            relative_accuracy_feed = mean(pr_info_by_block$relative_accuracy_feed,na.rm = T),
                            abs_accurate_nofeed = mean(pr_info_by_block$abs_accurate_nofeed,na.rm = T),
                            relative_accuracy_nofeed = mean(pr_info_by_block$relative_accuracy_nofeed,na.rm = T),
-                           percentage_last_ten=percentage_last_ten,
-                           mean_RT_low_performance=mean_RT_low_performance,
-                           mean_side_bias_low_performance=mean_side_bias_low_performance,
                            stringsAsFactors = F)
+                            #percentage_last_ten=percentage_last_ten,
+                            #mean_RT_low_performance=mean_RT_low_performance,
+                            #mean_side_bias_low_performance=mean_side_bias_low_performance,
 
   ##Part II: questionnaires:
   time_vars <- c("scheduled_time","start_time","completed_time")
@@ -438,7 +439,7 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
     thread=1
   }
   # modify physio_df to have physio_df$file_path include the file name
-  physio_df <- within(physio_df, file_path <- paste0(file_path, '/', file_name))
+  #physio_df <- within(physio_df, file_path <- paste0(file_path, '/', file_name))
 
   exp_out<-lapply(unique(physio_df$subject_id),function(IDx){
     physio_files_new <- physio_df$file_path[physio_df$subject_id==IDx]

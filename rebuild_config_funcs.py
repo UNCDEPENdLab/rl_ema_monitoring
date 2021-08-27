@@ -2,6 +2,8 @@ import argparse
 import os
 import sys
 import json
+import yaml
+import pathlib
 
 # method to separate a file/folder from it's overall path, returns {file/folder name:path} or [file/folder name, path]
 def splitPathName(path, exclude_str=None, list_out=False):
@@ -78,8 +80,26 @@ def add_path_to_json(json_dict, file_name, file_path):
     # return the new json dict
     return json_dict
 
+# method to find get the root path by matching file hierarchy with user-based setting
+def get_root_from_settings():
+    # get the current working directory as a list of strings
+    path_str = os.getcwd()
+    # get the home directory for the user
+    user_home = os.getenv("HOME")
+    # get the list of ema projects
+    proj_list = [user_home + '/.ema_management/' + proj for proj in os.listdir(user_home + '/.ema_management') if os.path.isdir(user_home + '/.ema_management/' + proj)]
+    # get the list of potential projects roots from the project list
+    root_list = [json.load(open(proj + '/root.json', 'r'))[0] for proj in proj_list]
+    # the correct root path will be a substring of the current working directory
+    correct_root = [x for x in root_list if x in path_str]
+    # if more than one root is found, or no root is found, then note the error
+    if len(correct_root) != 1:
+        print("Error: {0} root objects found".format(len(correct_root)))
+    else:
+        return correct_root[0]
+
 # method that builds a config file
-def build_config(rootName=None, rootDir=None):
+def build_config(rootName=None, rootDir=None, file_name='cfg'):
     '''
     This method builds a config file with the following format
         -> each file will have its path from a given root
@@ -95,12 +115,29 @@ def build_config(rootName=None, rootDir=None):
         Similar but not identifcal functionality to a .gitignore file
         Call this file .cfgignore -> each entry should be its own line
     '''
-    root_dir = os.getcwd()
+    # get the 
+    # TODO: modify this to pull the root dir from the home directory config
+    root_dir = get_root_from_settings()
+    repo_dir = root_dir
     # if a root dir is not given
     if rootDir != None:
         # then set the root dir to current working directory
         root_dir = rootDir
-    # if the root name does not equal 
+    # if the config file already exists
+    #if os.path.isfile(root_dir + '/' + file_name + '.json'):
+    #    # read the json file
+    #    old_json = json.load(open(root_dir + '/' + file_name + '.json', 'r'))
+    #    # use its set directory at the root_dir
+    #    root_dir = old_json["path_to_root"]
+    # if the "cfg.yaml" files exists
+    if os.path.isfile(repo_dir + '/' + "cfg.yaml"):
+        # load the yaml file
+        yaml_data = yaml.load(open(repo_dir + '/' + "cfg.yaml", 'r'))
+        # if the file name exists in the cfg.yaml
+        if file_name in yaml_data.keys():
+            #use what it has listed for a root directory
+            root_dir = yaml_data[file_name]
+    # if the root name does not equal None
     if rootName != None:
         # get the new root name
         root_name = os.path.basename(root_dir)[0] + '/' + rootName
@@ -110,6 +147,7 @@ def build_config(rootName=None, rootDir=None):
         root_dir = root_name
         # reset root_name
         root_name = os.path.basename(root_dir)
+        # TODO: also make this update the user-specific project settings file
     else:
         # just asign root_name based on root_dir
         root_name = os.path.basename(root_dir)
@@ -131,21 +169,25 @@ def build_config(rootName=None, rootDir=None):
     # load a list of strings used to exclude some files from being saved from .cfgignore
     # initialize the excludeList variable
     excludeList = None
-    # open .cfgignore
-    with open(root_dir + '/' + '.cfgignore') as exc:
-        # read the lines into the list
-        excludeList = [x.strip() for x in exc.readlines()]
+    # if there is an ignore file
+    if os.path.isfile(repo_dir + '/' + '.cfgignore'):
+        # open .cfgignore
+        with open(repo_dir + '/' + '.cfgignore') as exc: # root_dir
+            # read the lines into the list
+            excludeList = [x.strip() for x in exc.readlines()]
     # iterate through all of the potential dirpaths
     for (dirpath, dirnames, filenames) in os.walk(root_dir):
         # exclusion boolean
         skip_dir = False
-        # check for exclusion criteria
-        for exclude in excludeList:
-            # if an exlusion string is found
-            if exclude in dirpath:
-                # set the skip boolean to true
-                skip_dir = True
-                break
+        # if there is exclusion criteria
+        if excludeList != None:
+            # check for exclusion criteria
+            for exclude in excludeList:
+                # if an exlusion string is found
+                if exclude in dirpath:
+                    # set the skip boolean to true
+                    skip_dir = True
+                    break
         # if an exclusion string was not found
         if skip_dir == False:
             # for each filename
@@ -164,5 +206,12 @@ def build_config(rootName=None, rootDir=None):
     #    with open(root_dir + '/' + 'cfg.json', 'w') as fp:
     #        pass
     # open and dump the json_data dict into the new cfg.json file
-    with open(root_dir + '/' + 'cfg.json', 'w+') as json_file:
+    #if file_name == None:
+    #    # if a filename is not given, will be set the to base cfg.json file (for inheriting functions)
+    #    with open(root_dir + '/' + 'cfg.json', 'w+') as json_file:
+    #        json.dump(json_data, json_file, indent=4)
+    #else:
+    # if a filename is not given, will be set the to base cfg.json file (for inheriting functions)
+    with open(repo_dir + '/' + file_name + '.json', 'w+') as json_file:
         json.dump(json_data, json_file, indent=4)
+

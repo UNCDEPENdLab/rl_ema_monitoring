@@ -10,6 +10,9 @@
 __pycache__
 debug.log
 cfg.json
+cgf.yaml
+data.json
+videos.json
 conda-env
 .Rproj.user
 .DS_Store

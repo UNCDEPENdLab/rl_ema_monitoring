@@ -1,1 +1,5 @@
 pydrive
+pycap
+pyyaml
+pandas
+plotly

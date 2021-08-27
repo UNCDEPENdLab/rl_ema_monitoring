@@ -1,0 +1,7 @@
+lubridate
+dplyr
+assertthat
+rjson
+tinsel
+RSQLite
+tidyverse

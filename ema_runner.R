@@ -61,6 +61,13 @@
 #     Path to output the schedule and physio data files to.
 #     default: Path given by the dataPath argument.
 #
+#   cleanup:
+#     Whether or not to ru  the cleanup of the data and graphs.
+#     default: TRUE -> will run the data cleanup
+#     other: 
+#       FALSE -> will not cleanup the data
+#     Note: will run if render is set to TRUE
+#
 #   render:
 #     Whether or not to render the landing page or subject pages.
 #     default: TRUE -> will render entire site
@@ -88,7 +95,7 @@
 
 # import dependent packages
 library("pacman")
-pacman::p_load(reticulate, RSQLite, dplyr, tidyr, lubridate, rjson, R.utils, REDCapR)
+pacman::p_load(reticulate, RSQLite, dplyr, tidyr, lubridate, rjson, R.utils, REDCapR, zoo)
 
 setwd("dashboard/study_management")
 
@@ -101,13 +108,13 @@ source("../../ECG_Dashboard2.R")
 source("../../EEG_Dashboard.R")
 
 # main function to be run
-run_ema <- function(root=NULL, dataPath=getwd(), subjects="all", pull=TRUE, sched=TRUE, physio=TRUE, redcap=TRUE, nthreads=4, output=NULL, render=TRUE, site=NULL, force_proc=FALSE, force_reload=FALSE, save_lite=FALSE) {
+run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=TRUE, redcap=TRUE, nthreads=4, output=NULL, render=TRUE, force_proc=FALSE, force_reload=FALSE, save_lite=FALSE, cleanup_data=TRUE) {
   # SET ROOT
   ## Need to refactor the repo first ##
   #if(is.null(root) != TRUE) {
   #  setwd(root)
   #}
-  
+  # SET THE REPO DIR AT THE CURRENT DIRECTORY
   # handle that physio depends on schedule
   if(physio == TRUE) {
     sched = TRUE
@@ -117,11 +124,18 @@ run_ema <- function(root=NULL, dataPath=getwd(), subjects="all", pull=TRUE, sche
   #  redcap = TRUE
   #}
   # Currently overrides the data directory to known test machine path
-  dataPath <- "/Users/shanebuckley/desktop/rl_ema_monitoring/data"
+  #dataPath <- "/Users/shanebuckley/desktop/rl_ema_monitoring/data"
+  dataPath <<- get_cfg_var_p(var="data")
+  #print(dataPath)
+  videoPath <<- get_cfg_var_p(var="videos")
+  videoURL <<- get_cfg_var_p(var="video_url")
+  site <<- get_cfg_var_p(var="site_path")
   # Currently overrides root to be rl_ema_monitoring
-  root <- "rl_ema_monitoring"
+  #root <- "rl_ema_monitoring"
+  root <- basename(get_cfg_var_p(var="root"))
   # Get the list of active subjects (statically set for now)
-  active <- getActiveList(root_dir = root)
+  active <<- getActiveList(root_dir = root)
+  print(active)
   # get the list of subjects to run
   if(subjects != "all") {
     #@subjects <- active
@@ -132,6 +146,13 @@ run_ema <- function(root=NULL, dataPath=getwd(), subjects="all", pull=TRUE, sche
   #  
   #}
   
+  # find the root path
+  root_path <<- paste0(findRoot(root), '/', root)
+  # update path information -> need to run a rebuild for every json config at the root (currently: cfg, data, videos)
+  build_config(rootDir=root_path) # rebuilds the project's cfg.json
+  build_config(file_name="data") # rebuilds the data.json
+  build_config(file_name="videos") # rebuilds the videos.json
+  
   # PULL DATA FROM GDRIVES
   ## Need to implement multithreaded subject pull to accomodate updating json ##
   if(pull == TRUE) {
@@ -139,14 +160,16 @@ run_ema <- function(root=NULL, dataPath=getwd(), subjects="all", pull=TRUE, sche
     # pull data
     # iterate through the active subjects
     for(subj in active) {
-      pull_files(id=subj, path=dataPath)
+      pull_files(id=subj, path=dataPath, clinical_path=videoPath, clinical_url=videoURL)
     }
   }
   
-  # find the root path
-  root_path <- paste0(findRoot(root), '/', root)
-  # update path information
-  build_config(rootDir=root_path)
+  # update path information -> need to run a rebuild for every json config at the root (currently: cfg, data, videos)
+  build_config(rootDir=root_path) # rebuilds the project's cfg.json
+  build_config(file_name="data") # rebuilds the data.json
+  build_config(file_name="videos") # rebuilds the videos.json
+  # just call rebuild_project.py through a system call
+  #system(paste0("python ", get_cfg_var_p(var="root"), '/rebuild_project.py'))
   
   # GET DATA SUMMARY
   path_info <- get_ema_subject_metadata(root_dir = root)
@@ -157,7 +180,7 @@ run_ema <- function(root=NULL, dataPath=getwd(), subjects="all", pull=TRUE, sche
     print("Running REDCap data pull...")
     # Get the credentials (standard path for now)
     
-    creds <- get_redcap_creds(cred_path="../../data/redcap.json")
+    creds <- get_redcap_creds(cred_path=paste0(dataPath, "/redcap.json"))
     # Load the data
     redcap_data <<- redcap_pull(uri=creds$uri, token=creds$token, active=active)
   }
@@ -197,6 +220,38 @@ run_ema <- function(root=NULL, dataPath=getwd(), subjects="all", pull=TRUE, sche
       # GET PHYSIO DATA
       output <<- output
       run_physio(output=output)
+    }
+  }
+  
+  # update path information -> need to run a rebuild for every json config at the root (currently: cfg, data, videos)
+  build_config(rootDir=root_path) # rebuilds the project's cfg.json
+  build_config(file_name="data") # rebuilds the data.json
+  build_config(file_name="videos") # rebuilds the videos.json
+  
+  # load the schedule and physio if they are not loaded by previous steps
+  if(!exists("output_physio")){
+    load(paste0(dataPath, "/output_physio.Rdata"))
+    output_physio <<- output_physio
+  } else if(is.null(output_physio)) {
+    load(paste0(dataPath, "/output_physio.Rdata"))
+    output_physio <<- output_physio
+  }
+  
+  #print("here")
+  #print(output)
+  if(!exists("output")){
+    load(paste0(dataPath, "/output_schedule.Rdata"))
+    output <<- output
+  } else if(is.null(output)) {
+    load(paste0(dataPath, "/output_schedule.Rdata"))
+    output <<- output
+  }
+  
+  if(cleanup_data == TRUE){
+    # to run the cleanup function, loop through the subject IDs, resourcing cleanup, re-running it with the current sid
+    for(s in active) {
+      subj <<- s
+      source("dashboard_cleanup.R")
     }
   }
   
@@ -251,5 +306,11 @@ run_ema <- function(root=NULL, dataPath=getwd(), subjects="all", pull=TRUE, sche
 }
 
 #run_ema(pull=FALSE, sched=TRUE, physio=FALSE, redcap=FALSE, force_proc=TRUE, nthreads = 1, site="/Users/shanebuckley/desktop/rl_ema_monitoring/site", render=FALSE) # , force_reload=TRUE
-run_ema(redcap=TRUE, save_lite=TRUE, render=FALSE, pull=TRUE, sched=TRUE, physio=TRUE, force_proc=TRUE, force_reload=TRUE, nthreads = 4, site="/Users/shanebuckley/desktop/rl_ema_monitoring/site") # , force_reload=TRUE
+#run_ema(redcap=TRUE, save_lite=TRUE, render=FALSE, pull=TRUE, sched=TRUE, physio=TRUE, force_proc=TRUE, force_reload=TRUE, nthreads = 4, site="/Users/shanebuckley/desktop/rl_ema_monitoring/site") # , force_reload=TRUE
+# pull only
+#run_ema(redcap=FALSE, save_lite=FALSE, render=FALSE, pull=TRUE, sched=FALSE, physio=FALSE, nthreads = 4, site="/Users/shanebuckley/desktop/rl_ema_monitoring/site")
+# everything but the render and redcap pull
+#run_ema(redcap=FALSE, save_lite=TRUE, render=FALSE, pull=TRUE, sched=TRUE, physio=TRUE, force_proc=TRUE, force_reload=TRUE, nthreads = 4, site="/Users/shanebuckley/desktop/rl_ema_monitoring/site")
+# only run cleanup layer
+run_ema(redcap=FALSE, save_lite=FALSE, render=FALSE, pull=FALSE, sched=FALSE, physio=FALSE, force_proc=FALSE, force_reload=FALSE, cleanup_data=TRUE, nthreads = 4)
 #subjects=list("221604", "221849"),
