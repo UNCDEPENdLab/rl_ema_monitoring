@@ -38,6 +38,7 @@ if(exists("checklist")) {
 # output the sleep table to a csv
 write_csv(diary, paste0(dataPath, "/Subjects/", subj, "/reports/sleep.csv"))
 saveRDS(diary, paste0(dataPath, "/Subjects/", subj, "/reports/sleep.rds"))
-# save the sleep_dist for the rmd as an rdata file
-saveRDS(sleep_dist, paste0(dataPath, "/Subjects/", subj, "/reports/sleep_dist.rds"))
+
+# save the summaries (sleep_dist, insomnia_ratio) for the rmd as an rdata file
+saveRDS(name_list(sleep_dist, insomnia_ratio), paste0(dataPath, "/Subjects/", subj, "/reports/sleep_summaries.rds"))
 
