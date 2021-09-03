@@ -36,5 +36,6 @@ if(exists("checklist")) {
 # output the sleep table to a csv
 write_csv(mood, paste0(dataPath, "/Subjects/", subj, "/reports/mood.csv"))
 saveRDS(mood, paste0(dataPath, "/Subjects/", subj, "/reports/mood.rds"))
-# save the sleep_dist for the rmd as an rdata file
-saveRDS(val_avg, paste0(dataPath, "/Subjects/", subj, "/reports/val_avg.rds"))
+
+# save the val_avg for the rmd as an rdata file
+saveRDS(name_list(val_avg), paste0(dataPath, "/Subjects/", subj, "/reports/mood_summaries.rds"))
