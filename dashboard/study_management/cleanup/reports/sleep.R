@@ -20,16 +20,14 @@ if(dir.exists(paste0(dataPath, "/Subjects/", subj, "/reports")) != TRUE){
 }
 
 # create the unchecked diary csv if there is data to do so
-if(exists("checklist")) {
+if (exists("checklist")) {
   diary <- left_join(diary,checklist, by="Date")
   diary_unchecked <- filter(diary,`Checklist Complete?`=="No")
-  diary_unchecked <- transmute(diary_unchecked, "Date"=Date, "Problems"=Sleep, "Notes"=`Sleep Notes`, "Didn't sleep"=did_not_sleep, "Sleep latency"=sleep_latency, "Woke many times"=woke_many_times, "Woke early"=woke_early, "Overall"=overall)
   diary_check <- output$redcap %>% filter(ID==subj) %>% select(`Sleep`,`Sleep Notes`,Date)
   diary_check$Date <- as.character(diary_check$Date)
   diary$Date <- as.character(diary$Date)
   diary <- left_join(diary, diary_check, by="Date")#adding RA check columns
   diary <- arrange(diary, -row_number()) #make the most recent block come first
-  diary <- transmute(diary, "Date"=Date,"Problems"=Sleep, "Notes"=`Sleep Notes`, "Didn't sleep"=did_not_sleep, "Sleep latency"=sleep_latency, "Woke many times"=woke_many_times, "Woke early"=woke_early, "Overall"=overall)
   # output the sleep table to a csv
   write_csv(diary, paste0(dataPath, "/Subjects/", subj, "/reports/sleep_unchecked.csv"))
   saveRDS(diary, paste0(dataPath, "/Subjects/", subj, "/reports/sleep_unchecked.rds"))
