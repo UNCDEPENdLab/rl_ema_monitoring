@@ -1,0 +1,2 @@
+sleep:
+  sleep_dist_gray_gt_x: 50 #gray out reports above this threshold in sleep summary

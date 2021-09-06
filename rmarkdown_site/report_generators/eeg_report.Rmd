@@ -1,0 +1,17 @@
+```{r eeg-data, include=FALSE}
+eeg_data <- get_eeg_data(id, data_dir)
+```
+
+\newline
+### EEG signal quality {.tabset}
+#### Unchecked
+
+```{r eeg-unchecked-table, echo=FALSE, warning=FALSE, results="asis"}
+#EEG signal table
+render_eeg_table(eeg_data, "unchecked")
+```
+
+#### All blocks
+```{r eeg-unchecked-table, echo=FALSE, warning=FALSE, results="asis"}
+render_eeg_table(eeg_data, "all")
+```
