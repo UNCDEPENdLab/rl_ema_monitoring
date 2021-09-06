@@ -14,6 +14,12 @@ get_cleaned_data <- function(id, data_dir, what) {
     main_file <- dashboard_file_check(id, data_dir, "hr.rds", "heart rate")
     unchecked_file <- dashboard_file_check(id, data_dir, "hr_unchecked.rds", "unchecked heart rate", signal="none")
     summaries_file <- dashboard_file_check(id, data_dir, "hr_summaries.rds", "heart rate summaries", signal="none") #not used at present
+  } else if (what=="eeg") {
+    main_file <- dashboard_file_check(id, data_dir, "eeg.rds", "EEG")
+    unchecked_file <- dashboard_file_check(id, data_dir, "eeg_unchecked.rds", "unchecked EEG", signal="none")
+    summaries_file <- dashboard_file_check(id, data_dir, "eeg_summaries.rds", "EEG summaries", signal="none") #not used at present
+  } else {
+    stop("Unclear what ")
   }
   
   if (!is.null(main_file)) ret_list[["all"]] <- readRDS(main_file)
@@ -23,11 +29,6 @@ get_cleaned_data <- function(id, data_dir, what) {
   return(ret_list)
 }
 
-get_eeg_data <- function(id, data_dir) {
-  eeg_file <- dashboard_file_check(id, data_dir, "eeg.rds", "EEG signal quality")
-  
-  
-}
 
 # helper function to check for existence of expected file in subjects reports
 dashboard_file_check <- function(id, data_dir, file_name, file_desc, signal="error") {

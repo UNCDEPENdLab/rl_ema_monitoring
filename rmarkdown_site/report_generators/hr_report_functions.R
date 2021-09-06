@@ -19,7 +19,7 @@ render_hr_table <- function(hr_data, field=NULL) {
       per_Good=colDef(name="Good signal %", style=function(value) list(background=ifelse(value > 90, "#C6EFCE", "#ffc7ce")))
     ),
     borderless = TRUE,
-    defaultSorted = "Date",
+    defaultSorted = c("Date", "Block"),
     defaultSortOrder = "desc",
     fullWidth = FALSE
   )

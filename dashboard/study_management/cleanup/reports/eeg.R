@@ -13,12 +13,10 @@ eeg_row_ordered$per_Ch_4 <- eeg_row_ordered$per_Ch_4*100
 eeg_row_ordered$per_Ch_4 <- round(eeg_row_ordered$per_Ch_4)
 eeg_row_ordered$avg <- eeg_row_ordered$avg*100
 eeg_row_ordered$avg <- round(eeg_row_ordered$avg)
-eeg_col_named <- transmute(eeg_row_ordered, "Date"=Date, "Block"=Block, "Overall % good"=avg, "Ch. 1 % good"=per_Ch_1, "Ch. 2 % good"=per_Ch_2, "Ch. 3 % good"=per_Ch_3, "Ch. 4 % good"=per_Ch_4) 
 
 # create the unchecked mood csv if there is data to do so
 if(exists("checklist")) {
   eeg_unchecked <- filter(eeg_row_ordered, checklist=="No")
-  eeg_unchecked <- transmute(eeg_unchecked, "Date"=Date, "Block"=Block, "Overall % good"=avg, "Ch. 1 % good"=per_Ch_1, "Ch. 2 % good"=per_Ch_2, "Ch. 3 % good"=per_Ch_3, "Ch. 4 % good"=per_Ch_4)
   write_csv(eeg_unchecked, paste0(dataPath, "/Subjects/", subj, "/reports/eeg_unchecked.csv"))
   saveRDS(eeg_unchecked, paste0(dataPath, "/Subjects/", subj, "/reports/eeg_unchecked.rds"))
 }

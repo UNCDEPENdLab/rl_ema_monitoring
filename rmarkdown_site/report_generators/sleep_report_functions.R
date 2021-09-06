@@ -43,7 +43,7 @@ render_sleep_table <- function(sleep_data, field=NULL) {
       overall = gray_fmt(name="Overall")
     ),
     borderless = TRUE,
-    defaultSorted = "Date",
+    defaultSorted = c("Date"),
     defaultSortOrder = "desc",
     fullWidth = FALSE
   )

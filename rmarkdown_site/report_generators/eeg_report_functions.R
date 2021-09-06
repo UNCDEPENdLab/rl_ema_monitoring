@@ -1,14 +1,27 @@
-# generate reactable of hr data for display
-render_hr_table <- function(hr_data, field=NULL) {
-  stopifnot(field %in% names(hr_data))
-  if (is.null(hr_data[[field]])) {
+# generate reactable of eeg data for display
+render_eeg_table <- function(eeg_data, field=NULL) {
+  stopifnot(field %in% names(eeg_data))
+  if (is.null(eeg_data[[field]])) {
     dashboard_message("Nothing to display!")
     return(invisible(NULL))
   }
   
-  to_render <- hr_data[[field]] %>%
-    dplyr::select(Date, Block, per_Good)
-
+  to_render <- eeg_data[[field]] %>%
+    dplyr::select(Date, Block, avg, per_Ch_1, per_Ch_2, per_Ch_3, per_Ch_4)
+  
+  eeg_ch_fmt <- function(..., thresh=100) {
+    colDef(
+      style=function(value) {
+        if (value < thresh) {
+          list(background = dds$eeg$bad_ch_colors$background, color=dds$eeg$bad_ch_colors$font) #flag bad cells
+        } else {
+          list(background = dds$eeg$good_ch_colors$background, color=dds$eeg$good_ch_colors$font)
+        }
+      },
+      ...
+    )
+  }
+  
   tbl <- reactable(
     data = to_render,
     theme = journal(),
@@ -16,10 +29,14 @@ render_hr_table <- function(hr_data, field=NULL) {
     columns=list(
       Date=colDef(style=list(fontWeight = "bold")),
       Block=colDef(style=list(fontWeight = "bold")),
-      per_Good=colDef(name="Good signal %", style=function(value) list(background=ifelse(value > 90, "#C6EFCE", "#ffc7ce")))
+      avg=eeg_ch_fmt(name="Overall %", thresh = dds$eeg$overall_bad_lt_x),
+      per_Ch_1=eeg_ch_fmt(name="Ch. 1 % good", thresh = dds$eeg$ch_bad_lt_x),
+      per_Ch_2=eeg_ch_fmt(name="Ch. 2 % good", thresh = dds$eeg$ch_bad_lt_x),
+      per_Ch_3=eeg_ch_fmt(name="Ch. 3 % good", thresh = dds$eeg$ch_bad_lt_x),
+      per_Ch_4=eeg_ch_fmt(name="Ch. 4 % good", thresh = dds$eeg$ch_bad_lt_x)
     ),
     borderless = TRUE,
-    defaultSorted = "Date",
+    defaultSorted = c("Date", "Block"),
     defaultSortOrder = "desc",
     fullWidth = FALSE
   )
@@ -27,11 +44,11 @@ render_hr_table <- function(hr_data, field=NULL) {
   tbl
 }
 
-get_hr_data <- function(id, data_dir) {
-  hr_data <- get_cleaned_data(id, data_dir, "hr")
+get_eeg_data <- function(id, data_dir) {
+  eeg_data <- get_cleaned_data(id, data_dir, "eeg")
   
-  # hr-specific transformations applied to both checked and unchecked
-  wrangle_hr <- function(df) {
+  # eeg-specific transformations applied to both checked and unchecked
+  wrangle_eeg <- function(df) {
     df %>%    
       mutate(
         Date=dashboard_date(Date),
@@ -39,15 +56,26 @@ get_hr_data <- function(id, data_dir) {
       arrange(desc(Date))
   }
   
-  hr_data$all <- hr_data$all %>% wrangle_hr()
+  eeg_data$all <- eeg_data$all %>% wrangle_eeg()
   
-  if (!is.null(hr_data$unchecked)) {
-    hr_data$unchecked <- hr_data$unchecked %>% wrangle_hr()
+  if (!is.null(eeg_data$unchecked)) {
+    eeg_data$unchecked <- eeg_data$unchecked %>% wrangle_eeg()
   }
   
-  return(hr_data)
+  return(eeg_data)
 }
 
 
 
 ####### LEFTOVERS FROM MASTER_GENERATOR.RMD and other sources
+
+
+# kbl(eeg_unchecked) %>%
+#   kable_styling(fixed_thead = T) %>%
+#   column_spec(1, bold = T) %>%
+#   column_spec(2, bold = T) %>%
+#   column_spec(3, background=if_else(eeg_unchecked$`Overall % good`>80, "#C6EFCE", "#ffc7ce")) %>%
+#   column_spec(4, color=if_else(eeg_unchecked[4]>70, "#D8D8D8", "black")) %>%
+#   column_spec(5, color=if_else(eeg_unchecked[5]>70, "#D8D8D8", "black")) %>%
+#   column_spec(6, color=if_else(eeg_unchecked[6]>70, "#D8D8D8", "black")) %>%
+#   column_spec(7, color=if_else(eeg_unchecked[7]>70, "#D8D8D8", "black"))
