@@ -1,0 +1,17 @@
+```{r hr-data, include=FALSE}
+source("hr_report_functions.R")
+hr_data <- get_hr_data(id, data_dir)
+```
+
+\newline
+### Heart rate {.tabset}
+#### Unchecked
+
+```{r hr-unchecked-table, echo=FALSE, warning=FALSE, results="asis"}
+render_hr_table(hr_data, "unchecked")
+```
+
+#### All blocks
+```{r hr-all-table, echo=FALSE, warning=FALSE, results="asis"}
+render_hr_table(hr_data, "all")
+```

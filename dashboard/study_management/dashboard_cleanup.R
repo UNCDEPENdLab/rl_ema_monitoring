@@ -7,6 +7,12 @@
 
 #library(plyr)
 
+# little helper function to create named list from objects
+name_list <- function(...) {
+  vnames <- as.character(match.call())[-1]
+  return(setNames(list(...), vnames))
+}
+
 # This script should only be run after sourcing data_management_functions.R
 
 # function to convert lists in a dataframe to character vectors

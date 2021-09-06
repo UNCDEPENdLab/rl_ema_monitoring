@@ -1,0 +1,14 @@
+sleep:
+  sleep_dist_gray_gt_x: 50 #gray out reports above this threshold in sleep summary
+
+eeg:
+  overall_bad_lt_x: 80 # flag when overall (average of 4 channels) is below 80%
+  ch_bad_lt_x: 70 # flag when a single channel is below 70%
+
+  #display colors for good and bad channels
+  bad_ch_colors:
+    background: "#FFC7CE"
+    font: "black"
+  good_ch_colors:
+    background: "#C6EFCE"
+    font: "#7F7F7F"

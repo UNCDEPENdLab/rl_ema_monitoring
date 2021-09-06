@@ -1,0 +1,14 @@
+name: "Momentum RL-EMA Dashboard"
+output_dir: "rendered_site"
+navbar:
+  title: "Momentum Dashboard"
+  left:
+    - text: "Subject Overview"
+      href: index.html
+    - text: "About"
+      href: about.html
+output:
+  html_document:
+    theme: spacelab
+    highlight: textmate
+    code_folding: hide
