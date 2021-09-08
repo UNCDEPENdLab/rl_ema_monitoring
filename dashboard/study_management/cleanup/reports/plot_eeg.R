@@ -52,14 +52,15 @@ for (i in num_block) {
         eeg_plot <- ggplot(dq0, aes(t0,trial,fill=V)) + geom_tile() + facet_wrap(~channel) + 
           scale_x_continuous(breaks=c(0,a2f,max(dq0$t0)),labels=c(-500,0,1500),name='time [ms]') +
           geom_vline(xintercept = a2f, lty = "dashed", color = "#FF0000", size = 2) + 
-          scale_fill_viridis_c(option = "plasma",begin=0,end=1)
-      # save the image
-      #plotly::export(p=eeg_plot, file=paste0(site, "/", fpath, "/", fig_name))
-      #plotly::orca(p=eeg_plot, file=paste0(site, "/", fpath, "/", fig_name))
-      #ggsave(filename=fig_name, path=fpath, plot=eeg_plot)
-      png(paste0(fpath, "/", fig_name))
-      print(eeg_plot)
-      dev.off()
+          scale_fill_viridis_c(option = "plasma",begin=0,end=1) +
+          ggtitle(sprintf("Subject %s EEG Block %s", subj, toString(i)))
+        # save the image
+        #plotly::export(p=eeg_plot, file=paste0(site, "/", fpath, "/", fig_name))
+        #plotly::orca(p=eeg_plot, file=paste0(site, "/", fpath, "/", fig_name))
+        #ggsave(filename=fig_name, path=fpath, plot=eeg_plot)
+        png(paste0(fpath, "/", fig_name), res=300, width=8, height=8, units="in")
+        print(eeg_plot)
+        dev.off()
       })
     }
   })

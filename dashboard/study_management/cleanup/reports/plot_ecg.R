@@ -35,8 +35,12 @@ for (i in num_block) {
       # create the plot
       #eeg_plot <- NULL
       try({
-        ecg_plot <- ggplot(df0, aes(x=t0,y=mean)) + geom_line() + geom_point() + geom_ribbon(aes(ymin = mean-st_err, ymax = mean+st_err), linetype=2, alpha=0.1) + scale_x_continuous(breaks=c(0,a2f,max(df$t0)),labels=c(-1000,0,100000),name='time [ms]') + geom_vline(xintercept = a2f, lty = "dashed", color = "#FF0000", size = 2)
-        png(paste0(fpath, "/", fig_name))
+        ecg_plot <- ggplot(df0, aes(x=t0,y=mean)) + geom_line() + geom_point() + 
+          geom_ribbon(aes(ymin = mean-st_err, ymax = mean+st_err), linetype=2, alpha=0.1) + 
+          scale_x_continuous(breaks=c(0,a2f,max(df$t0)),labels=c(-1000,0,100000),name='time [ms]') + 
+          geom_vline(xintercept = a2f, lty = "dashed", color = "#FF0000", size = 2) +
+          ggtitle(sprintf("Subject %s ECG Block %s", subj, toString(i)))
+        png(paste0(fpath, "/", fig_name), res=300, width=7, height=7, units="in")
         print(ecg_plot)
         dev.off()
       })
