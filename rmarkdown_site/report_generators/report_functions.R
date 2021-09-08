@@ -9,7 +9,7 @@ get_cleaned_data <- function(id, data_dir, what) {
   if (what == "sleep") {
     main_file <- dashboard_file_check(id, data_dir, "sleep.rds", "sleep diary")
     unchecked_file <- dashboard_file_check(id, data_dir, "sleep_unchecked.rds", "unchecked sleep diary", signal="none")
-    summaries_file <- dashboard_file_check(id, data_dir, "sleep_summaries.rds", "sleep summaries", signal="warning")
+    summaries_file <- dashboard_file_check(id, data_dir, "sleep_summaries.rds", "sleep summaries", signal="warning") # should exist
   } else if (what == "hr") {
     main_file <- dashboard_file_check(id, data_dir, "hr.rds", "heart rate")
     unchecked_file <- dashboard_file_check(id, data_dir, "hr_unchecked.rds", "unchecked heart rate", signal="none")
@@ -18,6 +18,10 @@ get_cleaned_data <- function(id, data_dir, what) {
     main_file <- dashboard_file_check(id, data_dir, "eeg.rds", "EEG")
     unchecked_file <- dashboard_file_check(id, data_dir, "eeg_unchecked.rds", "unchecked EEG", signal="none")
     summaries_file <- dashboard_file_check(id, data_dir, "eeg_summaries.rds", "EEG summaries", signal="none") #not used at present
+  } else if (what == "task_performance") {
+    main_file <- dashboard_file_check(id, data_dir, "performance.rds", "task performance")
+    unchecked_file <- dashboard_file_check(id, data_dir, "performance_unchecked.rds", "unchecked task performance", signal="none")
+    summaries_file <- dashboard_file_check(id, data_dir, "performance_summaries.rds", "task performance summaries", signal="none") #not used at present
   } else {
     stop("Unclear what ")
   }

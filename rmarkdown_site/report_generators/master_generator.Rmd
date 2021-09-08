@@ -403,68 +403,7 @@ compliance_pf$renderPivot()
 ```
 
 
-\newline
-### Task performance {.tabset}
-#### Unchecked
-```{r perf table un, echo=FALSE, warning=FALSE}
-#Task performance table
-if(nrow(task_unchecked) > 0){
-  kbl(task_unchecked) %>%
-  kable_styling(fixed_thead = T) %>%
-  column_spec(1, bold = T) %>%
-  column_spec(2, bold = T) %>%
-  column_spec(3, background=case_when(task_unchecked[,3]>80 ~ "#C6EFCE",task_unchecked[,3]>70 & task_unchecked[,3]<=80 ~ "#FFEB9C", task_unchecked[,3]<70 ~ "#ffc7ce")) %>%
-  column_spec(4, background=case_when(task_unchecked[,4]>80 ~ "#C6EFCE",task_unchecked[,4]>70 & task_unchecked[,4]<=80 ~ "#FFEB9C", task_unchecked[,4]<70 ~ "#ffc7ce")) %>%
-  column_spec(5, color=ifelse(task_unchecked[,5] > 55 | is.na(task_unchecked[,5]), "#D8D8D8", "black")) %>%
-  column_spec(6, color=ifelse(task_unchecked[,6] > 55 | is.na(task_unchecked[,6]), "#D8D8D8","black")) %>%
-  column_spec(7, color=ifelse(task_unchecked[,7] > 1400, "#E6E6E6","black")) %>%
-  column_spec(8, color=ifelse(task_unchecked[,8] >= 67 | task_unchecked[,8] < 67, "#D8D8D8","black")) %>%
-  column_spec(9, color=ifelse(task_unchecked[,9] == "No", "#D8D8D8","black"))
-}
-```
 
-#### All blocks
-```{r perf table, echo=FALSE, warning=FALSE}
-if(nrow(task) > 0){
-  kbl(task) %>%
-  kable_styling(fixed_thead = T) %>%
-  column_spec(1, bold = T) %>%
-  column_spec(2, bold = T) %>%
-  column_spec(3, background=case_when(task[,3]>80 ~ "#C6EFCE",task[,3]>70 & task[,3]<=80 ~ "#FFEB9C", task[,3]<70 ~ "#ffc7ce")) %>%
-  column_spec(4, background=case_when(task[,4]>80 ~ "#C6EFCE",task[,4]>70 & task[,4]<=80 ~ "#FFEB9C", task[,4]<70 ~ "#ffc7ce")) %>%
-  column_spec(5, color=ifelse(task[,5] > 55 | is.na(task[,5]), "#D8D8D8", "black")) %>%
-  column_spec(6, color=ifelse(task[,6] > 55 | is.na(task[,6]), "#D8D8D8","black")) %>%
-  column_spec(7, color=ifelse(task[,7] > 1400, "#E6E6E6","black")) %>%
-  column_spec(8, color=ifelse(task[,8] >= 67 | task[,8] < 67, "#D8D8D8","black")) %>%
-  column_spec(9, color=ifelse(task[,9] == "No", "#D8D8D8","black"))
-}
-```
-
-
-\newline
-### HR {.tabset}
-#### Unchecked
-```{r unch hr, echo=FALSE, warning=FALSE}
-#HR table
-if(nrow(hr_unchecked) > 0){
-  kbl(hr_unchecked) %>%
-  kable_styling(fixed_thead = T) %>%
-  column_spec(1, bold = T) %>%
-  column_spec(2, bold = T) %>%
-  column_spec(3, background=if_else(hr_unchecked[3]>90, "#C6EFCE", "#ffc7ce"))
-}
-```
-
-#### All blocks
-```{r hr table, echo=FALSE, warning=FALSE}
-if(nrow(hr_ordered) > 0){
-  kbl(hr_ordered) %>%
-  kable_styling(fixed_thead = T) %>%
-  column_spec(1, bold = T) %>%
-  column_spec(2, bold = T) %>%
-  column_spec(3, background=if_else(hr_ordered[3]>90, "#C6EFCE", "#ffc7ce"))
-}
-```
 
 
 \newline
