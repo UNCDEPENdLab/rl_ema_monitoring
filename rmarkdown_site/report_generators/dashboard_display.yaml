@@ -1,0 +1,94 @@
+#### Task compliance table
+task_compliance:
+  delay:
+    good:
+      min: 0
+      max: 120
+      background: "#C6EFCE"
+      text: "#006100"
+    bad:
+      min: 240
+      background: "#FFEB9C"
+      text: "#9C5700"
+
+#### Task performance table
+task_performance:
+  objective_feedback:
+    good:
+      min: 80 # 80% or more correct is good
+      background: "#C6EFCE"
+      text: "black"
+    mediocre: # between 70% and 80%
+      background: "#FFEB9C"
+      text: "black"
+    bad:
+      max: 70 # less than 70% is bad
+      background: "#FFC7CE"
+      text: "black"
+  no_feedback:
+    bad:
+      max: 55 # in no feedback trials, < 55% is bad
+      background: "white"
+      text: "black"
+    good:
+      background: "white"
+      text: "#B3B3B3"
+  rt:
+    bad:
+      max: 1400 # RTs of 1400ms or less are considered too fast
+      background: "white"
+      text: "black"
+    good:
+      background: "white"
+      text: "#999999" # (gray60) gray out good RTs
+  side_bias:
+    bad:
+      min: 17 # 17% or higher deviation from 50%
+      background: "white"
+      text: "black"
+    good:
+      background: "white"
+      text: "#B3B3B3" # (gray70) gray out acceptable side distribution
+  intoxicated:
+    "yes":
+      background: "white"
+      text: "black"
+    "no":
+      background: "white"
+      text: "#B3B3B3" # (gray70) gray out not intoxicated samples
+
+#### Heart rate table
+hr:
+  hr_bad_lt_x: 90 # flag when HR quality is below 90%
+
+  #popup window size (pixels)
+  plot_window_height: 900
+  plot_window_width: 900
+
+  good_hr_colors:
+    background: "white"
+    text: "#ffc7ce"
+  bad_hr_colors:
+    background: "#FFC7CE"
+    text: "black"
+
+sleep:
+  sleep_dist_gray_gt_x: 50 #gray out reports above this threshold in sleep summary
+
+eeg:
+  #thresholds
+  overall_bad_lt_x: 80 # flag when overall (average of 4 channels) is below 80%
+  ch_bad_lt_x: 70 # flag when a single channel is below 70%
+
+  #popup window size (pixels)
+  plot_window_height: 900
+  plot_window_width: 900
+
+  #display colors for good and bad channels
+  bad_ch_colors:
+    background: "#FFC7CE"
+    text: "black"
+  good_ch_colors:
+    #background: "#C6EFCE"
+    background: "#e5e5e5"
+    text: "#7F7F7F"

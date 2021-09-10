@@ -21,8 +21,9 @@ if (nrow(test_learning)!=0){
       geom_line(color="skyblue3") +
       ylab("% correct choice")+
       xlab("window")+
-      ggtitle("Learning process")
-    png(paste0(fpath, "/", fig_name))
+      ggtitle("Learning process") + 
+      labs(subtitle=sprintf("Subject ID: %s", subj))
+    png(paste0(fpath, "/", fig_name), res=300, width=5, height=5, units="in")
     print(lr_graph)
     dev.off()
   })

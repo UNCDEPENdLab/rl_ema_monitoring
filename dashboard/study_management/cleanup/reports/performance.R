@@ -37,10 +37,9 @@ task <- unnest(task)
 if(exists("checklist")) {
   task <- left_join(task,checklist, by="Date")
   task_unchecked <- filter(task,`Checklist Complete?`=="No")
-  task_unchecked <- transmute(task_unchecked, "Date"=Date, "Block"=block, "Objective % correct (feed.)"=abs_accurate_feed, "Experienced % correct (feed.)"=relative_accuracy_feed, "Objective % correct (no feed.)"=abs_accurate_nofeed, "Experienced % correct (no feed.)"=relative_accuracy_nofeed, "RT(ms)"=mean_rt, "Left %"=IDe_bias, "Intoxicated?"=intox, "Cumulative earnings"=c_earn)
-  task <- transmute(task, "Date"=Date, "Block"=block, "Objective % correct (feed.)"=abs_accurate_feed, "Experienced % correct (feed.)"=relative_accuracy_feed, "Objective % correct (no feed.)"=abs_accurate_nofeed, "Experienced % correct (no feed.)"=relative_accuracy_nofeed, "RT(ms)"=mean_rt, "Left %"=IDe_bias, "Intoxicated?" = intox, "Cumulative earnings"=c_earn)
   # output the performance table to a csv
-  #write_csv(mood, paste0(dataPath, "/Subjects/", subj, "/reports/performance_unchecked.csv"))
+  write_csv(task_unchecked, paste0(dataPath, "/Subjects/", subj, "/reports/performance_unchecked.csv"))
+  saveRDS(task_unchecked, paste0(dataPath, "/Subjects/", subj, "/reports/performance_unchecked.rds"))
 }
 
 # output the sleep table to a csv
