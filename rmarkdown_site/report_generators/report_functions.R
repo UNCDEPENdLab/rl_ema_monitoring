@@ -22,8 +22,12 @@ get_cleaned_data <- function(id, data_dir, what) {
     main_file <- dashboard_file_check(id, data_dir, "performance.rds", "task performance")
     unchecked_file <- dashboard_file_check(id, data_dir, "performance_unchecked.rds", "unchecked task performance", signal="none")
     summaries_file <- dashboard_file_check(id, data_dir, "performance_summaries.rds", "task performance summaries", signal="none") #not used at present
+  } else if (what == "mood") {
+    main_file <- dashboard_file_check(id, data_dir, "mood.rds", "mood diary")
+    unchecked_file <- dashboard_file_check(id, data_dir, "mood_unchecked.rds", "unchecked mood diary", signal="none")
+    summaries_file <- dashboard_file_check(id, data_dir, "mood_summaries.rds", "mood diary summaries", signal="warning") #should exist
   } else {
-    stop("Unclear what ")
+    stop("Unclear what to load")
   }
   
   if (!is.null(main_file)) ret_list[["all"]] <- readRDS(main_file)
@@ -33,6 +37,27 @@ get_cleaned_data <- function(id, data_dir, what) {
   return(ret_list)
 }
 
+
+#helper function to use default formatting across the subject dashboard report, while allowing user to override
+dashboard_reactable <- function(...) {
+  r_list <- list(...)
+  r_names <- names(r_list)
+  defaults <- list(
+    theme = reactablefmtr::journal(),
+    defaultColDef = colDef(class = "cell", headerClass = "header"),
+    borderless = TRUE,
+    defaultSorted = c("Date", "Block"),
+    defaultSortOrder = "desc",
+    fullWidth = FALSE
+  )
+  
+  # fill in any default fields not already populated in input
+  for (nn in names(defaults)) {
+    if (!nn %in% r_names) r_list[[nn]] <- defaults[[nn]]
+  }
+  
+  do.call(reactable, r_list)
+}
 
 # helper function to check for existence of expected file in subjects reports
 dashboard_file_check <- function(id, data_dir, file_name, file_desc, signal="error") {
@@ -73,7 +98,7 @@ dashboard_error <- function(...) {
 dashboard_debug <- function(...) {
   if (isTRUE(render_debug)) { #global var
     msg <- paste(...)
-    cat(htmltools::HTML(paste0("<p class='dashboard_debug'>Error: ", msg, "</p>")))
+    cat(htmltools::HTML(paste0("<p class='dashboard_debug'>Debug: ", msg, "</p>")))
   }
 }
 

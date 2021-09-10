@@ -9,10 +9,8 @@ render_hr_table <- function(hr_data, field=NULL) {
   to_render <- hr_data[[field]] %>%
     dplyr::select(Date, Block, per_Good)
 
-  tbl <- reactable(
+  tbl <- dashboard_reactable(
     data = to_render,
-    theme = journal(),
-    defaultColDef = colDef(class = "cell", headerClass = "header"),
     columns=list(
       Date=colDef(style=list(fontWeight = "bold")),
       Block=colDef(html=TRUE, style=list(fontWeight = "bold"), cell=function(value, index) {
@@ -27,11 +25,7 @@ render_hr_table <- function(hr_data, field=NULL) {
         htmltools::HTML(sprintf("<a href='%s' target='popup' onclick=\"window.open('%s','popup','width=%d,height=%d'); return false;\">%s</a>", 
                                 ecg_plot, ecg_plot, dds$hr$plot_window_width, dds$hr$plot_window_height, value))
       })
-    ),
-    borderless = TRUE,
-    defaultSorted = c("Date", "Block"),
-    defaultSortOrder = "desc",
-    fullWidth = FALSE
+    )
   )
   
   tbl
@@ -86,3 +80,18 @@ get_hr_data <- function(id, data_dir) {
 #     column_spec(3, background=if_else(hr_ordered[3]>90, "#C6EFCE", "#ffc7ce"))
 # }
 # ```
+
+#HR table wrangling
+# hr <- rename(hr,"Block"=block)
+# 
+# hr_dates <- left_join(hr,blk_dt,by="Block") #add date column
+# 
+# hr_ordered <- arrange(hr_dates, -row_number()) #most recent blocks first
+# 
+# #convert all to percentages, rounded
+# hr_ordered$per_Good <- hr_ordered$per_Good*100
+# hr_ordered$per_Good <- round(hr_ordered$per_Good)
+# 
+# hr_unchecked <- filter(hr_ordered, checklist=="No")
+# hr_ordered <- transmute(hr_ordered, "Date"=Date, "Block"=Block, "Good signal %"=per_Good) 
+# hr_unchecked <- transmute(hr_unchecked, "Date"=Date, "Block"=Block, "Good signal %"=per_Good) 

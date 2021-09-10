@@ -89,77 +89,6 @@ blk_dt <- transmute(blk_dt,"Date"=date,"Block"=block, checklist=`Checklist Compl
 ```
 
 
-
-```{r mood, include=FALSE}
-#Mood report table wrangling
-mood <- proc_sched$form_dfs$`Mood Questionnaire`
-mood$answer_time <- str_extract(mood$answer_time,"\\d{4}-\\d{2}-\\d{2}") #chop off the hour from the answer time
-mood <- rename(mood,"Date"=answer_time)
-mood$Date <- as.character(mood$Date)
-mood <- left_join(mood,checklist, by="Date")
-mood$Date <- lapply(mood$Date,date_format) #format appropriately
-
-mood_check <- output$redcap %>% filter(ID==params$id) %>% select(`Mood`,`Mood Notes`,Date)
-mood_check$Date <- as.character(mood_check$Date)
-mood$Date <- as.character(mood$Date)
-
-mood <- left_join(mood, mood_check, by="Date")#adding RA check column
-mood <- arrange(mood, -row_number()) #make the most recent block come first
-
-#this will be used to determine the color of the font of the mood ratings
-val_avg_row <- filter(output$sample_form_summary, ID==params$id)
-val_avg <- sl_di_avg_row$val_arr_dis_avg
-
-mood_unchecked <- filter(mood,`Checklist Complete?`=="No")
-mood_unchecked <- transmute(mood_unchecked, "Date"=Date, "Problems"=Mood,"Notes"=`Mood Notes`,"Number of events"=number_of_events, "Valence"=Valence, "Arousal"=Arousal, "Anxious"=Anxious, "Elated"=Elated, "Irritable"=Irritable,"Energetic"=Energetic)
-mood <- transmute(mood, "Date"=Date, "Problems"=Mood,"Notes"=`Mood Notes`,"Number of events"=number_of_events, "Valence"=Valence, "Arousal"=Arousal, "Anxious"=Anxious, "Elated"=Elated, "Irritable"=Irritable,"Energetic"=Energetic)
-```
-
-```{r performance, include=FALSE}
-
-#task performance table wrangling
-task <- rename(perf,"Date"=date) #get rid of blocks not played
-task <- left_join(task,checklist, by="Date")
-task$Date <- lapply(task$Date,date_format) #reformat dates (these dates don't come from blk_dt)
-task <- arrange(task, -row_number()) #flip df so that most recent dates are first
-
-#create cumulative earnings column
-task$c_earn <- c()
-task$c_earn[nrow(task)] <- task$earning[nrow(task)]
-for(i in (nrow(task)-1):1){
-  task$c_earn[i] <- task$earning[i] + task$c_earn[i+1]
-}
-
-#TEMPORARY: adding in an intox response with a very early start time to make sure that all blocks match. This will not be necessary with real data, when there will be an intox response preceding every block.
-temp <- data.frame("time"=1504931510000,"answer"="Yes")
-output$proc_data[[params$id]]$raw_data$drugs_check <- rbind(output$proc_data[[params$id]]$raw_data$drugs_check,temp)
-
-#create intoxication column
-raw_s_data <- output$proc_data[[params$id]]$raw_data$sessions
-block_times <- as.numeric(raw_s_data$start_time_ms)
-raw_s_data$intox <- lapply(block_times, get_intox_resp, id=params$id)
-intox_df <- select(raw_s_data, block, intox)
-
-#join column to task df
-task <- left_join(task, intox_df, by="block")
-
-task$abs_accurate_feed <- task$abs_accurate_feed*100
-task$relative_accuracy_feed <- task$relative_accuracy_feed*100
-task$relative_accuracy_nofeed <- task$relative_accuracy_nofeed*100
-task$abs_accurate_nofeed <- task$abs_accurate_nofeed*100
-task$IDe_bias <- task$IDe_bias*100
-task$mean_rt <- task$mean_rt*1000
-
-task[,c(3:8)] <- round(task[,c(3:8)]) #round percentages to nearest whole percent
-
-
-rownames(task) <- NULL
-
-task_unchecked <- filter(task,`Checklist Complete?`=="No")
-task_unchecked <- transmute(task_unchecked, "Date"=Date, "Block"=block, "Objective % correct (feed.)"=abs_accurate_feed, "Experienced % correct (feed.)"=relative_accuracy_feed, "Objective % correct (no feed.)"=abs_accurate_nofeed, "Experienced % correct (no feed.)"=relative_accuracy_nofeed, "RT(ms)"=mean_rt, "Left %"=IDe_bias, "Intoxicated?"=intox, "Cumulative earnings"=c_earn)
-task <- transmute(task, "Date"=Date, "Block"=block, "Objective % correct (feed.)"=abs_accurate_feed, "Experienced % correct (feed.)"=relative_accuracy_feed, "Objective % correct (no feed.)"=abs_accurate_nofeed, "Experienced % correct (no feed.)"=relative_accuracy_nofeed, "RT(ms)"=mean_rt, "Left %"=IDe_bias, "Intoxicated?" = intox, "Cumulative earnings"=c_earn)
-```
-
 ```{r eeg, include=FALSE}
 #EEG table wrangling
 
@@ -188,22 +117,6 @@ eeg_unchecked <- filter(eeg_row_ordered, checklist=="No")
 eeg_unchecked <- transmute(eeg_unchecked, "Date"=Date, "Block"=Block, "Overall % good"=avg, "Ch. 1 % good"=per_Ch_1, "Ch. 2 % good"=per_Ch_2, "Ch. 3 % good"=per_Ch_3, "Ch. 4 % good"=per_Ch_4) 
 ```
  
-```{r hr, include=FALSE}
-#HR table wrangling
-hr <- rename(hr,"Block"=block)
-
-hr_dates <- left_join(hr,blk_dt,by="Block") #add date column
-
-hr_ordered <- arrange(hr_dates, -row_number()) #most recent blocks first
-
-#convert all to percentages, rounded
-hr_ordered$per_Good <- hr_ordered$per_Good*100
-hr_ordered$per_Good <- round(hr_ordered$per_Good)
-
-hr_unchecked <- filter(hr_ordered, checklist=="No")
-hr_ordered <- transmute(hr_ordered, "Date"=Date, "Block"=Block, "Good signal %"=per_Good) 
-hr_unchecked <- transmute(hr_unchecked, "Date"=Date, "Block"=Block, "Good signal %"=per_Good) 
-```
 
 ```{r video, include=FALSE}
 video <- output$redcap %>% filter(ID==params$id) %>% select(`Video`,`Video Notes`,Date)
@@ -441,47 +354,6 @@ if(nrow(diary) > 0){
 }
 ```
 
-\newline
-### Mood questionnaire {.tabset}
-#### Unchecked
-```{r mood unchecked, echo=FALSE, warning=FALSE}
-#Mood table
-#Will need to change the figure for val_arr_dis_avg when we figure out that threshold
-if(nrow(mood_unchecked) > 0){
-  kbl(mood_unchecked) %>%
-  kable_styling(fixed_thead = T) %>%
-  column_spec(1, bold = T) %>%
-  column_spec(2, background=if_else(is.na(mood_unchecked[2]), "#C6EFCE", "#ffc7ce")) %>%
-  column_spec(3, background=if_else(is.na(mood_unchecked[3]), "#C6EFCE", "#ffc7ce")) %>%
-  column_spec(4, color="#D8D8D8") %>%
-  column_spec(5, color=if_else(val_avg > 50, "#D8D8D8", "black")) %>%
-  column_spec(6, color=if_else(val_avg > 50, "#D8D8D8", "black")) %>%
-  column_spec(7, color=if_else(val_avg > 50, "#D8D8D8", "black")) %>%
-  column_spec(8, color=if_else(val_avg > 50, "#D8D8D8", "black")) %>%
-  column_spec(9, color=if_else(val_avg > 50, "#D8D8D8", "black")) %>%
-  column_spec(10, color=if_else(val_avg > 50, "#D8D8D8", "black"))
-}
-```
-
-#### All blocks
-```{r mood table, echo=FALSE, warning=FALSE}
-#Mood table
-#Will need to change the figure for val_arr_dis_avg when we figure out that threshold
-if(nrow(mood) > 0){
-  kbl(mood) %>%
-  kable_styling(fixed_thead = T) %>%
-  column_spec(1, bold = T) %>%
-  column_spec(2, background=if_else(is.na(mood[2]), "#C6EFCE", "#ffc7ce")) %>%
-  column_spec(3, background=if_else(is.na(mood[3]), "#C6EFCE", "#ffc7ce")) %>%
-  column_spec(4, color="#D8D8D8") %>%
-  column_spec(5, color=if_else(val_avg > 50, "#D8D8D8", "black")) %>%
-  column_spec(6, color=if_else(val_avg > 50, "#D8D8D8", "black")) %>%
-  column_spec(7, color=if_else(val_avg > 50, "#D8D8D8", "black")) %>%
-  column_spec(8, color=if_else(val_avg > 50, "#D8D8D8", "black")) %>%
-  column_spec(9, color=if_else(val_avg > 50, "#D8D8D8", "black")) %>%
-  column_spec(10, color=if_else(val_avg > 50, "#D8D8D8", "black"))
-}
-```
 
 \newline
 ### Videos {.tabset}

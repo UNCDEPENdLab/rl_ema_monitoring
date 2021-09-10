@@ -32,9 +32,8 @@ render_sleep_table <- function(sleep_data, field=NULL) {
     )
   }
   
-  tbl <- reactable(
+  tbl <- dashboard_reactable(
     data=to_render,
-    defaultColDef = colDef(class = "cell", headerClass = "header"),
     columns=list(
       did_not_sleep = gray_fmt(name="Didn't sleep"),
       sleep_latency = gray_fmt(name="Sleep latency"),
@@ -42,10 +41,7 @@ render_sleep_table <- function(sleep_data, field=NULL) {
       woke_early = gray_fmt(name="Woke early"),
       overall = gray_fmt(name="Overall")
     ),
-    borderless = TRUE,
-    defaultSorted = c("Date"),
-    defaultSortOrder = "desc",
-    fullWidth = FALSE
+    defaultSorted = c("Date")
   )
   
   tbl
@@ -61,6 +57,7 @@ get_sleep_data <- function(id, data_dir) {
         Date=dashboard_date(Date),
         #insomnia_ratio = cumsum(did_not_sleep)/n(), #this is the running ratio
         insomnia_ratio = sum(did_not_sleep)/n(),
+        did_not_sleep = factor(did_not_sleep, levels=c(TRUE, FALSE), labels=c("Yes", "No"))
       ) %>%
       arrange(desc(Date))
   }

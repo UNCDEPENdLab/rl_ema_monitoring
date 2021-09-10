@@ -32,10 +32,8 @@ render_eeg_table <- function(eeg_data, field=NULL) {
     )
   }
   
-  tbl <- reactable(
+  tbl <- dashboard_reactable(
     data = to_render,
-    theme = journal(),
-    defaultColDef = colDef(class = "cell", headerClass = "header"),
     columns=list(
       Date=colDef(style=list(fontWeight = "bold")),
       Block=colDef(style=list(fontWeight = "bold")),
@@ -44,11 +42,7 @@ render_eeg_table <- function(eeg_data, field=NULL) {
       per_Ch_2=eeg_ch_fmt(name="Ch. 2 % good", thresh = dds$eeg$ch_bad_lt_x),
       per_Ch_3=eeg_ch_fmt(name="Ch. 3 % good", thresh = dds$eeg$ch_bad_lt_x),
       per_Ch_4=eeg_ch_fmt(name="Ch. 4 % good", thresh = dds$eeg$ch_bad_lt_x)
-    ),
-    borderless = TRUE,
-    defaultSorted = c("Date", "Block"),
-    defaultSortOrder = "desc",
-    fullWidth = FALSE
+    )
   )
   
   tbl

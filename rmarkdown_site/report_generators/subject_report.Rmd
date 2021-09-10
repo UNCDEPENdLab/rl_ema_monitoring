@@ -52,3 +52,10 @@ res <- tryCatch(knitr::knit_child('task_performance_report.Rmd', quiet = TRUE),
 )
 cat(res, sep = '\n')
 ```
+
+```{r mood-report, echo=FALSE, results='asis'}
+res <- tryCatch(knitr::knit_child('mood_report.Rmd', quiet = TRUE),
+                error=function(e) dashboard_error(as.character(e))
+)
+cat(res, sep = '\n')
+```
