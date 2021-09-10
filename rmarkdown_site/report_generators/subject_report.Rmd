@@ -1,6 +1,8 @@
 ---
 title: Subject `r params$id` RL-EMA report
-output: html_document
+output:
+  html_document:
+    css: "dashboard.css"
 params:
   id: "221504"
   data_dir: "/Users/hallquist/Downloads/data"
@@ -9,15 +11,10 @@ params:
 
 Generated on `r Sys.time()`
 
-
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(pacman)
 pacman::p_load(REDCapR, dplyr, rjson, reactable, reactablefmtr)
-# library(kableExtra)
-# library("REDCapR")
-# library(dplyr)
-# library(rjson)
 source("report_functions.R")
 id <- params$id
 data_dir <- params$data_dir
@@ -27,8 +24,6 @@ render_debug <- params$render_debug
 
 # Overview
 
-# EEG
-
 ```{r eeg-report, echo=FALSE, results='asis'}
 res <- tryCatch(knitr::knit_child('eeg_report.Rmd', quiet = TRUE),
                 error=function(e) dashboard_error(as.character(e))
@@ -36,7 +31,6 @@ res <- tryCatch(knitr::knit_child('eeg_report.Rmd', quiet = TRUE),
 cat(res, sep = '\n')
 ```
 
-# Sleep diary
 
 ```{r sleep-report, echo=FALSE, results='asis'}
 res <- tryCatch(knitr::knit_child('sleep_report.Rmd', quiet = TRUE),
@@ -45,10 +39,15 @@ res <- tryCatch(knitr::knit_child('sleep_report.Rmd', quiet = TRUE),
 cat(res, sep = '\n')
 ```
 
-# Heart rate
-
 ```{r hr-report, echo=FALSE, results='asis'}
 res <- tryCatch(knitr::knit_child('hr_report.Rmd', quiet = TRUE),
+                error=function(e) dashboard_error(as.character(e))
+)
+cat(res, sep = '\n')
+```
+
+```{r task-performance-report, echo=FALSE, results='asis'}
+res <- tryCatch(knitr::knit_child('task_performance_report.Rmd', quiet = TRUE),
                 error=function(e) dashboard_error(as.character(e))
 )
 cat(res, sep = '\n')

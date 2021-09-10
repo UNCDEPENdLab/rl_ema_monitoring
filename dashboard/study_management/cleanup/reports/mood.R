@@ -26,9 +26,8 @@ if(exists("checklist")) {
   mood_check$Date <- as.character(mood_check$Date)
   mood$Date <- as.character(mood$Date)
   mood <- left_join(mood, mood_check, by="Date")#adding RA check column
-  mood_unchecked <- transmute(mood_unchecked, "Date"=Date, "Problems"=Mood,"Notes"=`Mood Notes`,"Number of events"=number_of_events, "Valence"=Valence, "Arousal"=Arousal, "Anxious"=Anxious, "Elated"=Elated, "Irritable"=Irritable,"Energetic"=Energetic)
-  mood <- transmute(mood, "Date"=Date, "Problems"=Mood,"Notes"=`Mood Notes`,"Number of events"=number_of_events, "Valence"=Valence, "Arousal"=Arousal, "Anxious"=Anxious, "Elated"=Elated, "Irritable"=Irritable,"Energetic"=Energetic)
-  # output the sleep table to a csv
+
+    # output the sleep table to a csv
   write_csv(mood, paste0(dataPath, "/Subjects/", subj, "/reports/mood_unchecked.csv"))
   saveRDS(mood, paste0(dataPath, "/Subjects/", subj, "/reports/mood_unchecked.rds"))
 }

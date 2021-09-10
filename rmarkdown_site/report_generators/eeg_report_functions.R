@@ -11,12 +11,22 @@ render_eeg_table <- function(eeg_data, field=NULL) {
   
   eeg_ch_fmt <- function(..., thresh=100) {
     colDef(
+      html = TRUE,
       style=function(value) {
         if (value < thresh) {
-          list(background = dds$eeg$bad_ch_colors$background, color=dds$eeg$bad_ch_colors$font) #flag bad cells
+          list(background = dds$eeg$bad_ch_colors$background, color=dds$eeg$bad_ch_colors$text) #flag bad cells
         } else {
-          list(background = dds$eeg$good_ch_colors$background, color=dds$eeg$good_ch_colors$font)
+          list(background = dds$eeg$good_ch_colors$background, color=dds$eeg$good_ch_colors$text)
         }
+      },
+      cell=function(value, index) {
+        eeg_plot <- paste0(file.path(data_dir, "Subjects", id, "plots", paste0("eeg_plot_", to_render$Block[index], ".png")))
+        htmltools::HTML(sprintf("<a href='%s' target='popup' onclick=\"window.open('%s','popup','width=%d,height=%d'); return false;\">%s</a>", 
+                                eeg_plot, eeg_plot, dds$eeg$plot_window_width, dds$eeg$plot_window_height, value))
+        # doesn't seem to pass onclick
+        # htmltools::tags$a(target="popup", href=eeg_plot,
+        #                   onclick=paste0("window.open('", eeg_plot, "','popup','width=900,height=900'); return false;"),
+        #                   value)
       },
       ...
     )

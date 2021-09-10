@@ -11,12 +11,13 @@ try({
     geom_hline(yintercept=overall_relative_with_feedback_mean, linetype="dashed", color = "cyan4")+
     geom_hline(yintercept=overall_relative_no_feedback_mean, linetype="dashed", color = "firebrick2")+
     ylab("% correct choice")+
-    ggtitle("Accuracy according to experienced probabilities")+
-    theme(plot.title = element_text(hjust = 0.5))+
+    ggtitle("Accuracy according to experienced probabilities") +
+    labs(subtitle=sprintf("Subject ID: %s", subj)) +
+    theme(plot.title = element_text(hjust = 0.5)) +
     scale_x_continuous(breaks = seq(0, max(relative_accuracy_by_block$block),by = 1))+
     geom_text(aes(0,overall_relative_with_feedback_mean,label =round(overall_relative_with_feedback_mean, digits = 1), vjust = -0.4), size = 2.8, color="cyan4")+
     geom_text(aes(0,overall_relative_no_feedback_mean,label =round(overall_relative_no_feedback_mean, digits = 1), vjust = -0.4), size = 2.8, color="firebrick2")
-  png(paste0(fpath, "/", fig_name))
+  png(paste0(fpath, "/", fig_name), res=300, width=9, height=5, units="in")
   print(acc_from_exp_prob_graph)
   dev.off()
 })

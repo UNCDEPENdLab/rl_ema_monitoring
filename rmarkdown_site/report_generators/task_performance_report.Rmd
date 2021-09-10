@@ -1,0 +1,18 @@
+```{r task-performance-data, include=FALSE}
+source("task_performance_report_functions.R")
+task_performance_data <- get_task_performance_data(id, data_dir)
+```
+
+\newline
+### Task performance {.tabset}
+#### Unchecked
+
+```{r task-performance-unchecked-table, echo=FALSE, warning=FALSE, results="asis"}
+#task performance table
+render_task_performance_table(task_performance_data, "unchecked")
+```
+
+#### All blocks
+```{r task-performance-all-table, echo=FALSE, warning=FALSE, results="asis"}
+render_task_performance_table(task_performance_data, "all")
+```
