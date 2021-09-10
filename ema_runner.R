@@ -160,7 +160,7 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=TRU
     # pull data
     # iterate through the active subjects
     for(subj in active) {
-      pull_files(id=subj, path=dataPath, clinical_path=videoPath, clinical_url=videoURL)
+      pull_files(id=subj, path=dataPath, clinical_path=videoPath, clinical_url=videoURL, pull_all=TRUE)
     }
   }
   
@@ -308,9 +308,9 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=TRU
 #run_ema(pull=FALSE, sched=TRUE, physio=FALSE, redcap=FALSE, force_proc=TRUE, nthreads = 1, site="/Users/shanebuckley/desktop/rl_ema_monitoring/site", render=FALSE) # , force_reload=TRUE
 #run_ema(redcap=TRUE, save_lite=TRUE, render=FALSE, pull=TRUE, sched=TRUE, physio=TRUE, force_proc=TRUE, force_reload=TRUE, nthreads = 4, site="/Users/shanebuckley/desktop/rl_ema_monitoring/site") # , force_reload=TRUE
 # pull only
-#run_ema(redcap=FALSE, save_lite=FALSE, render=FALSE, pull=TRUE, sched=FALSE, physio=FALSE, nthreads = 4, site="/Users/shanebuckley/desktop/rl_ema_monitoring/site")
+run_ema(redcap=FALSE, save_lite=FALSE, render=FALSE, pull=TRUE, sched=FALSE, physio=FALSE, cleanup_data=FALSE, nthreads = 4) #, site="/Users/shanebuckley/desktop/rl_ema_monitoring/site"
 # everything but the render and redcap pull
-#run_ema(redcap=FALSE, save_lite=TRUE, render=FALSE, pull=TRUE, sched=TRUE, physio=TRUE, force_proc=TRUE, force_reload=TRUE, nthreads = 4, site="/Users/shanebuckley/desktop/rl_ema_monitoring/site")
+#run_ema(redcap=FALSE, save_lite=TRUE, render=FALSE, pull=TRUE, sched=TRUE, physio=TRUE, force_proc=TRUE, force_reload=TRUE, cleanup_data=TRUE, nthreads = 4, site="/Users/shanebuckley/desktop/rl_ema_monitoring/site")
 # only run cleanup layer
-run_ema(redcap=FALSE, save_lite=FALSE, render=FALSE, pull=FALSE, sched=FALSE, physio=FALSE, force_proc=FALSE, force_reload=FALSE, cleanup_data=TRUE, nthreads = 4)
+#run_ema(redcap=FALSE, save_lite=FALSE, render=FALSE, pull=FALSE, sched=FALSE, physio=FALSE, force_proc=FALSE, force_reload=FALSE, cleanup_data=TRUE, nthreads = 4)
 #subjects=list("221604", "221849"),
