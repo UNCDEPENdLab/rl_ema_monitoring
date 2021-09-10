@@ -55,7 +55,7 @@ for (i in loopseq) {
     }
     dq0 <- dq0 %>% mutate(t0=as.numeric(substr(t,2,nchar(t))))
     dq0 <- dq0 %>% mutate(zscore=(V-mean(V,na.rm=TRUE))/sd(V,na.rm=TRUE))
-    dq0 <- dq0 %>% filter(abs(zscore) <= 5)
+    #dq0 <- dq0 %>% filter(abs(zscore) <= 5)  
     # check that file system expected exists and create the plot
     fpath <- paste0(site, "/static/static/subjects/", subj)
     # create the directory if it doesn't exist
