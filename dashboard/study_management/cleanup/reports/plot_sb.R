@@ -8,14 +8,16 @@ try({
   sb_graph <- ggplot(data=side_bias_by_block, aes(x=block, y=mean)) +
     geom_line() +
     ylab("side bias")+
-    geom_hline(yintercept=0, linetype="dashed", color = "firebrick2")+
-    geom_hline(yintercept=1, linetype="dashed", color = "firebrick2")+
-    ggtitle("Side bias by block")+
-    theme(plot.title = element_text(hjust = 0.5))+
+    geom_hline(yintercept=0, linetype="dashed", color = "firebrick2") +
+    geom_hline(yintercept=1, linetype="dashed", color = "firebrick2") +
+    ggtitle("Side bias by block") +
+    labs(subtitle=sprintf("Subject ID: %s", subj)) +
+    theme(plot.title = element_text(hjust = 0.5)) +
     scale_x_continuous(breaks = seq(0, max(side_bias_by_block$block),by = 1))
-  if (exists("blocks_with_poor_performance")&&nrow(blocks_with_poor_performance)>0){
-    sb_graph=sb_graph+geom_point(data=blocks_with_poor_performance, aes(x=poor_blocks, y=0.5), color="darkorchid1", size=2.2)}
-  png(paste0(fpath, "/", fig_name))
+  if (exists("blocks_with_poor_performance") && nrow(blocks_with_poor_performance) > 0) {
+    sb_graph=sb_graph+geom_point(data=blocks_with_poor_performance, aes(x=poor_blocks, y=0.5), color="darkorchid1", size=2.2)
+  }
+  png(paste0(fpath, "/", fig_name), res=300, width=9, height=5, units="in")
   print(sb_graph)
   dev.off()
 })
