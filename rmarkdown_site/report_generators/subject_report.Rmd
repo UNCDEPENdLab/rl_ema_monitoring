@@ -14,7 +14,7 @@ Generated on `r Sys.time()`
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(pacman)
-pacman::p_load(REDCapR, dplyr, rjson, reactable, reactablefmtr)
+pacman::p_load(REDCapR, dplyr, ggplot2, cowplot, rjson, reactable, reactablefmtr)
 source("report_functions.R")
 id <- params$id
 data_dir <- params$data_dir
