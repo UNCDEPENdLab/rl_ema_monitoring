@@ -483,6 +483,15 @@ get_cfg_var <- function(cfg="cfg.yaml", start_from=NULL, var=NULL) {
   return(ret_val)
 }
 
+get_redcap_checklist_r <- function(rc_url, rc_token, subj_id) {
+  # gets the data running the imported python function as a csv string
+  csv_str <- get_subj_redcap_checklist(rc_url=rc_url, rc_token=rc_token, subj_id=subj_id, as_str=TRUE)
+  # loads the csv string into a dataframe
+  data_df <- read.table(text = csv_str, sep =",", header = TRUE, stringsAsFactors = FALSE)
+  # returns the dataframe
+  return(data_df)
+}
+
 # Function to provide list of currently cached subject schedule files
 # A vector of subject_ids can be passed in lieu of a root dir variable. This is 
 # especially useful when getting metadata for a specific subject.

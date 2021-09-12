@@ -31,24 +31,24 @@ proc_sched <- output$proc_data[[subj]]
 info <- output$subj_info[[subj]]
 eeg <- output_physio$eeg$summary[[subj]]
 hr <- output_physio$ecg$summary[[subj]]
-if(exists("redcap_data")) {
-  if(redcap_data != "The RL-EMA QA checklist on RedCAP is blank for all participants in the active participants list.") {
-    checklist <- redcap_data %>% filter(ID==subj) %>% select(`Checklist Complete?`,Date)
-    checklist$Date <- as.character(checklist$Date)
-  }
-}
+#if(exists("redcap_data")) {
+#  if(redcap_data != "The RL-EMA QA checklist on RedCAP is blank for all participants in the active participants list.") {
+#    checklist <- redcap_data %>% filter(ID==subj) %>% select(`Checklist Complete?`,Date)
+#    checklist$Date <- as.character(checklist$Date)
+#  }
+#}
 perf$date <- as.character(perf$date)
 #get block and date columns
 blk_dt <- perf %>% select(block,date) #%>% dplyr::rename("Date"=date)
 blk_dt$date <- lapply(blk_dt$date,date_format) #reformat dates
 #blk_dt <- dplyr::rename(blk_dt,"Block"=block)
 
-if(exists("redcap_data")) {
-  if(redcap_data != "The RL-EMA QA checklist on RedCAP is blank for all participants in the active participants list.") {
-    blk_dt <- left_join(blk_dt, checklist, by="Date")
+#if(exists("redcap_data")) {
+#  if(redcap_data != "The RL-EMA QA checklist on RedCAP is blank for all participants in the active participants list.") {
+#    blk_dt <- left_join(blk_dt, checklist, by="Date")
     #blk_dt <- transmute(blk_dt,"Date"=date,"Block"=block, checklist=`Checklist Complete?`)
-  }
-}
+#  }
+#}
 
 print(paste0("Running cleanup for ", subj, "..."))
 

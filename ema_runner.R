@@ -180,9 +180,9 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=TRU
     print("Running REDCap data pull...")
     # Get the credentials (standard path for now)
     
-    creds <- get_redcap_creds(cred_path=paste0(dataPath, "/redcap.json"))
+    creds <<- get_redcap_creds(cred_path=paste0(dataPath, "/redcap.json"))
     # Load the data
-    redcap_data <<- redcap_pull(uri=creds$uri, token=creds$token, active=active)
+    #redcap_data <<- redcap_pull(uri=creds$uri, token=creds$token, active=active)
   }
   
   run_sched <- function() {
@@ -191,9 +191,9 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=TRU
     # Run schedule
     output <- proc_schedule(schedule_df = path_info$schedule,tz=Sys.timezone(),days_limit=60,force_reproc=force_proc)
     # Run REDCap merging into "output"
-    if(redcap == TRUE) {
-      output$redcap <- redcap_data
-    }
+    #if(redcap == TRUE) {
+    #  output$redcap <- redcap_data
+    #}
     #output <<- output_sched
     # Save the schedule output
     print("Saving the schedule results...")
@@ -251,6 +251,9 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=TRU
     # to run the cleanup function, loop through the subject IDs, resourcing cleanup, re-running it with the current sid
     for(s in active) {
       subj <<- s
+      if(redcap == TRUE) {
+        checklist <<- get_redcap_checklist_r(rc_url=creds$uri, rc_token=creds$token, subj_id=s)
+      }
       source("dashboard_cleanup.R")
     }
   }

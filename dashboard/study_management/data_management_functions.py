@@ -1,4 +1,5 @@
 import fnmatch
+import redcap
 import json
 import yaml
 import os
@@ -214,6 +215,36 @@ def get_data_info(sid, data_type, keywords=[], exclusion=[], data_cfg="subject.j
 		return data_df.to_csv(index=False)
 	# return the data as a raw pandas dataframe
 	return data_df
+
+# get the subject dataframe
+def get_subj_redcap_checklist(rc_url, rc_token, subj_id, as_str=False):
+	# connect to the redcap api
+	rc_project = redcap.Project(rc_url, rc_token)
+	# get the subject's checklist data
+	checklist = rc_project.export_records(records=[subj_id], fields=[x for x in rc_project.field_names if "checklist" in x], format="df")
+	# convert to a single index dataframe
+	checklist = checklist.reset_index(level=[rc_project.def_field])
+	# drop the def_field column (redundant copy of subject id)
+	checklist = checklist.drop(rc_project.def_field, axis=1)
+	# get the list of checklists
+	checklist_per_day = list(checklist.index)
+	# convert the list into a set of the days there are data for
+	checklist_per_day = {x.replace('rlema_day_', '').split('_')[0] for x in checklist_per_day if 'rlema_day_' in x}
+	# a variable that contains the a set of all expected days
+	# (skip this for now, may be handled in the front-end)
+	# drop the rows that are not checklist data
+	checklist = checklist.drop([x for x in checklist.index if "rlema_day_" not in x])
+	# get a dictionary from raw column name to label (subject 123 has all checkboxes set to 1 to populate as reference)
+	checklist_labels = rc_project.export_records(records=['123'], fields=[x for x in rc_project.field_names if "checklist" in x], format="df", export_checkbox_labels=True, raw_or_label='label')
+	checklist_labels = [x.replace(' ', '_') for x in checklist_labels.loc[(123, 'RL-EMA Day 1')]]
+	checklist_labels[checklist_labels.index('Yes')] = 'EMA_Checklist_Complete'
+	# rename the columns to be informative
+	checklist.columns = checklist_labels
+	# if set to return as csv string
+	if as_str == True:
+		return checklist.to_csv(index=False)
+	# return the dataframe
+	return checklist
 
 # method to get a subject's status
 def get_subject_status():
