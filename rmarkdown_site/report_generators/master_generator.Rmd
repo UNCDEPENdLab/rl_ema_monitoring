@@ -62,7 +62,7 @@ if(Sys.getenv("USER")=="dp"){
 
 rc<- redcap_pull(uri="https://www.ctsiredcap.pitt.edu/redcap/api/", token='7EB4987CE6130619646F4919D53EB0DD', activeList="221504")
 
-/Users/hallquist/Downloads/data/redcap.json
+#/Users/hallquist/Downloads/data/redcap.json
 
 ```
 
@@ -89,34 +89,6 @@ blk_dt <- transmute(blk_dt,"Date"=date,"Block"=block, checklist=`Checklist Compl
 ```
 
 
-```{r eeg, include=FALSE}
-#EEG table wrangling
-
-eeg <- rename(eeg,"Block"=block)
-
-eeg_dates <- left_join(eeg,blk_dt,by="Block") #add date and checklist column
-
-eeg_avg <- mutate(eeg_dates,"avg"=(per_Ch_1 + per_Ch_2 + per_Ch_3 +per_Ch_4)/4) #create column for avg EEG signal 
-
-eeg_row_ordered <- arrange(eeg_avg, -row_number()) #flip df so most recent blocks are first
-
-#convert all to percentages, rounded
-eeg_row_ordered$per_Ch_1 <- eeg_row_ordered$per_Ch_1*100
-eeg_row_ordered$per_Ch_1 <- round(eeg_row_ordered$per_Ch_1)
-eeg_row_ordered$per_Ch_2 <- eeg_row_ordered$per_Ch_2*100 
-eeg_row_ordered$per_Ch_2 <- round(eeg_row_ordered$per_Ch_2)
-eeg_row_ordered$per_Ch_3 <- eeg_row_ordered$per_Ch_3*100 
-eeg_row_ordered$per_Ch_3 <- round(eeg_row_ordered$per_Ch_3)
-eeg_row_ordered$per_Ch_4 <- eeg_row_ordered$per_Ch_4*100
-eeg_row_ordered$per_Ch_4 <- round(eeg_row_ordered$per_Ch_4)
-eeg_row_ordered$avg <- eeg_row_ordered$avg*100
-eeg_row_ordered$avg <- round(eeg_row_ordered$avg)
-
-eeg_col_named <- transmute(eeg_row_ordered, "Date"=Date, "Block"=Block, "Overall % good"=avg, "Ch. 1 % good"=per_Ch_1, "Ch. 2 % good"=per_Ch_2, "Ch. 3 % good"=per_Ch_3, "Ch. 4 % good"=per_Ch_4) 
-eeg_unchecked <- filter(eeg_row_ordered, checklist=="No")
-eeg_unchecked <- transmute(eeg_unchecked, "Date"=Date, "Block"=Block, "Overall % good"=avg, "Ch. 1 % good"=per_Ch_1, "Ch. 2 % good"=per_Ch_2, "Ch. 3 % good"=per_Ch_3, "Ch. 4 % good"=per_Ch_4) 
-```
- 
 
 ```{r video, include=FALSE}
 video <- output$redcap %>% filter(ID==params$id) %>% select(`Video`,`Video Notes`,Date)
@@ -130,84 +102,8 @@ video_unchecked <- transmute(video_unchecked, "Date"= Date, "Problems" = `Video`
 video <- transmute(video, "Date"=Date, "Problems" = `Video`, "Notes" = `Video Notes`, "Video" = links)
 ```
 
-```{r compliance, include=FALSE}
-compliance <-info[c("scheduled_time","delay","type", "duration")]
-compliance$scheduled_time <- as.Date(compliance$scheduled_time)
-compliance$delay <- round(as.numeric(compliance$delay), digits = 0)
-compliance$s_type[compliance$type=="trials"] <- "Behavioral Game"
-compliance$s_type[compliance$type=="questionnaires"] <- sapply(info$spec[compliance$type=="questionnaires"],`[[`,3)
-compliance$delay <- round(compliance$delay)
-
-#filters out NA/incomplete/upcoming data
-compliance_filtered <- compliance %>% filter(!is.na(s_type))
 
 
-compliance_filtered$is_missing <- is.na(compliance_filtered$duration)|compliance_filtered$delay>=1440
-compliance_filtered$delayednotmissing <- ifelse(compliance_filtered$is_missing, NA, compliance_filtered$delay)
-
-compliance_addon <- compliance_filtered[compliance_filtered$is_missing, ]
-
-compliance_addon$days_delayed <- floor(compliance_addon$delay/1440)
-
-compliance_addon$scheduled_time <- compliance_addon$scheduled_time + (compliance_addon$days_delayed)
-
-compliance_addon$delayednotmissing <- compliance_addon$delay - (compliance_addon$days_delayed * 1440)
-
-compliance_addon$days_delayed <- NULL
-compliance_addon$is_missing <- FALSE
-compliance_filtered_2 <- rbind(compliance_filtered, compliance_addon)
-
-#line 164 (call redcap_pull via Rdata file) will need to be redone once we know how redcap integration works (with multiple subjects)
-
-
-ema_checklist <- rc[c("Date", "Checklist Complete?")] 
-
-compliance_filtered_2$checklist <- ema_checklist$`Checklist Complete?`[match(compliance_filtered_2$scheduled_time, ema_checklist$Date)]
-print(compliance_filtered_2$checklist)
-
-compliance_filtered_2<- filter(compliance_filtered_2, scheduled_time < "2020-12-11" )
-
-compliance_unchecked <- compliance_filtered_2[compliance_filtered_2$checklist != "Yes"| is.na(compliance_filtered_2$checklist), ]
-
-#pivot tables
-
-
-library("pivottabler")
-compliance_pf <- PivotTable$new()
-compliance_pf$addData(compliance_filtered_2)
-compliance_pf$addColumnDataGroups("s_type", addTotal=FALSE)
-compliance_pf$addRowDataGroups("scheduled_time", addTotal=FALSE)
-compliance_pf$defineCalculation(calculationName = "delayednotmissing", summariseExpression = "ifelse(is.na(mean(as.numeric(delayednotmissing), na.rm=TRUE)), 0, mean(as.numeric(delayednotmissing), na.rm=TRUE))", caption = "avg delay")
-compliance_pf$defineCalculation(calculationName = "is_missing", summariseExpression = "length(which(is_missing))", caption = "number missing")
-compliance_pf$evaluatePivot()
-
-compliance_pun <- PivotTable$new()
-compliance_pun$addData(compliance_unchecked)
-compliance_pun$addColumnDataGroups("s_type", addTotal=FALSE)
-compliance_pun$addRowDataGroups("scheduled_time", addTotal=FALSE)
-compliance_pun$defineCalculation(calculationName = "delayednotmissing", summariseExpression = "ifelse(is.na(mean(as.numeric(delayednotmissing), na.rm=TRUE)), 0, mean(as.numeric(delayednotmissing), na.rm=TRUE))", caption = "avg delay")
-compliance_pun$defineCalculation(calculationName = "is_missing", summariseExpression = "length(which(is_missing))", caption = "number missing")
-compliance_pun$evaluatePivot()
-
-cells <- compliance_pun$findCells(minValue=121, maxValue=240, includeNull=FALSE, includeNA=FALSE)
-compliance_pun$setStyling(cells=cells, declarations=list("background-color"="#FFEB9C", "color"="#9C5700"))
-
-# apply the red style for an average delay of 4 hours or greater
-cells <- compliance_pun$findCells(minValue=241, includeNull=FALSE, includeNA=FALSE)
-compliance_pf$setStyling(cells=cells, declarations=list("background-color"="#FFC7CE", "color"="#9C0006"))
-
-# apply the green style for an average delay of between 0 and 2 hours
-#cells <- compliance_pf$findCells(minValue=0, maxValue=120, includeNull=FALSE, includeNA=FALSE)
-#compliance_pf$setStyling(cells=cells, declarations=list("background-color"="#C6EFCE", "color"="#006100"))
-
-# apply the yellow style for an average delay of between 2 and 4 hours
-cells <- compliance_pf$findCells(minValue=121, maxValue=240, includeNull=FALSE, includeNA=FALSE)
-compliance_pf$setStyling(cells=cells, declarations=list("background-color"="#FFEB9C", "color"="#9C5700"))
-
-# apply the red style for an average delay of 4 hours or greater
-cells <- compliance_pf$findCells(minValue=241, includeNull=FALSE, includeNA=FALSE)
-compliance_pf$setStyling(cells=cells, declarations=list("background-color"="#FFC7CE", "color"="#9C0006"))
-```
 \newline
 ## Overview
 ```{r overview table, echo = FALSE, warning=FALSE}
@@ -299,21 +195,6 @@ kbl(Individual_Overview) %>%
 
 
 ## Individual Areas
-
-
-\newline
-
-### Task Compliance {.tabset}
-
-#### Unchecked
-```{r compliance table, echo=FALSE}
-compliance_pun$renderPivot()
-```
-
-#### All 
-```{r compliance full, echo=FALSE}
-compliance_pf$renderPivot()
-```
 
 
 

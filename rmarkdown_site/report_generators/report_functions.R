@@ -111,3 +111,18 @@ dashboard_date <- function(d, in_func=anytime::anydate, out_fmt="%m/%d/%Y") {
   dobj <- in_func(d)
   dobj %>% format(out_fmt)
 }
+
+render_child <- function(rmd, section_name) {
+  checkmate::assert_file_exists(rmd)
+  res <- tryCatch(knitr::knit_child(rmd, quiet = TRUE),
+                  error=function(e) {
+                    h <- htmltools::div(
+                      class="section-fail",
+                      htmltools::h3(paste(rmd, "failed to knit")),
+                      dashboard_error(as.character(e))
+                    )
+                    return(as.character(h))
+                  }
+  )
+  cat(res, sep = '\n')
+}

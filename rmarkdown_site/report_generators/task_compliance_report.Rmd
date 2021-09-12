@@ -1,5 +1,3 @@
-# Task compliance {.tabset}
-
 ```{r task-compliance-data, echo=FALSE, warning=FALSE, message=FALSE, results="asis"}
 source("../report_functions/task_compliance_report_functions.R")
 task_compliance_data <- get_task_compliance_data(id, data_dir)

@@ -1,12 +1,9 @@
-# Heart rate {.tabset}
-
 ```{r hr-data,  echo=FALSE, warning=FALSE, message=FALSE, results="asis"}
 source("../report_functions/hr_report_functions.R")
 hr_data <- get_hr_data(id, data_dir)
 ```
 
 ## Unchecked
-
 ```{r hr-unchecked-table, echo=FALSE, warning=FALSE, results="asis"}
 render_hr_table(hr_data, "unchecked")
 ```

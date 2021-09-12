@@ -1,5 +1,3 @@
-# Task performance {.tabset}
-
 ```{r task-performance-data, echo=FALSE, warning=FALSE, message=FALSE, results="asis"}
 source("../report_functions/task_performance_report_functions.R")
 task_performance_data <- get_task_performance_data(id, data_dir)

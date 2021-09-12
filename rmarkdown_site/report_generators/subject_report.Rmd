@@ -9,6 +9,7 @@ output:
 params:
   id: "221504"
   data_dir: "/Users/hallquist/Downloads/data"
+  output_dir: "/Users/hallquist/Data_Analysis/Momentum/rl_ema_monitoring/rmarkdown_site/rendered_site"
   render_debug: FALSE
 ---
 
@@ -17,7 +18,7 @@ Generated on `r format(Sys.time(), "%a %b %d, %Y %I:%M %p")`
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(pacman)
-pacman::p_load(REDCapR, dplyr, tidyr, ggplot2, cowplot, rjson, reactable, reactablefmtr)
+pacman::p_load(REDCapR, dplyr, tidyr, ggplot2, cowplot, rjson, reactable, reactablefmtr, checkmate, htmltools)
 
 # Suppress summarise messages about grouping
 options(dplyr.summarise.inform = FALSE)
@@ -26,79 +27,55 @@ source("report_functions.R")
 id <- params$id
 data_dir <- params$data_dir
 render_debug <- params$render_debug
+output_dir <- params$output_dir
 
 #subject-specific plot directory
 p_base <- file.path(data_dir, "Subjects", id, "plots")
 ```
 
 <!--
-Note: I use top-level blank sections below to force the close of .tabset tabs
+Note: When the top-level headers for each section were in the respective report_generators,
+I tried using top-level blank sections below to force the close of .tabset tabs
 in cases where the rendering fails. Otherwise, the error messages will get
 folded into the preceding tabset and be hard for the user to see. These blank
 sections are not added to the TOC and should not have any negative effects.
 # {.unlisted .unnumbered .toc-ignore}
+https://stackoverflow.com/questions/38062706/rmarkdown-how-to-end-tabbed-content
+I have now moved to including the top-level headers inline in the Rmd so that these are always
+rendered prior to any knitting of the child report
 -->
 
 # Overview report is pending
-
 ```{r overview-report, echo=FALSE, results='asis', eval=FALSE}
-res <- tryCatch(knitr::knit_child('overview_report.Rmd', quiet = TRUE),
-                error=function(e) dashboard_error(as.character(e))
-)
-cat(res, sep = '\n')
+render_child("overview_report.Rmd", "Subject overview")
 ```
 
-# {.unlisted .unnumbered .toc-ignore}
+# Task compliance {.tabset}
 ```{r compliance-report, echo=FALSE, results='asis'}
-res <- tryCatch(knitr::knit_child('task_compliance_report.Rmd', quiet = TRUE),
-                error=function(e) dashboard_error(as.character(e))
-)
-cat(res, sep = '\n')
+render_child("task_compliance_report.Rmd", "Task compliance")
 ```
 
-# {.unlisted .unnumbered .toc-ignore}
+# EEG signal quality {.tabset}
 ```{r eeg-report, echo=FALSE, results='asis'}
-res <- tryCatch(knitr::knit_child('eeg_report.Rmd', quiet = TRUE),
-                error=function(e) {
-                  h <- htmltools::div(
-                    class="section-fail",
-                    htmltools::h1("EEG failed to knit"),
-                    dashboard_error(as.character(e))
-                  )
-                  return(as.character(h))
-                }
-)
-cat(res, sep = '\n')
+render_child("eeg_report.Rmd", "EEG signal quality")
 ```
 
-# {.unlisted .unnumbered .toc-ignore}
+# Sleep diary {.tabset}
 ```{r sleep-report, echo=FALSE, results='asis'}
-res <- tryCatch(knitr::knit_child('sleep_report.Rmd', quiet = TRUE),
-                error=function(e) dashboard_error(as.character(e))
-)
-cat(res, sep = '\n')
+render_child("sleep_report.Rmd", "Sleep diary")
 ```
 
-# {.unlisted .unnumbered .toc-ignore}
+# Heart rate {.tabset}
 ```{r hr-report, echo=FALSE, results='asis'}
-res <- tryCatch(knitr::knit_child('hr_report.Rmd', quiet = TRUE),
-                error=function(e) dashboard_error(as.character(e))
-)
-cat(res, sep = '\n')
+render_child("hr_report.Rmd", "Heart rate")
 ```
 
-# {.unlisted .unnumbered .toc-ignore}
+# Task performance {.tabset}
 ```{r task-performance-report, echo=FALSE, results='asis'}
-res <- tryCatch(knitr::knit_child('task_performance_report.Rmd', quiet = TRUE),
-                error=function(e) dashboard_error(as.character(e))
-)
-cat(res, sep = '\n')
+render_child("task_performance_report.Rmd", "Task performance")
 ```
 
-# {.unlisted .unnumbered .toc-ignore}
+# Mood questionnaire {.tabset}
 ```{r mood-report, echo=FALSE, results='asis'}
-res <- tryCatch(knitr::knit_child('mood_report.Rmd', quiet = TRUE),
-                error=function(e) dashboard_error(as.character(e))
-)
-cat(res, sep = '\n')
+render_child("mood_report.Rmd", "Mood")
 ```
