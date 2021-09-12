@@ -2,8 +2,7 @@
 render_eeg_table <- function(eeg_data, field=NULL) {
   stopifnot(field %in% names(eeg_data))
   if (is.null(eeg_data[[field]])) {
-    dashboard_message("Nothing to display!")
-    return(invisible(NULL))
+    return(dashboard_message("Nothing to display!"))
   }
   
   to_render <- eeg_data[[field]] %>%
@@ -83,3 +82,31 @@ get_eeg_data <- function(id, data_dir) {
 #   column_spec(5, color=if_else(eeg_unchecked[5]>70, "#D8D8D8", "black")) %>%
 #   column_spec(6, color=if_else(eeg_unchecked[6]>70, "#D8D8D8", "black")) %>%
 #   column_spec(7, color=if_else(eeg_unchecked[7]>70, "#D8D8D8", "black"))
+# 
+# ```{r eeg, include=FALSE}
+# #EEG table wrangling
+# 
+# eeg <- rename(eeg,"Block"=block)
+# 
+# eeg_dates <- left_join(eeg,blk_dt,by="Block") #add date and checklist column
+# 
+# eeg_avg <- mutate(eeg_dates,"avg"=(per_Ch_1 + per_Ch_2 + per_Ch_3 +per_Ch_4)/4) #create column for avg EEG signal 
+# 
+# eeg_row_ordered <- arrange(eeg_avg, -row_number()) #flip df so most recent blocks are first
+# 
+# #convert all to percentages, rounded
+# eeg_row_ordered$per_Ch_1 <- eeg_row_ordered$per_Ch_1*100
+# eeg_row_ordered$per_Ch_1 <- round(eeg_row_ordered$per_Ch_1)
+# eeg_row_ordered$per_Ch_2 <- eeg_row_ordered$per_Ch_2*100 
+# eeg_row_ordered$per_Ch_2 <- round(eeg_row_ordered$per_Ch_2)
+# eeg_row_ordered$per_Ch_3 <- eeg_row_ordered$per_Ch_3*100 
+# eeg_row_ordered$per_Ch_3 <- round(eeg_row_ordered$per_Ch_3)
+# eeg_row_ordered$per_Ch_4 <- eeg_row_ordered$per_Ch_4*100
+# eeg_row_ordered$per_Ch_4 <- round(eeg_row_ordered$per_Ch_4)
+# eeg_row_ordered$avg <- eeg_row_ordered$avg*100
+# eeg_row_ordered$avg <- round(eeg_row_ordered$avg)
+# 
+# eeg_col_named <- transmute(eeg_row_ordered, "Date"=Date, "Block"=Block, "Overall % good"=avg, "Ch. 1 % good"=per_Ch_1, "Ch. 2 % good"=per_Ch_2, "Ch. 3 % good"=per_Ch_3, "Ch. 4 % good"=per_Ch_4) 
+# eeg_unchecked <- filter(eeg_row_ordered, checklist=="No")
+# eeg_unchecked <- transmute(eeg_unchecked, "Date"=Date, "Block"=Block, "Overall % good"=avg, "Ch. 1 % good"=per_Ch_1, "Ch. 2 % good"=per_Ch_2, "Ch. 3 % good"=per_Ch_3, "Ch. 4 % good"=per_Ch_4) 
+# ```

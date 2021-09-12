@@ -1,18 +1,38 @@
-```{r mood-data, include=FALSE}
-source("mood_report_functions.R")
+# Mood questionnaire {.tabset}
+
+```{r mood-data, echo=FALSE, warning=FALSE, message=FALSE, results="asis"}
+source("../report_functions/mood_report_functions.R")
 mood_data <- get_mood_data(id, data_dir)
 ```
 
-\newline
-### Mood questionnaire {.tabset}
-#### Unchecked
+## Unchecked
 
 ```{r mood-questionnaire-unchecked-table, echo=FALSE, warning=FALSE, results="asis"}
 #mood questionnaire table
 render_mood_table(mood_data, "unchecked")
 ```
 
-#### All blocks
+## All blocks
 ```{r mood-questionnaire-all-table, echo=FALSE, warning=FALSE, results="asis"}
 render_mood_table(mood_data, "all")
+```
+
+## Arousal-Energetic plot
+```{r mood-ae, echo=FALSE, warning=FALSE, results="asis"}
+ae_graph <- file.path(p_base, "arousal_energetic_graph.png")
+if (file.exists(ae_graph)) {
+  knitr::include_graphics(ae_graph)
+} else {
+  dashboard_warning("No arousal-energetic graph at: ", ae_graph)
+}
+```
+
+## Elated-Sad plot
+```{r mood-es, echo=FALSE, warning=FALSE, results="asis"}
+es_graph <- file.path(p_base, "elated_sad_graph.png")
+if (file.exists(es_graph)) {
+  knitr::include_graphics(es_graph)
+} else {
+  dashboard_warning("No elated-sad graph at: ", es_graph)
+}
 ```

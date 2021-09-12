@@ -2,8 +2,7 @@
 render_hr_table <- function(hr_data, field=NULL) {
   stopifnot(field %in% names(hr_data))
   if (is.null(hr_data[[field]])) {
-    dashboard_message("Nothing to display!")
-    return(invisible(NULL))
+    return(dashboard_message("Nothing to display!"))
   }
   
   to_render <- hr_data[[field]] %>%

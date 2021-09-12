@@ -2,36 +2,76 @@
 title: Subject `r params$id` RL-EMA report
 output:
   html_document:
-    css: "dashboard.css"
+    toc: yes
+    toc_depth: 1
+    toc_float: true
+    css: "../dashboard.css"
 params:
   id: "221504"
   data_dir: "/Users/hallquist/Downloads/data"
   render_debug: FALSE
 ---
 
-Generated on `r Sys.time()`
+Generated on `r format(Sys.time(), "%a %b %d, %Y %I:%M %p")`
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(pacman)
-pacman::p_load(REDCapR, dplyr, ggplot2, cowplot, rjson, reactable, reactablefmtr)
+pacman::p_load(REDCapR, dplyr, tidyr, ggplot2, cowplot, rjson, reactable, reactablefmtr)
+
+# Suppress summarise messages about grouping
+options(dplyr.summarise.inform = FALSE)
+
 source("report_functions.R")
 id <- params$id
 data_dir <- params$data_dir
 render_debug <- params$render_debug
+
+#subject-specific plot directory
+p_base <- file.path(data_dir, "Subjects", id, "plots")
 ```
 
+<!--
+Note: I use top-level blank sections below to force the close of .tabset tabs
+in cases where the rendering fails. Otherwise, the error messages will get
+folded into the preceding tabset and be hard for the user to see. These blank
+sections are not added to the TOC and should not have any negative effects.
+# {.unlisted .unnumbered .toc-ignore}
+-->
 
-# Overview
+# Overview report is pending
 
-```{r eeg-report, echo=FALSE, results='asis'}
-res <- tryCatch(knitr::knit_child('eeg_report.Rmd', quiet = TRUE),
+```{r overview-report, echo=FALSE, results='asis', eval=FALSE}
+res <- tryCatch(knitr::knit_child('overview_report.Rmd', quiet = TRUE),
                 error=function(e) dashboard_error(as.character(e))
 )
 cat(res, sep = '\n')
 ```
 
+# {.unlisted .unnumbered .toc-ignore}
+```{r compliance-report, echo=FALSE, results='asis'}
+res <- tryCatch(knitr::knit_child('task_compliance_report.Rmd', quiet = TRUE),
+                error=function(e) dashboard_error(as.character(e))
+)
+cat(res, sep = '\n')
+```
 
+# {.unlisted .unnumbered .toc-ignore}
+```{r eeg-report, echo=FALSE, results='asis'}
+res <- tryCatch(knitr::knit_child('eeg_report.Rmd', quiet = TRUE),
+                error=function(e) {
+                  h <- htmltools::div(
+                    class="section-fail",
+                    htmltools::h1("EEG failed to knit"),
+                    dashboard_error(as.character(e))
+                  )
+                  return(as.character(h))
+                }
+)
+cat(res, sep = '\n')
+```
+
+# {.unlisted .unnumbered .toc-ignore}
 ```{r sleep-report, echo=FALSE, results='asis'}
 res <- tryCatch(knitr::knit_child('sleep_report.Rmd', quiet = TRUE),
                 error=function(e) dashboard_error(as.character(e))
@@ -39,6 +79,7 @@ res <- tryCatch(knitr::knit_child('sleep_report.Rmd', quiet = TRUE),
 cat(res, sep = '\n')
 ```
 
+# {.unlisted .unnumbered .toc-ignore}
 ```{r hr-report, echo=FALSE, results='asis'}
 res <- tryCatch(knitr::knit_child('hr_report.Rmd', quiet = TRUE),
                 error=function(e) dashboard_error(as.character(e))
@@ -46,6 +87,7 @@ res <- tryCatch(knitr::knit_child('hr_report.Rmd', quiet = TRUE),
 cat(res, sep = '\n')
 ```
 
+# {.unlisted .unnumbered .toc-ignore}
 ```{r task-performance-report, echo=FALSE, results='asis'}
 res <- tryCatch(knitr::knit_child('task_performance_report.Rmd', quiet = TRUE),
                 error=function(e) dashboard_error(as.character(e))
@@ -53,6 +95,7 @@ res <- tryCatch(knitr::knit_child('task_performance_report.Rmd', quiet = TRUE),
 cat(res, sep = '\n')
 ```
 
+# {.unlisted .unnumbered .toc-ignore}
 ```{r mood-report, echo=FALSE, results='asis'}
 res <- tryCatch(knitr::knit_child('mood_report.Rmd', quiet = TRUE),
                 error=function(e) dashboard_error(as.character(e))

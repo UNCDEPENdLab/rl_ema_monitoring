@@ -1,0 +1,19 @@
+# Task compliance {.tabset}
+
+```{r task-compliance-data, echo=FALSE, warning=FALSE, message=FALSE, results="asis"}
+source("../report_functions/task_compliance_report_functions.R")
+task_compliance_data <- get_task_compliance_data(id, data_dir)
+```
+
+## Unchecked
+
+```{r task-compliance-unchecked-table, echo=FALSE, warning=FALSE, message=FALSE, results="asis"}
+#task compliance table
+render_task_compliance_table(task_compliance_data, "unchecked")
+```
+
+## All blocks
+
+```{r task-compliance-all-table, echo=FALSE, warning=FALSE, message=FALSE, results="asis"}
+render_task_compliance_table(task_compliance_data, "all") 
+```

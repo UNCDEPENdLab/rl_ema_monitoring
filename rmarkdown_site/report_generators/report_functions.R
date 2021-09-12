@@ -22,6 +22,10 @@ get_cleaned_data <- function(id, data_dir, what) {
     main_file <- dashboard_file_check(id, data_dir, "performance.rds", "task performance")
     unchecked_file <- dashboard_file_check(id, data_dir, "performance_unchecked.rds", "unchecked task performance", signal="none")
     summaries_file <- dashboard_file_check(id, data_dir, "performance_summaries.rds", "task performance summaries", signal="none") #not used at present
+  } else if (what == "task_compliance") {
+    main_file <- dashboard_file_check(id, data_dir, "compliance.rds", "task compliance")
+    unchecked_file <- dashboard_file_check(id, data_dir, "compliance_unchecked.rds", "unchecked task compliance", signal="none")
+    summaries_file <- dashboard_file_check(id, data_dir, "compliance_summaries.rds", "task compliane summaries", signal="none") #not used at present
   } else if (what == "mood") {
     main_file <- dashboard_file_check(id, data_dir, "mood.rds", "mood diary")
     unchecked_file <- dashboard_file_check(id, data_dir, "mood_unchecked.rds", "unchecked mood diary", signal="none")
@@ -63,7 +67,6 @@ dashboard_reactable <- function(...) {
 dashboard_file_check <- function(id, data_dir, file_name, file_desc, signal="error") {
   expect_file <- file.path(data_dir, "Subjects", id, "reports", file_name)
   if (!checkmate::test_file_exists(expect_file)) {
-    expect_file <- NULL #set back to absent
     if (signal=="error") {
       dashboard_error("Cannot find", file_desc, "file:", expect_file)  
     } else if (signal == "warning") {
@@ -71,6 +74,7 @@ dashboard_file_check <- function(id, data_dir, file_name, file_desc, signal="err
     } else if (signal == "none") {
       dashboard_debug("No", file_desc, "file exists:", expect_file) #only prints when debug is on
     }
+    expect_file <- NULL #set back to absent
   }
   return(expect_file)
 }
@@ -79,26 +83,26 @@ dashboard_file_check <- function(id, data_dir, file_name, file_desc, signal="err
 #need to amend this for formatting
 dashboard_message<- function(...) {
   msg <- paste(...)
-  cat(htmltools::HTML(paste0("<p class='dashboard_message'>Message: ", msg, "</p>")))
+  htmltools::HTML(paste0("<p class='dashboard-message'><b>Message:</b> ", msg, "</p>"))
 }
 
 #need to amend this for formatting
 dashboard_warning <- function(...) {
   msg <- paste(...)
-  cat(htmltools::HTML(paste0("<p class='dashboard_warning'>Warning: ", msg, "</p>")))
+  htmltools::HTML(paste0("<p class='dashboard-warning'><b>Warning:</b> ", msg, "</p>"))
 }
 
 #need to amend this for formatting
 dashboard_error <- function(...) {
   msg <- paste(...)
-  cat(htmltools::HTML(paste0("<p class='dashboard_error'>Error: ", msg, "</p>")))
+  htmltools::HTML(paste0("<p class='dashboard-error'><b>Error:</b> ", msg, "</p>"))
 }
 
 #need to amend this for formatting
 dashboard_debug <- function(...) {
   if (isTRUE(render_debug)) { #global var
     msg <- paste(...)
-    cat(htmltools::HTML(paste0("<p class='dashboard_debug'>Debug: ", msg, "</p>")))
+    htmltools::HTML(paste0("<p class='dashboard-debug'><b>Debug:</b> ", msg, "</p>"))
   }
 }
 

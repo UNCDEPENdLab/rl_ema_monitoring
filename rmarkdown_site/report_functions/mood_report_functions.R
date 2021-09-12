@@ -2,31 +2,89 @@
 render_mood_table <- function(mood_data, field=NULL) {
   stopifnot(field %in% names(mood_data))
   if (is.null(mood_data[[field]])) {
-    dashboard_message("Nothing to display!")
-    return(invisible(NULL))
+    return(dashboard_message("Nothing to display!"))
   }
   
-  to_render <- mood_data[[field]] %>%
-    dplyr::select(Date, number_of_events, Valence, Arousal, 
-                  Anxious, Elated, Sad, Irritable, Energetic)
+  to_render <- mood_data[[field]]
+  event_data <- mood_data[[paste0(field, "_events")]]
 
+  #inspired by: https://glin.github.io/reactable/articles/cran-packages/cran-packages.html
+  event_details <- function(index) {
+    date_match <- to_render$Date[index]
+    
+    # compare against events
+    evt_match <- event_data %>% dplyr::filter(Date == !!date_match)
+    
+    detail <- htmltools::div(
+      class = "mood-detail",
+      reactable(
+        data = evt_match %>% dplyr::select(-Date),
+        columns=list(
+          category = colDef(name="Category", width=125),
+          description = colDef(name="Description", width=225),
+          time_ago = colDef(name="Min. ago"),
+          Good_Bad = colDef(name="Good-Bad"),
+          Physical_Pleasure_Physical_Pain = colDef(name="Pleasure-Pain"),
+          Loved_Lonely = colDef(name="Loved-Lonely"),
+          Powerful_Weak = colDef(name="Powerful-Weak"),
+          Safe_Threatened = colDef(name="Safe-Threatened")  
+        ),
+        fullWidth=TRUE,
+        defaultColDef = colDef(minWidth = 50),
+        outlined=TRUE)
+    )
+    
+    # pkg <- pkgs[index, ]
+    # urls <- unlist(strsplit(gsub(",", " , ", pkg$URL, perl = TRUE), "[ \n]"))
+    # 
+    # pkg_field <- function(name, ...) {
+    #   if (any(is.na(...))) NULL
+    #   else tagList(div(class = "detail-label", name), ...)
+    # }
+    # 
+    # detail <- div(
+    #   class = "package-detail",
+    #   div(class = "detail-header", pkg$Package, span(class = "detail-title", pkg$Title)),
+    #   div(class = "detail-description", pkg$Description),
+    #   pkg_field("Version", pkg$Version),
+    #   pkg_field("Depends", pkg$Depends),
+    #   pkg_field("Imports", pkg$Imports),
+    #   pkg_field("Suggests", pkg$Suggests),
+    #   pkg_field("Author", pkg$Author),
+    #   pkg_field("License", pkg$License),
+    #   pkg_field("URL", lapply(urls, function(url) {
+    #     if (grepl("https?://", url)) tags$a(href = url, url)
+    #     else if (identical(url, ",")) ", "
+    #     else url
+    #   })),
+    #   pkg_field("System Requirements", pkg$SystemRequirements)
+    # )
+    # 
+    # if (length(versions[[pkg$Package]]) > 0) {
+    #   archived <- pkg_field(
+    #     "Archived Versions",
+    #     reactable(
+    #       versions[[pkg$Package]],
+    #       pagination = FALSE,
+    #       defaultColDef = colDef(headerClass = "header"),
+    #       columns = list(
+    #         Date = colDef(name = "Published", align = "right", width = 120, cell = function(value) {
+    #           strftime(value, format = "%b %d, %Y")
+    #         })
+    #       ),
+    #       fullWidth = FALSE,
+    #       class = "archived-table",
+    #       theme = reactableTheme(cellPadding = "8px 12px")
+    #     )
+    #   )
+    #   detail <- tagAppendChild(detail, archived)
+    # }
+    
+    detail
+  }
+  
   #"Date"=Date, "Problems"=Mood,"Notes"=`Mood Notes`,"Number of events"=number_of_events,
   # mood_unchecked <- transmute(mood_unchecked, "Valence"=Valence, "Arousal"=Arousal, "Anxious"=Anxious, "Elated"=Elated, "Irritable"=Irritable,"Energetic"=Energetic)
-  
-  
-  #kbl(mood_unchecked) %>%
-    #     kable_styling(fixed_thead = T) %>%
-    #     column_spec(1, bold = T) %>%
-    #     column_spec(2, background=if_else(is.na(mood_unchecked[2]), "#C6EFCE", "#ffc7ce")) %>%
-    #     column_spec(3, background=if_else(is.na(mood_unchecked[3]), "#C6EFCE", "#ffc7ce")) %>%
-    #     column_spec(4, color="#D8D8D8") %>%
-    #     column_spec(5, color=if_else(val_avg > 50, "#D8D8D8", "black")) %>%
-    #     column_spec(6, color=if_else(val_avg > 50, "#D8D8D8", "black")) %>%
-    #     column_spec(7, color=if_else(val_avg > 50, "#D8D8D8", "black")) %>%
-    #     column_spec(8, color=if_else(val_avg > 50, "#D8D8D8", "black")) %>%
-    #     column_spec(9, color=if_else(val_avg > 50, "#D8D8D8", "black")) %>%
-    #     column_spec(10, color=if_else(val_avg > 50, "#D8D8D8", "black"))
-  # }
   
   #not clear why val_avg weas being used above to gray out all columns -- waiting on this
   tbl <- dashboard_reactable(
@@ -35,27 +93,45 @@ render_mood_table <- function(mood_data, field=NULL) {
       Date=colDef(style=list(fontWeight = "bold")),
       number_of_events=colDef(name="Number of events")
     ),
-    defaultSorted="Date"
+    defaultSorted="Date",
+    details = event_details
   )
   
   tbl
 }
+
 
 get_mood_data <- function(id, data_dir) {
   mood_data <- get_cleaned_data(id, data_dir, "mood")
   
   # mood-specific transformations applied to both checked and unchecked
   wrangle_mood <- function(df) {
-    df %>%    
-      mutate(
-        Date=dashboard_date(Date),
+    #filter down to just the rows that vary by mood report, not event
+    df %>%
+      dplyr::select(Date, number_of_events, Valence, Arousal, 
+                    Anxious, Elated, Sad, Irritable, Energetic
       ) %>%
+      distinct() %>% # use this to drop the event-related row repeats
+      mutate(Date=dashboard_date(Date)) %>%
       arrange(desc(Date))
   }
   
+  wrangle_events <- function(df) {
+    df %>% dplyr::select(
+      Date, category, description, time_ago, Good_Bad, Physical_Pleasure_Physical_Pain,
+      Loved_Lonely, Powerful_Weak, Safe_Threatened
+    ) %>%
+      mutate(Date=dashboard_date(Date))
+  }
+  
+  # The mood.rds objects are stored with repeated rows for the mood ratings, where the repeats are
+  #   the multiple events that are reported. Each event has distinct Good/Bad ratings. But for mood
+  #   reports overall, we want to filter to just the first row of each event, then separate out event data
+  mood_data$all_events <- mood_data$all %>% wrangle_events()
   mood_data$all <- mood_data$all %>% wrangle_mood()
   
   if (!is.null(mood_data$unchecked)) {
+    mood_data$unchecked_events <- mood_data$unchecked %>% wrangle_events()
     mood_data$unchecked <- mood_data$unchecked %>% wrangle_mood()
   }
   
