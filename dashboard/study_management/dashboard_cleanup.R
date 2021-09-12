@@ -39,14 +39,14 @@ if(exists("redcap_data")) {
 }
 perf$date <- as.character(perf$date)
 #get block and date columns
-blk_dt <- perf %>% select(block,date) %>% dplyr::rename("Date"=date)
-blk_dt$date <- lapply(blk_dt$Date,date_format) #reformat dates
-blk_dt <- dplyr::rename(blk_dt,"Block"=block)
+blk_dt <- perf %>% select(block,date) #%>% dplyr::rename("Date"=date)
+blk_dt$date <- lapply(blk_dt$date,date_format) #reformat dates
+#blk_dt <- dplyr::rename(blk_dt,"Block"=block)
 
 if(exists("redcap_data")) {
   if(redcap_data != "The RL-EMA QA checklist on RedCAP is blank for all participants in the active participants list.") {
     blk_dt <- left_join(blk_dt, checklist, by="Date")
-    blk_dt <- transmute(blk_dt,"Date"=date,"Block"=block, checklist=`Checklist Complete?`)
+    #blk_dt <- transmute(blk_dt,"Date"=date,"Block"=block, checklist=`Checklist Complete?`)
   }
 }
 

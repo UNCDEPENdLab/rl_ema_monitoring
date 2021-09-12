@@ -1,11 +1,14 @@
-compliance <-info[c("scheduled_time","delay","type", "duration")]
-compliance$scheduled_time <- as.Date(compliance$scheduled_time)
-compliance$delay <- round(as.numeric(compliance$delay), digits = 0)
-compliance$s_type[compliance$type=="trials"] <- "Behavioral Game"
-compliance$s_type[compliance$type=="questionnaires"] <- sapply(info$spec[compliance$type=="questionnaires"],`[[`,3)
-compliance$delay <- round(compliance$delay)
+#compliance <-info[c("scheduled_time","delay","type", "duration")]
+#compliance$scheduled_time <- as.Date(compliance$scheduled_time)
+#compliance$delay <- round(as.numeric(compliance$delay), digits = 0)
+#compliance$s_type[compliance$type=="trials"] <- "Behavioral Game"
+#compliance$s_type[compliance$type=="questionnaires"] <- sapply(info$spec[compliance$type=="questionnaires"],`[[`,3)
+#compliance$delay <- round(compliance$delay)
+
 #filters out NA/incomplete/upcoming data
-compliance_filtered <- compliance %>% filter(!is.na(s_type))
+#compliance_filtered <- compliance %>% filter(!is.na(s_type))
+# quick fix by just setting compliance_filtered to info
+compliance_filtered <- info
 compliance_filtered$is_missing <- is.na(compliance_filtered$duration)|compliance_filtered$delay>=1440
 compliance_filtered$delayednotmissing <- ifelse(compliance_filtered$is_missing, NA, compliance_filtered$delay)
 compliance_addon <- compliance_filtered[compliance_filtered$is_missing, ]
@@ -25,11 +28,11 @@ if(exists("checklist")) {
   print(compliance_filtered_2$checklist)
   compliance_filtered_2 <- filter(compliance_filtered_2, scheduled_time < "2020-12-11" )
   compliance_unchecked <- compliance_filtered_2[compliance_filtered_2$checklist != "Yes"| is.na(compliance_filtered_2$checklist), ]
-  write_csv(compliance_unchecked, paste0(dataPath, "/Subjects/", subj, "/reports/compliance_unchecked.csv"))
+  #write_csv(compliance_unchecked, paste0(dataPath, "/Subjects/", subj, "/reports/compliance_unchecked.csv"))
   saveRDS(compliance_unchecked, paste0(dataPath, "/Subjects/", subj, "/reports/compliance_unchecked.rds"))
 }
 
 # output the sleep table to a csv
-write_csv(compliance_filtered_2, paste0(dataPath, "/Subjects/", subj, "/reports/compliance.csv"))
+#write_csv(compliance_filtered_2, paste0(dataPath, "/Subjects/", subj, "/reports/compliance.csv"))
 saveRDS(compliance_filtered_2, paste0(dataPath, "/Subjects/", subj, "/reports/compliance.rds"))
 
