@@ -17,22 +17,30 @@ params:
 
 Generated on `r format(Sys.time(), "%a %b %d, %Y %I:%M %p")`
 
-```{r setup, include=FALSE}
+```{r setup, echo=FALSE, warning=FALSE, message=FALSE, results="asis"}
 knitr::opts_chunk$set(echo = TRUE)
 library(pacman)
 pacman::p_load(REDCapR, dplyr, tidyr, ggplot2, cowplot, rjson, reactable, reactablefmtr, checkmate, htmltools)
 
 # Suppress summarise messages about grouping
 options(dplyr.summarise.inform = FALSE)
-
 source("report_functions.R")
+
 id <- params$id
 data_dir <- params$data_dir
-render_debug <- params$render_debug
 output_dir <- params$output_dir
+render_debug <- params$render_debug
 
 #subject-specific plot directory
 p_base <- file.path(data_dir, "Subjects", id, "plots")
+if (!dir.exists(p_base)) {
+  dashboard_warning("Cannot find subject plot directory:", p_base)
+}
+
+d_base <- file.path(data_dir, "Subjects", id)
+if (!dir.exists(d_base)) {
+  dashboard_error("Cannot find subject data directory:", d_base)
+} 
 ```
 
 <!--

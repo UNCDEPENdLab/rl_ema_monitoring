@@ -7,14 +7,14 @@ render_task_compliance_table <- function(task_compliance_data, field=NULL) {
   
   #select fields to display
   #to_render <- task_compliance_data[[field]] %>%
-  #  dplyr::select(scheduled_time, delay, s_type, is_missing, delayednotmissing)
+  #  dplyr::select(scheduled_time, delay, type, is_missing, delayednotmissing)
 
   to_render <- task_compliance_data[[field]]  
 
   # dynamically generate groups and column definitions based on . separator  
   compliance_col_list <- function(data) {
     columns <- list(
-      Date=colDef(style=list(fontWeight = "bold"))
+      Date=colDef(style=list(fontWeight = "bold", minWidth=70))
     )
     
     col_groups <- list()
@@ -27,8 +27,8 @@ render_task_compliance_table <- function(task_compliance_data, field=NULL) {
     for (uu in seq_along(uniq_types)) {
       uname <- uniq_types[uu]
       col_groups[[uu]] <- colGroup(name=uname, columns = grep(paste0("\\.", uname), names(data), value=TRUE))
-      columns[[paste0("n_miss.", uname)]] <- colDef(name="Number missing")
-      columns[[paste0("avg_delay.", uname)]] <- colDef(name="Delay (minutes)")
+      columns[[paste0("n_miss.", uname)]] <- colDef(name="Num miss")
+      columns[[paste0("avg_delay.", uname)]] <- colDef(name="Delay (min)")
     }
     
     return(list(cols=columns, groups=col_groups))
@@ -73,7 +73,8 @@ render_task_compliance_table <- function(task_compliance_data, field=NULL) {
     data = to_render,
     columns=clist$cols,
     columnGroups=clist$groups,
-    defaultSorted="Date"
+    defaultSorted="Date",
+    defaultColDef = colDef(minWidth = 55)
   )
   
   tbl
@@ -93,14 +94,14 @@ get_task_compliance_data <- function(id, data_dir) {
       dplyr::mutate(
         Date=dashboard_date(Date),
       ) %>%
-      dplyr::select(Date, s_type, is_missing, delayednotmissing) %>%
-      group_by(Date, s_type) %>%
+      dplyr::select(Date, type, is_missing, delayednotmissing) %>%
+      group_by(Date, type) %>%
       dplyr::summarise(
         n_miss=sum(is_missing),
-        avg_delay=mean(delayednotmissing)
+        avg_delay=round(mean(delayednotmissing))
       ) %>% ungroup() %>%
       arrange(desc(Date)) %>% #%>% setDT()
-      pivot_wider(names_from=s_type, values_from=c(n_miss, avg_delay), names_sep=".")
+      pivot_wider(names_from=type, values_from=c(n_miss, avg_delay), names_sep=".")
     
   }
   

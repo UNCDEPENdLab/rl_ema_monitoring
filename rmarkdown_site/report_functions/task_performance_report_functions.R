@@ -89,7 +89,6 @@ get_task_performance_data <- function(id, data_dir) {
       dplyr::mutate(
         Date=dashboard_date(Date),
       ) %>%
-      dplyr::rename(Block=block) %>% # upper case for consistency
       arrange(desc(Date))
   }
   

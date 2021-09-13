@@ -124,11 +124,15 @@ get_mood_data <- function(id, data_dir) {
       mutate(Date=dashboard_date(Date))
   }
   
-  # The mood.rds objects are stored with repeated rows for the mood ratings, where the repeats are
-  #   the multiple events that are reported. Each event has distinct Good/Bad ratings. But for mood
-  #   reports overall, we want to filter to just the first row of each event, then separate out event data
-  mood_data$all_events <- mood_data$all %>% wrangle_events()
-  mood_data$all <- mood_data$all %>% wrangle_mood()
+  if (!is.null(mood_data$all)) {
+    # The mood.rds objects are stored with repeated rows for the mood ratings, where the repeats are
+    #   the multiple events that are reported. Each event has distinct Good/Bad ratings. But for mood
+    #   reports overall, we want to filter to just the first row of each event, then separate out event data
+    mood_data$all_events <- mood_data$all %>% wrangle_events()
+    mood_data$all <- mood_data$all %>% wrangle_mood()
+  } else {
+    dashboard_warning("No mood data found. mood_data$all is NULL in get_mood_data.")
+  }
   
   if (!is.null(mood_data$unchecked)) {
     mood_data$unchecked_events <- mood_data$unchecked %>% wrangle_events()

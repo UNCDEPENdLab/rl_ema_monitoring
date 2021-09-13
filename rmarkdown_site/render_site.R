@@ -6,17 +6,16 @@ get_subject_list <- function(data_dir) {
 } 
 
 
-render_subject_reports(
-  data_dir="/Users/hallquist/Downloads/data",
-  output_dir="/Users/hallquist/Data_Analysis/Momentum/rl_ema_monitoring/rmarkdown_site/rendered_site",
-  debug=FALSE
-)
-
-render_subject_reports <- function(data_dir, output_dir, rerender_mins=10, force=FALSE, debug=FALSE) {
+render_subject_reports <- function(data_dir, site_dir, output_dir, rerender_mins=10, force=FALSE, debug=FALSE) {
   checkmate::assert_directory_exists(data_dir)
+  checkmate::assert_directory_exists(site_dir)
+  setwd(site_dir)
   #extant <- get_report_cache(data_dir)$page_summary 
   
   slist <- get_subject_list(data_dir)
+  
+  render_separately <- function(...) callr::r(
+    function(...) rmarkdown::render(..., envir = globalenv()), args = list(...), show = TRUE)
   
   for (ss in seq_len(nrow(slist))) {
     this_subj <- slist[ss, , drop=FALSE]
@@ -44,14 +43,28 @@ render_subject_reports <- function(data_dir, output_dir, rerender_mins=10, force
     # }
     
     if (isTRUE(render_subject)) {
+      
       #do the work
       outfile <- paste0(this_subj$id, ".html") #could be handled by a config$file approach
+      
+      # Calling rmarkdown::render in this session generates problems with contaminating the global environment
+      # and global variable scope within the knitted markdown. To mirror what happens when you hit 'Knit' in
+      # Rstudio (which works well here), we need to initialize a clean R session that includes the globalenv()
+      # See here: https://stackoverflow.com/questions/32257970/knitr-inherits-variables-from-a-users-environment-even-with-envir-new-env
+
       result <- tryCatch(expr={
-        rmarkdown::render(
-          "report_generators/subject_report.Rmd", 
-          params=list(id=this_subj$id, data_dir=data_dir, output_dir=output_dir, render_debug=debug), 
-          output_dir = file.path(output_dir, "Subjects"), output_file = outfile,
-          output_yaml = "_site.yml") #this doesn't preserve the navbar
+        #rmarkdown::render(
+        render_separately(
+          file.path(site_dir, "report_generators", "subject_report.Rmd"), 
+          params=list(id=this_subj$id, data_dir=data_dir, output_dir=output_dir, render_debug=debug),
+          output_dir = file.path(output_dir, "Subjects"), 
+          output_file = outfile,
+          output_options = list(
+            self_contained=FALSE,
+            lib_dir=file.path(output_dir, "Subjects", "site_libs")
+          )
+        )
+        #output_yaml = "_site.yml") #this doesn't preserve the navbar
       }, error=function(e) { warning("Error rendering subject report for: ", this_subj$id); return("Error") })
       
       if (result == "Error") { 
@@ -66,3 +79,11 @@ render_subject_reports <- function(data_dir, output_dir, rerender_mins=10, force
   }
   
 }
+
+
+render_subject_reports(
+  data_dir="/Users/hallquist/Downloads/data",
+  site_dir="/Users/hallquist/Data_Analysis/Momentum/rl_ema_monitoring/rmarkdown_site",
+  output_dir="/Users/hallquist/Data_Analysis/Momentum/rl_ema_monitoring/rmarkdown_site/rendered_site",
+  debug=FALSE
+)

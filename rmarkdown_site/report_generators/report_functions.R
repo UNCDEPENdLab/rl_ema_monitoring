@@ -34,8 +34,17 @@ get_cleaned_data <- function(id, data_dir, what) {
     stop("Unclear what to load")
   }
   
-  if (!is.null(main_file)) ret_list[["all"]] <- readRDS(main_file)
-  if (!is.null(unchecked_file)) ret_list[["unchecked"]] <- readRDS(unchecked_file)
+  read_and_wrangle <- function(rds) {
+    df <- readRDS(rds)
+    #always make date and block upper case
+    if ("date" %in% names(df)) { df <- df %>% dplyr::rename(Date=date) }
+    if ("block" %in% names(df)) { df <- df %>% dplyr::rename(Block=block) }
+    if (is.list(df$Date)) { df$Date <- unlist(df$Date) } #nested list problem (temporary)
+    return(df)
+  }
+  
+  if (!is.null(main_file)) ret_list[["all"]] <- read_and_wrangle(main_file)
+  if (!is.null(unchecked_file)) ret_list[["unchecked"]] <- read_and_wrangle(unchecked_file)
   if (!is.null(summaries_file)) ret_list[["summaries"]] <- readRDS(summaries_file)
   
   return(ret_list)
@@ -60,7 +69,7 @@ dashboard_reactable <- function(...) {
     if (!nn %in% r_names) r_list[[nn]] <- defaults[[nn]]
   }
   
-  do.call(reactable, r_list)
+  do.call(reactable, r_list) #, envir=knitr::knit_global())
 }
 
 # helper function to check for existence of expected file in subjects reports
@@ -108,21 +117,24 @@ dashboard_debug <- function(...) {
 
 #small helper function for formatting dates for display
 dashboard_date <- function(d, in_func=anytime::anydate, out_fmt="%m/%d/%Y") {
+  if (is.list(d)) d <- unlist(d) #some nested lists being passed
   dobj <- in_func(d)
   dobj %>% format(out_fmt)
 }
 
+# wrapper function to render a child Rmd document and print an HTML error if it fails
 render_child <- function(rmd, section_name) {
   checkmate::assert_file_exists(rmd)
-  res <- tryCatch(knitr::knit_child(rmd, quiet = TRUE),
-                  error=function(e) {
-                    h <- htmltools::div(
-                      class="section-fail",
-                      htmltools::h3(paste(rmd, "failed to knit")),
-                      dashboard_error(as.character(e))
-                    )
-                    return(as.character(h))
-                  }
+  res <- tryCatch(
+    knitr::knit_child(rmd, quiet = TRUE),
+    error=function(e) {
+      h <- htmltools::div(
+        class="section-fail",
+        htmltools::h3(paste(rmd, "failed to knit")),
+        dashboard_error(as.character(e))
+      )
+      return(as.character(h))
+    }
   )
   cat(res, sep = '\n')
 }
