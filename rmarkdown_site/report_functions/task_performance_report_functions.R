@@ -1,6 +1,6 @@
 # generate reactable of task_performance data for display
 render_task_performance_table <- function(task_performance_data, field=NULL) {
-  stopifnot(field %in% names(task_performance_data))
+  checkmate::assert_list(task_performance_data)
   if (is.null(task_performance_data[[field]])) {
     return(dashboard_message("Nothing to display!"))
   }

@@ -1,6 +1,6 @@
 # generate reactable of task_compliance data for display
 render_task_compliance_table <- function(task_compliance_data, field=NULL) {
-  stopifnot(field %in% names(task_compliance_data))
+  checkmate::assert_list(task_compliance_data)
   if (is.null(task_compliance_data[[field]])) {
     return(dashboard_message("Nothing to display!"))
   }

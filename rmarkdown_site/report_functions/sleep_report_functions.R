@@ -1,6 +1,6 @@
 # generate reactable of sleep data for display
 render_sleep_table <- function(sleep_data, field=NULL) {
-  stopifnot(field %in% names(sleep_data))
+  checkmate::assert_list(sleep_data)
   if (is.null(sleep_data[[field]])) {
     return(dashboard_message("Nothing to display!"))
   }

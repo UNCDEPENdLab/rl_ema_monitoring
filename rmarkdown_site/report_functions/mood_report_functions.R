@@ -1,6 +1,6 @@
 # generate reactable of mood data for display
 render_mood_table <- function(mood_data, field=NULL) {
-  stopifnot(field %in% names(mood_data))
+  checkmate::assert_list(mood_data)
   if (is.null(mood_data[[field]])) {
     return(dashboard_message("Nothing to display!"))
   }
@@ -10,15 +10,15 @@ render_mood_table <- function(mood_data, field=NULL) {
 
   #inspired by: https://glin.github.io/reactable/articles/cran-packages/cran-packages.html
   event_details <- function(index) {
-    date_match <- to_render$Date[index]
+    episode_match <- to_render$episode_number[index]
     
     # compare against events
-    evt_match <- event_data %>% dplyr::filter(Date == !!date_match)
+    evt_match <- event_data %>% dplyr::filter(episode_number == !!episode_match)
     
     detail <- htmltools::div(
       class = "mood-detail",
       reactable(
-        data = evt_match %>% dplyr::select(-Date),
+        data = evt_match %>% dplyr::select(-Date, -episode_number),
         columns=list(
           category = colDef(name="Category", width=125),
           description = colDef(name="Description", width=225),
@@ -88,7 +88,7 @@ render_mood_table <- function(mood_data, field=NULL) {
   
   #not clear why val_avg weas being used above to gray out all columns -- waiting on this
   tbl <- dashboard_reactable(
-    data = to_render,
+    data = to_render %>% dplyr::select(-episode_number),
     columns=list(
       Date=colDef(style=list(fontWeight = "bold")),
       number_of_events=colDef(name="Number of events")
@@ -104,12 +104,33 @@ render_mood_table <- function(mood_data, field=NULL) {
 get_mood_data <- function(id, data_dir) {
   mood_data <- get_cleaned_data(id, data_dir, "mood")
   
+  # generate unique episode number to ensure that reports with multiple events are grouped properly
+  # grouping by date alone doesn't work because a date may have many events in separate episodes (prompts)
+  encode_episode <- function(df) {
+    if (is.null(df)) { return(NULL) }
+    
+    #cur_group_id accurately groups identical records within day based on 4 affects, but does not follow row order
+    bb <- df %>% group_by(Date, Valence, Arousal, Anxious, Elated) %>%
+      mutate(idx = cur_group_id()) %>% ungroup() 
+    
+    # look at repeats of each idx, then reorder from highest to lowest
+    # this assumes that the row order in the original file was sorted in some finer way (e.g., time)
+    rr <- rle(bb$idx)
+    bb$episode_number <- rep(max(bb$idx):min(bb$idx), times = rr$lengths)
+    bb$idx <- NULL
+    
+    return(bb)
+  }
+  
+  mood_data$all <- encode_episode(mood_data$all)
+  mood_data$unchecked <- encode_episode(mood_data$unchecked)
+  
   # mood-specific transformations applied to both checked and unchecked
   wrangle_mood <- function(df) {
     #filter down to just the rows that vary by mood report, not event
     df %>%
       dplyr::select(Date, number_of_events, Valence, Arousal, 
-                    Anxious, Elated, Sad, Irritable, Energetic
+                    Anxious, Elated, Sad, Irritable, Energetic, episode_number
       ) %>%
       distinct() %>% # use this to drop the event-related row repeats
       mutate(Date=dashboard_date(Date)) %>%
@@ -119,7 +140,7 @@ get_mood_data <- function(id, data_dir) {
   wrangle_events <- function(df) {
     df %>% dplyr::select(
       Date, category, description, time_ago, Good_Bad, Physical_Pleasure_Physical_Pain,
-      Loved_Lonely, Powerful_Weak, Safe_Threatened
+      Loved_Lonely, Powerful_Weak, Safe_Threatened, episode_number
     ) %>%
       mutate(Date=dashboard_date(Date))
   }

@@ -1,6 +1,6 @@
 # generate reactable of eeg data for display
 render_eeg_table <- function(eeg_data, field=NULL) {
-  stopifnot(field %in% names(eeg_data))
+  checkmate::assert_list(eeg_data)
   if (is.null(eeg_data[[field]])) {
     return(dashboard_message("Nothing to display!"))
   }

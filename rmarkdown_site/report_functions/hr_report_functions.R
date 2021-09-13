@@ -1,6 +1,6 @@
 # generate reactable of hr data for display
 render_hr_table <- function(hr_data, field=NULL) {
-  stopifnot(field %in% names(hr_data))
+  checkmate::assert_list(hr_data)
   if (is.null(hr_data[[field]])) {
     return(dashboard_message("Nothing to display!"))
   }
