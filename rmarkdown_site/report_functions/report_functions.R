@@ -37,9 +37,11 @@ get_cleaned_data <- function(id, data_dir, what) {
   read_and_wrangle <- function(rds) {
     df <- readRDS(rds)
     #always make date and block upper case
-    if ("date" %in% names(df)) { df <- df %>% dplyr::rename(Date=date) }
+    if ("date" %in% names(df)) { 
+      df <- df %>% dplyr::rename(Date=date) 
+      if (is.list(df$Date)) { df$Date <- unlist(df$Date) } #nested list problem (temporary)
+    }
     if ("block" %in% names(df)) { df <- df %>% dplyr::rename(Block=block) }
-    if (is.list(df$Date)) { df$Date <- unlist(df$Date) } #nested list problem (temporary)
     return(df)
   }
   

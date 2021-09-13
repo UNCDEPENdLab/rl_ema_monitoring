@@ -9,7 +9,7 @@ output:
     self_contained: false
     lib_dir: "site_libs"
 params:
-  id: "221504"
+  id: "221604"
   data_dir: "/Users/hallquist/Downloads/data"
   output_dir: "/Users/hallquist/Data_Analysis/Momentum/rl_ema_monitoring/rmarkdown_site/rendered_site"
   render_debug: FALSE
@@ -24,7 +24,7 @@ pacman::p_load(REDCapR, dplyr, tidyr, ggplot2, cowplot, rjson, reactable, reacta
 
 # Suppress summarise messages about grouping
 options(dplyr.summarise.inform = FALSE)
-source("report_functions.R")
+source("../report_functions/report_functions.R")
 
 id <- params$id
 data_dir <- params$data_dir
@@ -41,6 +41,7 @@ d_base <- file.path(data_dir, "Subjects", id)
 if (!dir.exists(d_base)) {
   dashboard_error("Cannot find subject data directory:", d_base)
 } 
+
 ```
 
 <!--
@@ -61,7 +62,7 @@ render_child("overview_report.Rmd", "Subject overview")
 ```
 
 # Task compliance {.tabset}
-```{r compliance-report, echo=FALSE, results='asis'}
+```{r compliance-report, echo=FALSE, results='asis', eval=TRUE}
 render_child("task_compliance_report.Rmd", "Task compliance")
 ```
 

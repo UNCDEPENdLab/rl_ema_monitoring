@@ -14,6 +14,7 @@ render_subject_reports <- function(data_dir, site_dir, output_dir, rerender_mins
   
   slist <- get_subject_list(data_dir)
   
+  #helper function to render report in separate R session to avoid environment contamination
   render_separately <- function(...) callr::r(
     function(...) rmarkdown::render(..., envir = globalenv()), args = list(...), show = TRUE)
   

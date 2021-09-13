@@ -14,8 +14,11 @@ render_task_performance_table <- function(task_performance_data, field=NULL) {
   #formatter for feedback columns
   feedback_fmt <- function(...) {
     colDef(
+      html=TRUE,
       style=function(value) {
-        if (value < dds$task_performance$objective_feedback$bad$max) {
+        if (is.na(value)) {
+          list(background = dds$task_performance$missing_accuracy$background, color=dds$task_performance$missing_accuracy$background)
+        } else if (value < dds$task_performance$objective_feedback$bad$max) {
           list(background = dds$task_performance$objective_feedback$bad$background, color=dds$task_performance$objective_feedback$bad$text)
         } else if (value >= dds$task_performance$objective_feedback$bad$max && value <= dds$task_performance$objective_feedback$good$min) {
           list(background = dds$task_performance$objective_feedback$mediocre$background, color=dds$task_performance$objective_feedback$mediocre$text)
@@ -30,9 +33,12 @@ render_task_performance_table <- function(task_performance_data, field=NULL) {
   #formatter for no feedback columns
   no_feedback_fmt <- function(...) {
     colDef(
+      html=TRUE,
       style=function(value) {
-        # NAs for no feedback trials are treated as okay
-        if (is.na(value) || value < dds$task_performance$no_feedback$bad$max) {
+        if (is.na(value)) {
+          # NAs for no feedback trials are treated as okay
+          list(background = dds$task_performance$missing_accuracy$background, color=dds$task_performance$missing_accuracy$background)
+        } else if (value < dds$task_performance$no_feedback$bad$max) {
           list(background = dds$task_performance$no_feedback$bad$background, color=dds$task_performance$no_feedback$bad$text)
         } else { # value >= dds$task_performance$no_feedback$bad$max
           list(background = dds$task_performance$no_feedback$good$background, color=dds$task_performance$no_feedback$good$text)

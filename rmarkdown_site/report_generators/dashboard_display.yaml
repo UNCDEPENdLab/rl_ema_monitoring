@@ -13,6 +13,8 @@ task_compliance:
 
 #### Task performance table
 task_performance:
+
+  # thresholds and colors for feedback trials
   objective_feedback:
     good:
       min: 80 # 80% or more correct is good
@@ -25,6 +27,8 @@ task_performance:
       max: 70 # less than 70% is bad
       background: "#FFC7CE"
       text: "black"
+
+  # thresholds and colors for no-feedback trials
   no_feedback:
     bad:
       max: 55 # in no feedback trials, < 55% is bad
@@ -33,6 +37,12 @@ task_performance:
     good:
       background: "white"
       text: "#B3B3B3"
+
+  # colors for missing accuracy
+  missing_accuracy:
+    background: "#B7CEEC" # blue angel
+    text: "black"
+
   rt:
     bad:
       max: 1400 # RTs of 1400ms or less are considered too fast
