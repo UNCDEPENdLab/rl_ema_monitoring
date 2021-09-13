@@ -93,7 +93,11 @@ get_task_performance_data <- function(id, data_dir) {
       arrange(desc(Date))
   }
   
-  task_performance_data$all <- task_performance_data$all %>% wrangle_task_performance()
+  if (!is.null(task_performance_data$all)) {
+    task_performance_data$all <- task_performance_data$all %>% wrangle_task_performance()
+  } else {
+    dashboard_warning("No task performance data found. task_performance_data$all is NULL in get_task_performance_data.")
+  }
   
   if (!is.null(task_performance_data$unchecked)) {
     task_performance_data$unchecked <- task_performance_data$unchecked %>% wrangle_task_performance()

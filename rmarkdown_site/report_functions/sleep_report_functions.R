@@ -61,7 +61,11 @@ get_sleep_data <- function(id, data_dir) {
       arrange(desc(Date))
   }
   
-  sleep_data$all <- sleep_data$all %>% wrangle_sleep()
+  if (!is.null(sleep_data$all)) {
+    sleep_data$all <- sleep_data$all %>% wrangle_sleep()
+  } else {
+    dashboard_warning("No sleep data found. sleep_data$all is NULL in get_sleep_data")
+  }
   
   #TODO: come back and use _summaries.rds once that's regenerated within master
   #insomnia_ratio <- sum(sleep$did_not_sleep)/nrow(sleep) #not entirely sure what the objective is here

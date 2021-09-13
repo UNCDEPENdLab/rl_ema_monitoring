@@ -6,6 +6,8 @@ output:
     toc_depth: 1
     toc_float: true
     css: "../dashboard.css"
+    self_contained: false
+    lib_dir: "site_libs"
 params:
   id: "221504"
   data_dir: "/Users/hallquist/Downloads/data"

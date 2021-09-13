@@ -59,7 +59,11 @@ get_eeg_data <- function(id, data_dir) {
       arrange(desc(Date))
   }
   
-  eeg_data$all <- eeg_data$all %>% wrangle_eeg()
+  if (!is.null(eeg_data$all)) {
+    eeg_data$all <- eeg_data$all %>% wrangle_eeg()
+  } else {
+    dashboard_warning("No EEG data found. eeg_data$all is NULL in get_eeg_data.")
+  }
   
   if (!is.null(eeg_data$unchecked)) {
     eeg_data$unchecked <- eeg_data$unchecked %>% wrangle_eeg()

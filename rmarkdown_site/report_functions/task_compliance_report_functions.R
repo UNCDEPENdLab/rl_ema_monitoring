@@ -104,9 +104,13 @@ get_task_compliance_data <- function(id, data_dir) {
     
   }
   
-  task_compliance_data$all <- task_compliance_data$all %>%
-    dplyr::filter(!is.na(scheduled_time)) %>%
-    wrangle_task_compliance()
+  if (!is.null(task_compliance_data$all)) {
+    task_compliance_data$all <- task_compliance_data$all %>%
+      dplyr::filter(!is.na(scheduled_time)) %>%
+      wrangle_task_compliance()
+  } else {
+    dashboard_warning("No task compliance data found. task_compliance_data$all is NULL in get_task_compliance_data.")
+  }
   
   if (!is.null(task_compliance_data$unchecked)) {
     n_miss <- sum(is.na(task_compliance_data$unchecked$scheduled_time))

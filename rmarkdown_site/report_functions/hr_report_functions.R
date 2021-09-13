@@ -42,7 +42,11 @@ get_hr_data <- function(id, data_dir) {
       arrange(desc(Date))
   }
   
-  hr_data$all <- hr_data$all %>% wrangle_hr()
+  if (!is.null(hr_data$all)) {
+    hr_data$all <- hr_data$all %>% wrangle_hr()
+  } else {
+    dashboard_warning("No HR data found. hr_data$all is NULL in get_hr_data.")
+  }
   
   if (!is.null(hr_data$unchecked)) {
     hr_data$unchecked <- hr_data$unchecked %>% wrangle_hr()
