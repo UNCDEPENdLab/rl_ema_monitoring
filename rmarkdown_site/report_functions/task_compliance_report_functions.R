@@ -11,6 +11,42 @@ render_task_compliance_table <- function(task_compliance_data, field=NULL) {
 
   to_render <- task_compliance_data[[field]]  
 
+  #formatter for delay columns
+  delay_fmt <- function(...) {
+    colDef(
+      style=function(value) {
+        if (is.na(value)) {
+          list(background = dds$task_compliance$delay$missing$background, color=dds$task_compliance$delay$missing$text)
+        } else if (value < dds$task_compliance$delay$good$max) {
+          list(background = dds$task_compliance$delay$good$background, color=dds$task_compliance$delay$good$text)
+        } else if (value >= dds$task_compliance$delay$good$max && value <= dds$task_compliance$delay$bad$min) {
+          list(background = dds$task_compliance$delay$mediocre$background, color=dds$task_compliance$delay$mediocre$text)
+        } else { # value > dds$task_compliance$delay$bad$min
+          list(background = dds$task_compliance$delay$bad$background, color=dds$task_compliance$delay$bad$text)
+        }
+      },
+      ...
+    )
+  }
+  
+  #formatter for number_missing columns
+  nmiss_fmt <- function(...) {
+    colDef(
+      style=function(value) {
+        if (is.na(value)) {
+          list(background = dds$task_compliance$num_missing$missing$background, color=dds$task_compliance$num_missing$missing$text)
+        } else if (value <= dds$task_compliance$num_missing$good$max) {
+          list(background = dds$task_compliance$num_missing$good$background, color=dds$task_compliance$num_missing$good$text)
+        } else if (value > dds$task_compliance$num_missing$good$max && value < dds$task_compliance$num_missing$bad$min) {
+          list(background = dds$task_compliance$num_missing$mediocre$background, color=dds$task_compliance$num_missing$mediocre$text)
+        } else { # value >= dds$task_compliance$num_missing$bad$min
+          list(background = dds$task_compliance$num_missing$bad$background, color=dds$task_compliance$num_missing$bad$text)
+        }
+      },
+      ...
+    )
+  }
+  
   # dynamically generate groups and column definitions based on . separator  
   compliance_col_list <- function(data) {
     columns <- list(
@@ -27,8 +63,8 @@ render_task_compliance_table <- function(task_compliance_data, field=NULL) {
     for (uu in seq_along(uniq_types)) {
       uname <- uniq_types[uu]
       col_groups[[uu]] <- colGroup(name=uname, columns = grep(paste0("\\.", uname), names(data), value=TRUE))
-      columns[[paste0("n_miss.", uname)]] <- colDef(name="Num miss")
-      columns[[paste0("avg_delay.", uname)]] <- colDef(name="Delay (min)")
+      columns[[paste0("n_miss.", uname)]] <- nmiss_fmt(name="Num miss")
+      columns[[paste0("avg_delay.", uname)]] <- delay_fmt(name="Delay (min)")
     }
     
     return(list(cols=columns, groups=col_groups))
@@ -36,38 +72,6 @@ render_task_compliance_table <- function(task_compliance_data, field=NULL) {
 
   clist <- compliance_col_list(to_render)
     
-  # 
-  # #formatter for feedback columns
-  # feedback_fmt <- function(...) {
-  #   colDef(
-  #     style=function(value) {
-  #       if (value < dds$task_compliance$objective_feedback$bad$max) {
-  #         list(background = dds$task_compliance$objective_feedback$bad$background, color=dds$task_compliance$objective_feedback$bad$text)
-  #       } else if (value >= dds$task_compliance$objective_feedback$bad$max && value <= dds$task_compliance$objective_feedback$good$min) {
-  #         list(background = dds$task_compliance$objective_feedback$mediocre$background, color=dds$task_compliance$objective_feedback$mediocre$text)
-  #       } else { # value > dds$task_compliance$objective_feedback$good$min
-  #         list(background = dds$task_compliance$objective_feedback$good$background, color=dds$task_compliance$objective_feedback$good$text)
-  #       }
-  #     },
-  #     ...
-  #   )
-  # }
-  # 
-  # #formatter for no feedback columns
-  # no_feedback_fmt <- function(...) {
-  #   colDef(
-  #     style=function(value) {
-  #       # NAs for no feedback trials are treated as okay
-  #       if (is.na(value) || value < dds$task_compliance$no_feedback$bad$max) {
-  #         list(background = dds$task_compliance$no_feedback$bad$background, color=dds$task_compliance$no_feedback$bad$text)
-  #       } else { # value >= dds$task_compliance$no_feedback$bad$max
-  #         list(background = dds$task_compliance$no_feedback$good$background, color=dds$task_compliance$no_feedback$good$text)
-  #       }
-  #     },
-  #     ...
-  #   )
-  # }
-  # 
   
   tbl <- dashboard_reactable(
     data = to_render,

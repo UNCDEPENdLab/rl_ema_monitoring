@@ -1,15 +1,51 @@
+#### Shared color scheme
+colors:
+  good:
+    background: &good-background "#FFFFFF" # white
+    text: &good-text "#B3B3B3"  # (gray70) slightly gray out
+  mediocre:
+    background: &mediocre-background "#FBECD0"
+    text: &mediocre-text "#000000"  # black
+  bad:
+    background: &bad-background "#FFB399"
+    text: &bad-text "#000000"  # black
+  missing:
+    background: &missing-background "#B7CEEC" # blue angel
+    text: &missing-text "black"
+
 #### Task compliance table
 task_compliance:
   delay:
     good:
-      min: 0
-      max: 120
-      background: "#C6EFCE"
-      text: "#006100"
+      max: 120 # no more than 120 minutes
+      background: *good-background
+      text: *good-text
+    mediocre: # between 120 and 150 minutes
+      background: *mediocre-background
+      text: *mediocre-text
     bad:
-      min: 240
-      background: "#FFEB9C"
-      text: "#9C5700"
+      min: 150
+      background: *bad-background
+      text: *bad-text
+    missing:
+      background: "white" #don't draw attention to NAs
+      text: "black"
+  num_missing:
+    good:
+      max: 0 # no missing considered good
+      background: *good-background
+      text: *good-text
+    mediocre: # 1
+      background: *mediocre-background
+      text: *mediocre-text
+    bad:
+      min: 2 # 2 or more
+      background: *bad-background
+      text: *bad-text
+    missing:
+      background: "white" #don't draw attention to NAs
+      text: "black"
+
 
 #### Task performance table
 task_performance:
@@ -17,26 +53,30 @@ task_performance:
   # thresholds and colors for feedback trials
   objective_feedback:
     good:
-      min: 80 # 80% or more correct is good
-      background: "#C6EFCE"
-      text: "black"
-    mediocre: # between 70% and 80%
-      background: "#FFEB9C"
-      text: "black"
+      min: 75 # 75% or more correct is good
+      background: *good-background
+      text: *good-text
+    mediocre: # between 60% and 75%
+      background: *mediocre-background
+      text: *mediocre-text
     bad:
-      max: 70 # less than 70% is bad
-      background: "#FFC7CE"
-      text: "black"
+      max: 60 # less than 60% is bad
+      background: *bad-background
+      text: *bad-text
 
   # thresholds and colors for no-feedback trials
   no_feedback:
-    bad:
-      max: 55 # in no feedback trials, < 55% is bad
-      background: "white"
-      text: "black"
-    good:
-      background: "white"
-      text: "#B3B3B3"
+    good: # 70% or more
+      min: 70
+      background: *good-background
+      text: *good-text
+    mediocre: # between 50% and 70%
+      background: *mediocre-background
+      text: *mediocre-text
+    bad: # less than 50%
+      max: 50 # in no feedback trials, < 50% is bad
+      background: *bad-background
+      text: *bad-text
 
   # colors for missing accuracy
   missing_accuracy:
@@ -100,5 +140,5 @@ eeg:
     text: "black"
   good_ch_colors:
     #background: "#C6EFCE"
-    background: "#e5e5e5"
-    text: "#7F7F7F"
+    background: *good-background
+    text: *good-text

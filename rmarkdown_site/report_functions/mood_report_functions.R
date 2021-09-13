@@ -34,52 +34,6 @@ render_mood_table <- function(mood_data, field=NULL) {
         outlined=TRUE)
     )
     
-    # pkg <- pkgs[index, ]
-    # urls <- unlist(strsplit(gsub(",", " , ", pkg$URL, perl = TRUE), "[ \n]"))
-    # 
-    # pkg_field <- function(name, ...) {
-    #   if (any(is.na(...))) NULL
-    #   else tagList(div(class = "detail-label", name), ...)
-    # }
-    # 
-    # detail <- div(
-    #   class = "package-detail",
-    #   div(class = "detail-header", pkg$Package, span(class = "detail-title", pkg$Title)),
-    #   div(class = "detail-description", pkg$Description),
-    #   pkg_field("Version", pkg$Version),
-    #   pkg_field("Depends", pkg$Depends),
-    #   pkg_field("Imports", pkg$Imports),
-    #   pkg_field("Suggests", pkg$Suggests),
-    #   pkg_field("Author", pkg$Author),
-    #   pkg_field("License", pkg$License),
-    #   pkg_field("URL", lapply(urls, function(url) {
-    #     if (grepl("https?://", url)) tags$a(href = url, url)
-    #     else if (identical(url, ",")) ", "
-    #     else url
-    #   })),
-    #   pkg_field("System Requirements", pkg$SystemRequirements)
-    # )
-    # 
-    # if (length(versions[[pkg$Package]]) > 0) {
-    #   archived <- pkg_field(
-    #     "Archived Versions",
-    #     reactable(
-    #       versions[[pkg$Package]],
-    #       pagination = FALSE,
-    #       defaultColDef = colDef(headerClass = "header"),
-    #       columns = list(
-    #         Date = colDef(name = "Published", align = "right", width = 120, cell = function(value) {
-    #           strftime(value, format = "%b %d, %Y")
-    #         })
-    #       ),
-    #       fullWidth = FALSE,
-    #       class = "archived-table",
-    #       theme = reactableTheme(cellPadding = "8px 12px")
-    #     )
-    #   )
-    #   detail <- tagAppendChild(detail, archived)
-    # }
-    
     detail
   }
   
@@ -232,3 +186,50 @@ get_mood_data <- function(id, data_dir) {
 #     column_spec(10, color=if_else(val_avg > 50, "#D8D8D8", "black"))
 # }
 # ```
+
+#inspired by: https://glin.github.io/reactable/articles/cran-packages/cran-packages.html
+# pkg <- pkgs[index, ]
+# urls <- unlist(strsplit(gsub(",", " , ", pkg$URL, perl = TRUE), "[ \n]"))
+# 
+# pkg_field <- function(name, ...) {
+#   if (any(is.na(...))) NULL
+#   else tagList(div(class = "detail-label", name), ...)
+# }
+# 
+# detail <- div(
+#   class = "package-detail",
+#   div(class = "detail-header", pkg$Package, span(class = "detail-title", pkg$Title)),
+#   div(class = "detail-description", pkg$Description),
+#   pkg_field("Version", pkg$Version),
+#   pkg_field("Depends", pkg$Depends),
+#   pkg_field("Imports", pkg$Imports),
+#   pkg_field("Suggests", pkg$Suggests),
+#   pkg_field("Author", pkg$Author),
+#   pkg_field("License", pkg$License),
+#   pkg_field("URL", lapply(urls, function(url) {
+#     if (grepl("https?://", url)) tags$a(href = url, url)
+#     else if (identical(url, ",")) ", "
+#     else url
+#   })),
+#   pkg_field("System Requirements", pkg$SystemRequirements)
+# )
+# 
+# if (length(versions[[pkg$Package]]) > 0) {
+#   archived <- pkg_field(
+#     "Archived Versions",
+#     reactable(
+#       versions[[pkg$Package]],
+#       pagination = FALSE,
+#       defaultColDef = colDef(headerClass = "header"),
+#       columns = list(
+#         Date = colDef(name = "Published", align = "right", width = 120, cell = function(value) {
+#           strftime(value, format = "%b %d, %Y")
+#         })
+#       ),
+#       fullWidth = FALSE,
+#       class = "archived-table",
+#       theme = reactableTheme(cellPadding = "8px 12px")
+#     )
+#   )
+#   detail <- tagAppendChild(detail, archived)
+# }

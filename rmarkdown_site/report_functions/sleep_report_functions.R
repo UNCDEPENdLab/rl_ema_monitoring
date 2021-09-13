@@ -14,8 +14,7 @@ render_sleep_table <- function(sleep_data, field=NULL) {
   }
   
   sleep_dist <- sleep_data$summaries$sleep_dist
-  to_render <- sleep_data[[field]] %>%
-    dplyr::select(Date, did_not_sleep, sleep_latency, woke_many_times, woke_early, overall)
+  to_render <- sleep_data[[field]]
   
   #TODO: Need $Sleep field, which may come from RedCAP (see sleep.R)
   gray_fmt <- function(...) {
@@ -31,8 +30,43 @@ render_sleep_table <- function(sleep_data, field=NULL) {
     )
   }
   
+  sleep_details <- function(index) {
+    diary_data <- to_render[index,,drop=FALSE]
+
+    if(!"number_of_events" %in% names(diary_data)) {
+      has_diary <- FALSE
+    } else {
+      has_diary <- diary_data$number_of_events > 0
+    }
+    if (isFALSE(has_diary)) { return(NULL) } #no details
+    
+    detail <- htmltools::div(
+      class = "sleep-detail",
+      reactable(
+        data = diary_data %>% 
+          dplyr::select(category, description, Good_Bad, Physical_Pleasure_Physical_Pain, 
+                        Loved_Lonely, Powerful_Weak, Safe_Threatened),
+        columns=list(
+          category = colDef(name="Category", width=125),
+          description = colDef(name="Description", width=225),
+          #time_ago = colDef(name="Min. ago"), #not present in currnt data
+          Good_Bad = colDef(name="Good-Bad"),
+          Physical_Pleasure_Physical_Pain = colDef(name="Pleasure-Pain"),
+          Loved_Lonely = colDef(name="Loved-Lonely"),
+          Powerful_Weak = colDef(name="Powerful-Weak"),
+          Safe_Threatened = colDef(name="Safe-Threatened")  
+        ),
+        fullWidth=TRUE,
+        defaultColDef = colDef(minWidth = 50),
+        outlined=TRUE)
+    )
+    
+    detail
+  }
+  
   tbl <- dashboard_reactable(
-    data=to_render,
+    data=to_render %>%
+      dplyr::select(Date, did_not_sleep, sleep_latency, woke_many_times, woke_early, overall),
     columns=list(
       did_not_sleep = gray_fmt(name="Didn't sleep"),
       sleep_latency = gray_fmt(name="Sleep latency"),
@@ -40,7 +74,8 @@ render_sleep_table <- function(sleep_data, field=NULL) {
       woke_early = gray_fmt(name="Woke early"),
       overall = gray_fmt(name="Overall")
     ),
-    defaultSorted = c("Date")
+    defaultSorted = c("Date"),
+    details=sleep_details
   )
   
   tbl

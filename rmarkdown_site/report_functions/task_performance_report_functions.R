@@ -18,11 +18,11 @@ render_task_performance_table <- function(task_performance_data, field=NULL) {
       style=function(value) {
         if (is.na(value)) {
           list(background = dds$task_performance$missing_accuracy$background, color=dds$task_performance$missing_accuracy$background)
-        } else if (value < dds$task_performance$objective_feedback$bad$max) {
+        } else if (value <= dds$task_performance$objective_feedback$bad$max) {
           list(background = dds$task_performance$objective_feedback$bad$background, color=dds$task_performance$objective_feedback$bad$text)
-        } else if (value >= dds$task_performance$objective_feedback$bad$max && value <= dds$task_performance$objective_feedback$good$min) {
+        } else if (value > dds$task_performance$objective_feedback$bad$max && value < dds$task_performance$objective_feedback$good$min) {
           list(background = dds$task_performance$objective_feedback$mediocre$background, color=dds$task_performance$objective_feedback$mediocre$text)
-        } else { # value > dds$task_performance$objective_feedback$good$min
+        } else { # value >= dds$task_performance$objective_feedback$good$min
           list(background = dds$task_performance$objective_feedback$good$background, color=dds$task_performance$objective_feedback$good$text)
         }
       },
@@ -38,9 +38,11 @@ render_task_performance_table <- function(task_performance_data, field=NULL) {
         if (is.na(value)) {
           # NAs for no feedback trials are treated as okay
           list(background = dds$task_performance$missing_accuracy$background, color=dds$task_performance$missing_accuracy$background)
-        } else if (value < dds$task_performance$no_feedback$bad$max) {
+        } else if (value <= dds$task_performance$no_feedback$bad$max) {
           list(background = dds$task_performance$no_feedback$bad$background, color=dds$task_performance$no_feedback$bad$text)
-        } else { # value >= dds$task_performance$no_feedback$bad$max
+        } else if (value > dds$task_performance$no_feedback$bad$max && value < dds$task_performance$no_feedback$good$min) {
+          list(background = dds$task_performance$no_feedback$mediocre$background, color=dds$task_performance$no_feedback$mediocre$text)
+        } else { # value >= dds$task_performance$no_feedback$good$min
           list(background = dds$task_performance$no_feedback$good$background, color=dds$task_performance$no_feedback$good$text)
         }
       },
