@@ -160,7 +160,7 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=TRU
     # pull data
     # iterate through the active subjects
     for(subj in active) {
-      pull_files(id=subj, path=dataPath, clinical_path=videoPath, clinical_url=videoURL)
+      pull_files(id=subj, path=dataPath, clinical_path=videoPath, clinical_url=videoURL, pull_all=TRUE)
     }
   }
   
@@ -180,9 +180,9 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=TRU
     print("Running REDCap data pull...")
     # Get the credentials (standard path for now)
     
-    creds <- get_redcap_creds(cred_path=paste0(dataPath, "/redcap.json"))
+    creds <<- get_redcap_creds(cred_path=paste0(dataPath, "/redcap.json"))
     # Load the data
-    redcap_data <<- redcap_pull(uri=creds$uri, token=creds$token, active=active)
+    #redcap_data <<- redcap_pull(uri=creds$uri, token=creds$token, active=active)
   }
   
   run_sched <- function() {
@@ -191,9 +191,9 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=TRU
     # Run schedule
     output <- proc_schedule(schedule_df = path_info$schedule,tz=Sys.timezone(),days_limit=60,force_reproc=force_proc)
     # Run REDCap merging into "output"
-    if(redcap == TRUE) {
-      output$redcap <- redcap_data
-    }
+    #if(redcap == TRUE) {
+    #  output$redcap <- redcap_data
+    #}
     #output <<- output_sched
     # Save the schedule output
     print("Saving the schedule results...")
@@ -251,6 +251,9 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=TRU
     # to run the cleanup function, loop through the subject IDs, resourcing cleanup, re-running it with the current sid
     for(s in active) {
       subj <<- s
+      if(redcap == TRUE) {
+        checklist <<- get_redcap_checklist_r(rc_url=creds$uri, rc_token=creds$token, subj_id=s)
+      }
       source("dashboard_cleanup.R")
     }
   }
@@ -308,9 +311,9 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=TRU
 #run_ema(pull=FALSE, sched=TRUE, physio=FALSE, redcap=FALSE, force_proc=TRUE, nthreads = 1, site="/Users/shanebuckley/desktop/rl_ema_monitoring/site", render=FALSE) # , force_reload=TRUE
 #run_ema(redcap=TRUE, save_lite=TRUE, render=FALSE, pull=TRUE, sched=TRUE, physio=TRUE, force_proc=TRUE, force_reload=TRUE, nthreads = 4, site="/Users/shanebuckley/desktop/rl_ema_monitoring/site") # , force_reload=TRUE
 # pull only
-#run_ema(redcap=FALSE, save_lite=FALSE, render=FALSE, pull=TRUE, sched=FALSE, physio=FALSE, nthreads = 4, site="/Users/shanebuckley/desktop/rl_ema_monitoring/site")
+#run_ema(redcap=FALSE, save_lite=FALSE, render=FALSE, pull=TRUE, sched=FALSE, physio=FALSE, cleanup_data=FALSE, nthreads = 4) #, site="/Users/shanebuckley/desktop/rl_ema_monitoring/site"
 # everything but the render and redcap pull
-#run_ema(redcap=FALSE, save_lite=TRUE, render=FALSE, pull=TRUE, sched=TRUE, physio=TRUE, force_proc=TRUE, force_reload=TRUE, nthreads = 4, site="/Users/shanebuckley/desktop/rl_ema_monitoring/site")
+#run_ema(redcap=FALSE, save_lite=TRUE, render=FALSE, pull=TRUE, sched=TRUE, physio=TRUE, force_proc=TRUE, force_reload=TRUE, cleanup_data=TRUE, nthreads = 4) #, site="/Users/shanebuckley/desktop/rl_ema_monitoring/site")
 # only run cleanup layer
 run_ema(redcap=FALSE, save_lite=FALSE, render=FALSE, pull=FALSE, sched=FALSE, physio=FALSE, force_proc=FALSE, force_reload=FALSE, cleanup_data=TRUE, nthreads = 4)
 #subjects=list("221604", "221849"),
