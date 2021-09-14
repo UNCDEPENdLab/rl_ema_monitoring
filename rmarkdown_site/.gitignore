@@ -1,2 +1,3 @@
 #don't push items in rendered site
 rendered_site/
+push_site.R

@@ -4,8 +4,8 @@ output:
   html_document:
     toc: yes
     toc_depth: 1
-    toc_float: true
-    css: "../dashboard.css"
+    toc_float: false
+    #css: !expr here::here("dashboard.css")
     self_contained: false
     lib_dir: "site_libs"
 params:
@@ -15,33 +15,52 @@ params:
   render_debug: FALSE
 ---
 
+```{r css-force, echo=FALSE, results="asis"}
+rr <- readLines("dashboard.css")
+cat(c("<style type='text/css'>", rr, "</style>"), sep="\n")
+```
+
 Generated on `r format(Sys.time(), "%a %b %d, %Y %I:%M %p")`
 
 ```{r setup, echo=FALSE, warning=FALSE, message=FALSE, results="asis"}
 knitr::opts_chunk$set(echo = TRUE)
+knit_base <- knitr::opts_current$get("root.dir")
+options(knitr.graphics.error = FALSE) # don't complain about missing figures
 library(pacman)
 pacman::p_load(REDCapR, dplyr, tidyr, ggplot2, cowplot, rjson, reactable, reactablefmtr, checkmate, htmltools)
 
 # Suppress summarise messages about grouping
 options(dplyr.summarise.inform = FALSE)
-source("../report_functions/report_functions.R")
+source("report_functions/report_functions.R")
+
+#dds stands for dashboard display settings -- contains colors and thresholds
+dds <- yaml::read_yaml("report_generators/dashboard_display.yaml")
 
 id <- params$id
 data_dir <- params$data_dir
 output_dir <- params$output_dir
 render_debug <- params$render_debug
 
-#subject-specific plot directory
-p_base <- file.path(data_dir, "Subjects", id, "plots")
-if (!dir.exists(p_base)) {
-  dashboard_warning("Cannot find subject plot directory:", p_base)
+#handle plot copying into output folder
+p_src <- file.path(data_dir, "Subjects", id, "plots")
+p_dest <- file.path(output_dir, "plots", id)
+if (!dir.exists(p_src)) {
+  dashboard_warning("Cannot find subject plot directory:", p_src)
+} else {
+  #if (!dir.exists(p_dest)) dir.create(p_dest)
+  R.utils::copyDirectory(p_src, p_dest)
 }
+
+# directory of subject html file in rendered site
+s_base <- file.path(output_dir, "Subjects")
+
+#path must be relative to output directory
+p_base <- R.utils::getRelativePath(p_dest, relativeTo=s_base)
 
 d_base <- file.path(data_dir, "Subjects", id)
 if (!dir.exists(d_base)) {
   dashboard_error("Cannot find subject data directory:", d_base)
 } 
-
 ```
 
 <!--
@@ -58,35 +77,35 @@ rendered prior to any knitting of the child report
 
 # Overview report is pending
 ```{r overview-report, echo=FALSE, results='asis', eval=FALSE}
-render_child("overview_report.Rmd", "Subject overview")
+render_child("report_generators/overview_report.Rmd", "Subject overview")
 ```
 
 # Task compliance {.tabset}
 ```{r compliance-report, echo=FALSE, results='asis', eval=TRUE}
-render_child("task_compliance_report.Rmd", "Task compliance")
+render_child("report_generators/task_compliance_report.Rmd", "Task compliance")
 ```
 
 # EEG signal quality {.tabset}
 ```{r eeg-report, echo=FALSE, results='asis'}
-render_child("eeg_report.Rmd", "EEG signal quality")
+render_child("report_generators/eeg_report.Rmd", "EEG signal quality")
 ```
 
 # Sleep diary {.tabset}
 ```{r sleep-report, echo=FALSE, results='asis'}
-render_child("sleep_report.Rmd", "Sleep diary")
+render_child("report_generators/sleep_report.Rmd", "Sleep diary")
 ```
 
 # Heart rate {.tabset}
 ```{r hr-report, echo=FALSE, results='asis'}
-render_child("hr_report.Rmd", "Heart rate")
+render_child("report_generators/hr_report.Rmd", "Heart rate")
 ```
 
 # Task performance {.tabset}
 ```{r task-performance-report, echo=FALSE, results='asis'}
-render_child("task_performance_report.Rmd", "Task performance")
+render_child("report_generators/task_performance_report.Rmd", "Task performance")
 ```
 
 # Mood questionnaire {.tabset}
 ```{r mood-report, echo=FALSE, results='asis'}
-render_child("mood_report.Rmd", "Mood")
+render_child("report_generators/mood_report.Rmd", "Mood")
 ```

@@ -3,22 +3,21 @@ source("../report_functions/task_performance_report_functions.R")
 task_performance_data <- get_task_performance_data(id, data_dir)
 ```
 
-## Unchecked
-
-```{r task-performance-unchecked-table, echo=FALSE, warning=FALSE, results="asis"}
-#task performance table
-render_task_performance_table(task_performance_data, "unchecked")
-```
-
 ## All blocks
 ```{r task-performance-all-table, echo=FALSE, warning=FALSE, results="asis"}
 render_task_performance_table(task_performance_data, "all")
 ```
 
+## Unchecked
+```{r task-performance-unchecked-table, echo=FALSE, warning=FALSE, results="asis"}
+#task performance table
+render_task_performance_table(task_performance_data, "unchecked")
+```
+
 ## Accuracy by block
 ```{r task-exp, echo=FALSE, warning=FALSE, results="asis"}
-exp_graph <- file.path(p_base, "acc_from_exp_prob.png")
-des_graph <- file.path(p_base, "acc_from_des_prob.png")
+exp_graph <- file.path(p_dest, "acc_from_exp_prob.png")
+des_graph <- file.path(p_dest, "acc_from_des_prob.png")
 
 g1 <- g2 <- NULL
 if (file.exists(exp_graph)) {
@@ -48,30 +47,15 @@ if (is.ggplot(g1) && is.ggplot(g2)) {
 
 ## Learning curve
 ```{r task-lr, echo=FALSE, warning=FALSE, results="asis"}
-lr_graph <- file.path(p_base, "lr_plot.png")
-if (file.exists(lr_graph)) {
-  knitr::include_graphics(lr_graph)
-} else {
-  dashboard_warning("No learning curve graph at: ", lr_graph)
-}
+include_subject_figure("lr_plot.png", "learning curve")
 ```
 
 ## Reaction times
 ```{r task-rt, echo=FALSE, warning=FALSE, results="asis"}
-rt_graph <- file.path(p_base, "rt_graph.png")
-if (file.exists(rt_graph)) {
-  knitr::include_graphics(rt_graph)
-} else {
-  dashboard_warning("No reaction time graph at: ", rt_graph)
-}
+include_subject_figure("rt_graph.png", "reaction time")
 ```
 
 ## Side bias
 ```{r task-bias, echo=FALSE, warning=FALSE, results="asis"}
-sb_graph <- file.path(p_base, "sb_graph.png")
-if (file.exists(sb_graph)) {
-  knitr::include_graphics(sb_graph)
-} else {
-  dashboard_warning("No side bias graph at: ", sb_graph)
-}
+include_subject_figure("sb_graph.png", "side bias")
 ```

@@ -13,14 +13,14 @@ render_hr_table <- function(hr_data, field=NULL) {
     columns=list(
       Date=colDef(style=list(fontWeight = "bold")),
       Block=colDef(html=TRUE, style=list(fontWeight = "bold"), cell=function(value, index) {
-        ecg_plot <- paste0(file.path(data_dir, "Subjects", id, "plots", paste0("ecg_plot_", to_render$Block[index], ".png")))
+        ecg_plot <- paste0(file.path(p_base, paste0("ecg_plot_", to_render$Block[index], ".png")))
         htmltools::HTML(sprintf("<a href='%s' target='popup' onclick=\"window.open('%s','popup','width=%d,height=%d'); return false;\">%s</a>", 
                                 ecg_plot, ecg_plot, dds$hr$plot_window_width, dds$hr$plot_window_height, value))
       }),
       per_Good=colDef(name="Good signal %", html=TRUE, style=function(value) {
         list(background=ifelse(value < dds$hr$hr_bad_lt_x, dds$hr$bad_hr_colors$background, dds$hr$good_hr_colors$background))
       }, cell=function(value, index) {
-        ecg_plot <- paste0(file.path(data_dir, "Subjects", id, "plots", paste0("ecg_plot_", to_render$Block[index], ".png")))
+        ecg_plot <- paste0(file.path(p_base, paste0("ecg_plot_", to_render$Block[index], ".png")))
         htmltools::HTML(sprintf("<a href='%s' target='popup' onclick=\"window.open('%s','popup','width=%d,height=%d'); return false;\">%s</a>", 
                                 ecg_plot, ecg_plot, dds$hr$plot_window_width, dds$hr$plot_window_height, value))
       })

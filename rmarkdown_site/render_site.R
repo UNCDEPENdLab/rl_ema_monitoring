@@ -3,7 +3,7 @@ get_subject_list <- function(data_dir) {
   active <- data.frame(id=jj$active, status="active")
   inactive <- data.frame(id=jj$inactive, status="inactive")
   rbind(active, inactive)
-} 
+}
 
 
 render_subject_reports <- function(data_dir, site_dir, output_dir, rerender_mins=10, force=FALSE, debug=FALSE) {
@@ -56,7 +56,7 @@ render_subject_reports <- function(data_dir, site_dir, output_dir, rerender_mins
       result <- tryCatch(expr={
         #rmarkdown::render(
         render_separately(
-          file.path(site_dir, "report_generators", "subject_report.Rmd"), 
+          file.path(site_dir, "subject_report.Rmd"),
           params=list(id=this_subj$id, data_dir=data_dir, output_dir=output_dir, render_debug=debug),
           output_dir = file.path(output_dir, "Subjects"), 
           output_file = outfile,
@@ -76,15 +76,18 @@ render_subject_reports <- function(data_dir, site_dir, output_dir, rerender_mins
       
       #insert_into_report_cache(data_dir, id=this_subj$id, list(page_summary=list(page=page, render_date=Sys.time())))
     }
-    
   }
+  
+  file.copy(file.path(site_dir, "dashboard.css"), file.path(output_dir, "Subjects", "dashboard.css"))
   
 }
 
-
 render_subject_reports(
-  data_dir="/Users/hallquist/Downloads/data",
+  #data_dir="/Users/hallquist/Downloads/data",
+  data_dir="/Users/hallquist/Downloads/subject_reports_09_13",
   site_dir="/Users/hallquist/Data_Analysis/Momentum/rl_ema_monitoring/rmarkdown_site",
   output_dir="/Users/hallquist/Data_Analysis/Momentum/rl_ema_monitoring/rmarkdown_site/rendered_site",
   debug=FALSE
 )
+
+source("push_site.R")

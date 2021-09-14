@@ -1,6 +1,3 @@
-#dds stands for dashboard display settings
-dds <- yaml::read_yaml("dashboard_display.yaml")
-
 #general wrapper that implements all, unchecked, summaries 3-file approach
 get_cleaned_data <- function(id, data_dir, what) {
   ret_list <- list(all=NULL, unchecked=NULL, summaries=NULL)
@@ -139,4 +136,15 @@ render_child <- function(rmd, section_name) {
     }
   )
   cat(res, sep = '\n')
+}
+
+include_subject_figure <- function(fname, desc=NULL) {
+  if (is.null(desc)) desc <- fname
+  abs_loc <- file.path(p_dest, fname)
+  rel_loc <- file.path(p_base, fname)
+  if (file.exists(abs_loc)) {
+    knitr::include_graphics(rel_loc)
+  } else {
+    dashboard_warning("No", desc, "graph at: ", abs_loc)
+  }
 }

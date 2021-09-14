@@ -19,7 +19,7 @@ render_eeg_table <- function(eeg_data, field=NULL) {
         }
       },
       cell=function(value, index) {
-        eeg_plot <- paste0(file.path(data_dir, "Subjects", id, "plots", paste0("eeg_plot_", to_render$Block[index], ".png")))
+        eeg_plot <- paste0(file.path(p_base, paste0("eeg_plot_", to_render$Block[index], ".png")))
         htmltools::HTML(sprintf("<a href='%s' target='popup' onclick=\"window.open('%s','popup','width=%d,height=%d'); return false;\">%s</a>", 
                                 eeg_plot, eeg_plot, dds$eeg$plot_window_width, dds$eeg$plot_window_height, value))
         # doesn't seem to pass onclick

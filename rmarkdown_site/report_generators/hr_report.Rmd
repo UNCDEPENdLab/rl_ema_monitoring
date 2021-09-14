@@ -3,12 +3,12 @@ source("../report_functions/hr_report_functions.R")
 hr_data <- get_hr_data(id, data_dir)
 ```
 
-## Unchecked
-```{r hr-unchecked-table, echo=FALSE, warning=FALSE, results="asis"}
-render_hr_table(hr_data, "unchecked")
-```
-
 ## All blocks
 ```{r hr-all-table, echo=FALSE, warning=FALSE, results="asis"}
 render_hr_table(hr_data, "all")
+```
+
+## Unchecked
+```{r hr-unchecked-table, echo=FALSE, warning=FALSE, results="asis"}
+render_hr_table(hr_data, "unchecked")
 ```

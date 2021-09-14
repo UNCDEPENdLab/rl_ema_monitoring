@@ -50,7 +50,7 @@ render_task_compliance_table <- function(task_compliance_data, field=NULL) {
   # dynamically generate groups and column definitions based on . separator  
   compliance_col_list <- function(data) {
     columns <- list(
-      Date=colDef(style=list(fontWeight = "bold", minWidth=70))
+      Date=colDef(style=list(fontWeight = "bold", minWidth=90))
     )
     
     col_groups <- list()
@@ -78,7 +78,9 @@ render_task_compliance_table <- function(task_compliance_data, field=NULL) {
     columns=clist$cols,
     columnGroups=clist$groups,
     defaultSorted="Date",
-    defaultColDef = colDef(minWidth = 55)
+    defaultColDef = colDef(minWidth = 60),
+    fullWidth=TRUE,
+    theme = reactablefmtr::journal(font_size = 12)
   )
   
   tbl
@@ -97,8 +99,11 @@ get_task_compliance_data <- function(id, data_dir) {
       dplyr::rename(Date=scheduled_time) %>%
       dplyr::mutate(
         Date=dashboard_date(Date),
+        type=dplyr::recode(type, trials="Games", "Mood Questionnaire"="Mood", "Sleep Diary"="Sleep", 
+                           "Daily recording"="Video", "5m Resting State"="5 min Resting", "End questionnaire"="End Qs")
       ) %>%
       dplyr::select(Date, type, is_missing, delayednotmissing) %>%
+      
       group_by(Date, type) %>%
       dplyr::summarise(
         n_miss=sum(is_missing),

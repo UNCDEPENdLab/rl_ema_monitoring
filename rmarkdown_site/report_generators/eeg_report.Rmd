@@ -3,14 +3,12 @@ source("../report_functions/eeg_report_functions.R")
 eeg_data <- get_eeg_data(id, data_dir)
 ```
 
-## Unchecked
-
-```{r eeg-unchecked-table, echo=FALSE, warning=FALSE, results="asis"}
-#EEG signal table
-render_eeg_table(eeg_data, "unchecked")
-```
-
 ## All blocks
 ```{r eeg-all-table, echo=FALSE, warning=FALSE, results="asis"}
 render_eeg_table(eeg_data, "all")
+```
+
+## Unchecked
+```{r eeg-unchecked-table, echo=FALSE, warning=FALSE, results="asis"}
+render_eeg_table(eeg_data, "unchecked")
 ```

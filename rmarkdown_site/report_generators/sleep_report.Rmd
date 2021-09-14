@@ -3,13 +3,12 @@ source("../report_functions/sleep_report_functions.R")
 sleep_data <- get_sleep_data(id, data_dir)
 ```
 
-## Unchecked
-```{r sleep-diary-unchecked-table, echo=FALSE, warning=FALSE, results="asis"}
-#Sleep diary table
-render_sleep_table(sleep_data, "unchecked")
-```
-
 ## All blocks
 ```{r sleep-diary-all-table, echo=FALSE, warning=FALSE, results="asis"}
 render_sleep_table(sleep_data, "all")
+```
+
+## Unchecked
+```{r sleep-diary-unchecked-table, echo=FALSE, warning=FALSE, results="asis"}
+render_sleep_table(sleep_data, "unchecked")
 ```
