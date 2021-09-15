@@ -1,10 +1,17 @@
 # get the 
 # params$id -> subj  Shane -> AndyP
+
+sliding_window = FALSE
+
 num_block <- output_physio$eeg$summary[[subj]]$block
-if (length(num_block)>=5){
-  loopseq <- seq(from=5,to=length(num_block),by=1)
-} else { # fewer than 5 blocks, just plot what we have
-  loopseq <- 1
+if (sliding_window){
+  if (length(num_block)>=5){
+    loopseq <- seq(from=5,to=length(num_block),by=1)
+  } else { # fewer than 5 blocks, just plot what we have
+    loopseq <- 1
+  }
+} else {
+  loopseq <- 1:length(num_block)
 }
 # preliminary calcs
 df <- output_physio$eeg$fb
@@ -39,10 +46,14 @@ dq <- dq %>% mutate(channel=case_when(
 for (i in loopseq) {
   try({
     # plot for individual subject iS out of a cached physio file
+    if (sliding_window){
     if (length(num_block)>=5){
-      dq0 <- dq %>% mutate(trial=trials, blocks=blocks) %>% filter(blocks==i-4:i)  
+      dq0 <- dq %>% mutate(trial=trials, blocks==blocks) %>% filter(blocks==i-4:i)  
     } else {
-      dq0 <- dq %>% mutate(trial=trials, blocks=blocks) # do not filter, there is only 1 window to plot
+      dq0 <- dq %>% mutate(trial=trials, blocks==blocks) # do not filter, there is only 1 window to plot
+    }
+    } else {
+      dq0 <- dq %>% mutate(trial=trials,blocks==blocks) %>% filter(blocks==i)
     }
     isX <- dq0 %>% select(starts_with("X"))
     isV <- dq0 %>% select(starts_with("V"))
@@ -57,39 +68,52 @@ for (i in loopseq) {
     dq0 <- dq0 %>% mutate(zscore=(V-mean(V,na.rm=TRUE))/sd(V,na.rm=TRUE))
     #dq0 <- dq0 %>% filter(abs(zscore) <= 5)  
     # check that file system expected exists and create the plot
-    fpath <- paste0(site, "/static/static/subjects/", subj)
+    #fpath <- paste0(site, "/static/static/subjects/", subj)
     # create the directory if it doesn't exist
-    dir.create(path=paste0(site, "/static/static/subjects/", subj), showWarnings = FALSE, recursive = TRUE)
+    #dir.create(path=paste0(site, "/static/static/subjects/", subj), showWarnings = FALSE, recursive = TRUE)
     # save the graph as an image file
     fig_name = paste0("eeg_plot_", toString(i), ".png")
     # if the file doesn't exist
     #print("HELLO")
-    if (!file.exists(paste0(fpath, "/", fig_name))) {
+    if (!file.exists(paste0(plots_path, "/", fig_name))) {
       # create the plot
       #eeg_plot <- NULL
       try({
-        if (length(num_block)>=5){
-        eeg_plot <- ggplot(dq0, aes(t0,trial,fill=V)) + geom_tile() + facet_wrap(~channel) + 
-          scale_x_continuous(breaks=c(0,a2f,max(dq0$t0)),labels=c(-500,0,1500),name='time [ms]') +
-          geom_vline(xintercept = a2f, lty = "dashed", color = "#FF0000", size = 2) + 
-          scale_fill_viridis_c(option = "plasma",begin=0,end=1) +
-          ggtitle(sprintf("Subject %s EEG Blocks %s - %s", subj, toString(i-4), toString(i)))
-          # save the image
-          #plotly::export(p=eeg_plot, file=paste0(site, "/", fpath, "/", fig_name))
-          #plotly::orca(p=eeg_plot, file=paste0(site, "/", fpath, "/", fig_name))
-          #ggsave(filename=fig_name, path=fpath, plot=eeg_plot)
-          png(paste0(fpath, "/", fig_name), res=300, width=8, height=8, units="in")
-        } else {
+        if (sliding_window){
+          if (length(num_block)>=5){
             eeg_plot <- ggplot(dq0, aes(t0,trial,fill=V)) + geom_tile() + facet_wrap(~channel) + 
-            scale_x_continuous(breaks=c(0,a2f,max(dq0$t0)),labels=c(-500,0,1500),name='time [ms]') +
-            geom_vline(xintercept = a2f, lty = "dashed", color = "#FF0000", size = 2) + 
-            scale_fill_viridis_c(option = "plasma",begin=0,end=1) +
-            ggtitle(sprintf("Subject %s EEG Blocks %s - %s", subj, toString(1), toString(4)))
+              scale_x_continuous(breaks=c(0,a2f,max(dq0$t0)),labels=c(-500,0,1500),name='time [ms]') +
+              geom_vline(xintercept = a2f, lty = "dashed", color = "#FF0000", size = 2) + 
+              scale_fill_viridis_c(option = "plasma",begin=0,end=1) +
+              ggtitle(sprintf("Subject %s EEG Blocks %s - %s", subj, toString(i-4), toString(i)))
             # save the image
             #plotly::export(p=eeg_plot, file=paste0(site, "/", fpath, "/", fig_name))
             #plotly::orca(p=eeg_plot, file=paste0(site, "/", fpath, "/", fig_name))
             #ggsave(filename=fig_name, path=fpath, plot=eeg_plot)
-            png(paste0(fpath, "/", fig_name), res=300, width=8, height=8, units="in") 
+            png(paste0(plots_path, "/", fig_name), res=300, width=8, height=8, units="in")
+          } else {
+            eeg_plot <- ggplot(dq0, aes(t0,trial,fill=V)) + geom_tile() + facet_wrap(~channel) + 
+              scale_x_continuous(breaks=c(0,a2f,max(dq0$t0)),labels=c(-500,0,1500),name='time [ms]') +
+              geom_vline(xintercept = a2f, lty = "dashed", color = "#FF0000", size = 2) + 
+              scale_fill_viridis_c(option = "plasma",begin=0,end=1) +
+              ggtitle(sprintf("Subject %s EEG Blocks %s - %s", subj, toString(1), toString(4)))
+            # save the image
+            #plotly::export(p=eeg_plot, file=paste0(site, "/", fpath, "/", fig_name))
+            #plotly::orca(p=eeg_plot, file=paste0(site, "/", fpath, "/", fig_name))
+            #ggsave(filename=fig_name, path=fpath, plot=eeg_plot)
+            png(paste0(plots_path, "/", fig_name), res=300, width=8, height=8, units="in") 
+          }
+        } else {
+          eeg_plot <- ggplot(dq0, aes(t0,trial,fill=V)) + geom_tile() + facet_wrap(~channel) + 
+            scale_x_continuous(breaks=c(0,a2f,max(dq0$t0)),labels=c(-500,0,1500),name='time [ms]') +
+            geom_vline(xintercept = a2f, lty = "dashed", color = "#FF0000", size = 2) + 
+            scale_fill_viridis_c(option = "plasma",begin=0,end=1) +
+            ggtitle(sprintf("Subject %s EEG Blocks %s - %s", subj, toString(1), toString(4)))
+          # save the image
+          #plotly::export(p=eeg_plot, file=paste0(site, "/", fpath, "/", fig_name))
+          #plotly::orca(p=eeg_plot, file=paste0(site, "/", fpath, "/", fig_name))
+          #ggsave(filename=fig_name, path=fpath, plot=eeg_plot)
+          png(paste0(plots_path, "/", fig_name), res=300, width=8, height=8, units="in")
         }
         print(eeg_plot)
         dev.off()

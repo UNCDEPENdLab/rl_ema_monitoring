@@ -1,7 +1,7 @@
 # check that file system expected exists and create the plot
-fpath <- paste0(site, "/static/static/subjects/", subj)
+#fpath <- paste0(site, "/static/static/subjects/", subj)
 # create the directory if it doesn't exist
-dir.create(path=paste0(site, "/static/static/subjects/", subj), showWarnings = FALSE, recursive = TRUE)
+#dir.create(path=paste0(site, "/static/static/subjects/", subj), showWarnings = FALSE, recursive = TRUE)
 # save the graph as an image file
 fig_name = paste0("acc_from_des_prob.png")
 try({
@@ -18,7 +18,7 @@ try({
     geom_text(aes(0,overall_with_feedback_mean,label =round(overall_with_feedback_mean, digits = 1), vjust = -0.4), size = 2.8, color="cyan4") +
     geom_text(aes(0,overall_no_feedback_mean,label =round(overall_no_feedback_mean, digits = 1), vjust = -0.4), size = 2.8, color="firebrick2") +
     
-  png(paste0(fpath, "/", fig_name), res=300, width=9, height=5, units="in")
+  png(paste0(plots_path, "/", fig_name), res=300, width=9, height=5, units="in")
   print(acc_from_des_prob_graph)
   dev.off()
 })

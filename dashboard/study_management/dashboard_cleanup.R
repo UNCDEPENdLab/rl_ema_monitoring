@@ -40,7 +40,7 @@ hr <- output_physio$ecg$summary[[subj]]
 perf$date <- as.character(perf$date)
 #get block and date columns
 blk_dt <- perf %>% select(block,date) #%>% dplyr::rename("Date"=date)
-blk_dt$date <- lapply(blk_dt$date,date_format) #reformat dates
+blk_dt$date <- sapply(blk_dt$date,date_format) #lapply(blk_dt$date,date_format) #reformat dates
 #blk_dt <- dplyr::rename(blk_dt,"Block"=block)
 
 #if(exists("redcap_data")) {

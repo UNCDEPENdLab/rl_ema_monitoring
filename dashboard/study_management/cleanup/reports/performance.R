@@ -32,6 +32,7 @@ rownames(task) <- NULL
 # ensure that the data is a flat dataframe (no nested lists/dataframes)
 task <- unnest(task)
 #task[] <- lapply(task, list_to_cv)
+task <- task[!duplicated(task), ]
 
 # create the unchecked mood csv if there is data to do so
 if(exists("checklist")) {

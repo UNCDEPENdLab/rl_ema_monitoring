@@ -160,7 +160,7 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=TRU
     # pull data
     # iterate through the active subjects
     for(subj in active) {
-      pull_files(id=subj, path=dataPath, clinical_path=videoPath, clinical_url=videoURL, pull_all=TRUE)
+      pull_files(id=subj, path=dataPath, clinical_path=videoPath, clinical_url=videoURL, pull_all=FALSE)
     }
   }
   
@@ -228,6 +228,9 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=TRU
   build_config(file_name="data") # rebuilds the data.json
   build_config(file_name="videos") # rebuilds the videos.json
   
+  reports_path <<- ""
+  plots_path <<- ""
+  
   # load the schedule and physio if they are not loaded by previous steps
   if(!exists("output_physio")){
     load(paste0(dataPath, "/output_physio.Rdata"))
@@ -254,8 +257,32 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=TRU
       if(redcap == TRUE) {
         checklist <<- get_redcap_checklist_r(rc_url=creds$uri, rc_token=creds$token, subj_id=s)
       }
+      reports_path <<- paste0(dataPath, '/Subjects/', s, '/reports')
+      plots_path <<- paste0(dataPath, '/Subjects/', s, '/plots')
+      # create a reports directory for the subject if one does not exist
+      dir.create(reports_path, showWarnings = FALSE, recursive=TRUE)
+      # create a plots directory for the subject if one does not exist
+      dir.create(plots_path, showWarnings = FALSE, recursive=TRUE)
+      # try to get the rds file and append it to the list of rds files
       source("dashboard_cleanup.R")
     }
+    build_config(rootDir=root_path) # rebuilds the project's cfg.json
+    build_config(file_name="data") # rebuilds the data.json
+    # create an empty list for the rds data paths
+    rds_list <- list()
+    # generate an overall overview rds by aggregating over the subject's overall.rds files.
+    for(s in active) {
+      try({
+        # get the path of the file
+        subject_overall_path <- paste0(getPathFromCfg(root_dir=root, cfg_name='data.json', sourced_file="overall.rds", keywords=s), '/overall.rds')
+        rds_list <- append(rds_list, subject_overall_path)
+      })
+    }
+    try({
+      rds_combo <- rds_list %>%
+        map_dfr(readRDS)
+      saveRDS(rds_combo, paste0(dataPath, "/Subjects/overall_overview.rds"))
+    })
   }
   
   # Make a new page on the site for these subjects

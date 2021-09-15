@@ -1,7 +1,7 @@
 # check that file system expected exists and create the plot
-fpath <- paste0(site, "/static/static/subjects/", subj)
+#fpath <- paste0(site, "/static/static/subjects/", subj)
 # create the directory if it doesn't exist
-dir.create(path=paste0(site, "/static/static/subjects/", subj), showWarnings = FALSE, recursive = TRUE)
+#dir.create(path=paste0(site, "/static/static/subjects/", subj), showWarnings = FALSE, recursive = TRUE)
 # save the graph as an image file
 fig_name = paste0("rt_graph.png")
 try({
@@ -17,7 +17,7 @@ try({
   if (exists("blocks_with_poor_performance")&&nrow(blocks_with_poor_performance)>0) {
     rt_graph <- rt_graph + geom_point(data=blocks_with_poor_performance, aes(x=poor_blocks, y=1400), color="darkorchid1", size=2.2, inherit.aes = F)
   }
-  png(paste0(fpath, "/", fig_name), res=300, width=9, height=5, units="in")
+  png(paste0(plots_path, "/", fig_name), res=300, width=9, height=5, units="in")
   print(rt_graph)
   dev.off()
 })
