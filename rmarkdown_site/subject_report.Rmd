@@ -8,6 +8,9 @@ output:
     #css: !expr here::here("dashboard.css")
     self_contained: false
     lib_dir: "site_libs"
+    theme: spacelab
+    includes:
+      before_body: navbar_sub.html
 params:
   id: "221604"
   data_dir: "/Users/hallquist/Downloads/data"
@@ -75,8 +78,8 @@ I have now moved to including the top-level headers inline in the Rmd so that th
 rendered prior to any knitting of the child report
 -->
 
-# Overview report is pending
-```{r overview-report, echo=FALSE, results='asis', eval=FALSE}
+# Overview
+```{r overview-report, echo=FALSE, results='asis', eval=TRUE}
 render_child("report_generators/overview_report.Rmd", "Subject overview")
 ```
 

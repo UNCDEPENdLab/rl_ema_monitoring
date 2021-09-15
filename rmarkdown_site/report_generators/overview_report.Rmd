@@ -1,7 +1,5 @@
-# Overview
-
 ```{r overview-data, echo=FALSE, warning=FALSE, message=FALSE, results="asis"}
-source("overview_report_functions.R")
+source("../report_functions/overview_report_functions.R")
 overview_data <- get_overview_data(id, data_dir)
 ```
 

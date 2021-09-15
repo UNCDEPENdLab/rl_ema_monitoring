@@ -80,7 +80,7 @@ render_task_compliance_table <- function(task_compliance_data, field=NULL) {
     defaultSorted="Date",
     defaultColDef = colDef(minWidth = 60),
     fullWidth=TRUE,
-    theme = reactablefmtr::journal(font_size = 12)
+    theme = reactablefmtr::journal(font_size = 12, header_font_size = 12)
   )
   
   tbl

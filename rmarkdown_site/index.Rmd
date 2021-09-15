@@ -1,11 +1,56 @@
 ---
-title: "My Website"
+title: Momentum RL-EMA dashboard
+output:
+  html_document:
+    toc: no
+    self_contained: false
+    lib_dir: "site_libs"
+    theme: spacelab
+    includes:
+      before_body: navbar_main.html
+params:
+  data_dir: "/Users/hallquist/Downloads/data"
+  output_dir: "/Users/hallquist/Data_Analysis/Momentum/rl_ema_monitoring/rmarkdown_site/rendered_site"
+  render_debug: FALSE
 ---
 
-Hello, Website!
+```{r css-force, echo=FALSE, results="asis"}
+rr <- readLines("dashboard.css")
+cat(c("<style type='text/css'>", rr, "</style>"), sep="\n")
+```
 
-For more information about simple R Markdown websites, please read the documentation at https://bookdown.org/yihui/rmarkdown/rmarkdown-site.html.
+Generated on `r format(Sys.time(), "%a %b %d, %Y %I:%M %p")`
 
-Please also note that simple R Markdown sites are _not_ based on **blogdown**. They are probably good for websites with only a few Rmd documents. For larger-scale and more sophisticated websites (such as blogs), you may want to use **blogdown** instead: https://github.com/rstudio/blogdown.
+```{r setup, echo=FALSE, warning=FALSE, message=FALSE, results="asis"}
+knitr::opts_chunk$set(echo = TRUE)
+knit_base <- knitr::opts_current$get("root.dir")
+options(knitr.graphics.error = FALSE) # don't complain about missing figures
+library(pacman)
+pacman::p_load(REDCapR, dplyr, tidyr, ggplot2, cowplot, rjson, reactable, reactablefmtr, checkmate, htmltools)
 
-config <- site_config(".")
+# Suppress summarise messages about grouping
+options(dplyr.summarise.inform = FALSE)
+source("report_functions/report_functions.R")
+
+#dds stands for dashboard display settings -- contains colors and thresholds
+dds <- yaml::read_yaml("report_generators/dashboard_display.yaml")
+
+data_dir <- params$data_dir
+output_dir <- params$output_dir
+render_debug <- params$render_debug
+```
+
+```{r get-overview, echo=FALSE, warning=FALSE, message=FALSE, results="asis"}
+source("report_functions/overview_report_functions.R")
+overview_data <- get_all_overviews(data_dir)
+```
+
+# Active
+```{r active-subjects, echo=FALSE, warning=FALSE, message=FALSE, results="asis"}
+render_overview_table(overview_data, "active", add_links=TRUE)
+```
+
+# Inactive
+```{r inactive-subjects, echo=FALSE, warning=FALSE, message=FALSE, results="asis"}
+render_overview_table(overview_data, "inactive", add_links=TRUE)
+```

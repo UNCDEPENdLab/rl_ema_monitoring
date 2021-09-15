@@ -1,3 +1,15 @@
+get_subject_list <- function(data_dir) {
+  jj <- rjson::fromJSON(file = file.path(data_dir, "subject_status.json"))$subjects
+  active <- data.frame(id=jj$active, status="active")
+  inactive <- data.frame(id=jj$inactive, status="inactive")
+  rbind(active, inactive)
+}
+
+#helper function to render report in separate R session to avoid environment contamination
+render_separately <- function(...) callr::r(
+  function(...) rmarkdown::render(..., envir = globalenv()), args = list(...), show = TRUE)
+
+
 #general wrapper that implements all, unchecked, summaries 3-file approach
 get_cleaned_data <- function(id, data_dir, what) {
   ret_list <- list(all=NULL, unchecked=NULL, summaries=NULL)
@@ -27,6 +39,8 @@ get_cleaned_data <- function(id, data_dir, what) {
     main_file <- dashboard_file_check(id, data_dir, "mood.rds", "mood diary")
     unchecked_file <- dashboard_file_check(id, data_dir, "mood_unchecked.rds", "unchecked mood diary", signal="none")
     summaries_file <- dashboard_file_check(id, data_dir, "mood_summaries.rds", "mood diary summaries", signal="warning") #should exist
+  } else if (what == "overview") {
+    main_file <- dashboard_file_check(id, data_dir, "overall.rds", "subject overview")
   } else {
     stop("Unclear what to load")
   }
@@ -147,4 +161,19 @@ include_subject_figure <- function(fname, desc=NULL) {
   } else {
     dashboard_warning("No", desc, "graph at: ", abs_loc)
   }
+}
+
+get_all_overviews <- function(data_dir) {
+  slist <- get_subject_list(data_dir)
+  overview_data <- do.call(rbind, lapply(slist$id, function(id) {
+    df <- get_overview_data(id, data_dir)$all
+    return(df)
+  }))
+  
+  #populate missing subject overviews with NAs
+  all_df <- slist %>% left_join(overview_data, by="id")
+  return(list(
+    active=all_df %>% dplyr::filter(status=="active"),
+    inactive=all_df %>% dplyr::filter(status=="inactive")
+  ))
 }

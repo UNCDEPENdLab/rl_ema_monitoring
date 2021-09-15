@@ -1,10 +1,4 @@
-get_subject_list <- function(data_dir) {
-  jj <- rjson::fromJSON(file = file.path(data_dir, "subject_status.json"))$subjects
-  active <- data.frame(id=jj$active, status="active")
-  inactive <- data.frame(id=jj$inactive, status="inactive")
-  rbind(active, inactive)
-}
-
+source("report_functions/report_functions.R")
 
 render_subject_reports <- function(data_dir, site_dir, output_dir, rerender_mins=10, force=FALSE, debug=FALSE) {
   checkmate::assert_directory_exists(data_dir)
@@ -13,10 +7,6 @@ render_subject_reports <- function(data_dir, site_dir, output_dir, rerender_mins
   #extant <- get_report_cache(data_dir)$page_summary 
   
   slist <- get_subject_list(data_dir)
-  
-  #helper function to render report in separate R session to avoid environment contamination
-  render_separately <- function(...) callr::r(
-    function(...) rmarkdown::render(..., envir = globalenv()), args = list(...), show = TRUE)
   
   for (ss in seq_len(nrow(slist))) {
     this_subj <- slist[ss, , drop=FALSE]
@@ -82,12 +72,32 @@ render_subject_reports <- function(data_dir, site_dir, output_dir, rerender_mins
   
 }
 
-render_subject_reports(
-  #data_dir="/Users/hallquist/Downloads/data",
-  data_dir="/Users/hallquist/Downloads/subject_reports_09_13",
+render_main_pages <- function(data_dir, site_dir, output_dir, debug=FALSE) {
+  #just index for now...
+  result <- tryCatch(expr={
+    #rmarkdown::render(
+    render_separately(
+      file.path(site_dir, "index.Rmd"),
+      params=list(data_dir=data_dir, output_dir=output_dir, render_debug=debug),
+      output_dir = output_dir,
+      output_options = list(
+        self_contained=FALSE,
+        lib_dir=file.path(output_dir, "site_libs")
+      )
+    )
+  }, error=function(e) { warning("Error rendering index.html"); return("Error") }
+  )
+}
+
+site_settings <- list(
+  data_dir="/Users/hallquist/Downloads/subject_reports_09_14",
   site_dir="/Users/hallquist/Data_Analysis/Momentum/rl_ema_monitoring/rmarkdown_site",
   output_dir="/Users/hallquist/Data_Analysis/Momentum/rl_ema_monitoring/rmarkdown_site/rendered_site",
   debug=FALSE
 )
+
+do.call(render_subject_reports, site_settings)
+do.call(render_main_pages, site_settings)
+
 
 source("push_site.R")
