@@ -2,6 +2,8 @@ import datetime
 import json
 import os
 import sys
+import yaml
+from data_management_functions import get_cfg_var_p
 
 def add_subject_by_status(id, status, path=None):
     '''
@@ -13,7 +15,9 @@ def add_subject_by_status(id, status, path=None):
     # if the path variable is None
     if path == None:
         # then use the current working directory by default
-        path = os.getcwd()
+        #path = os.getcwd()
+        # then use the data path in the project config
+        path = get_cfg_var_p(var="root")
     # handle for running on a windows operaing system (removes leading '/')
     if sys.platform == "win32":
         path = path.replace('\\','/').replace('//','/')

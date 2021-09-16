@@ -4,6 +4,8 @@ import sys
 from set_status_func import add_subject_by_status
 from pydrive.auth import GoogleAuth
 from pydrive.drive import GoogleDrive
+import yaml
+from data_management_functions import get_cfg_var_p
 
 def make_json(id, gmail, path):
     '''
@@ -15,15 +17,15 @@ def make_json(id, gmail, path):
     dataPath = path
     # Path given should be path to data, modify path to go to 'subjects_skeleton.json'
     # splits the path string into lists around '/'
-    pathList = path.split('/')
+    #pathList = path.split('/')
     # removes the last element 'data'
-    pathList.pop()
+    #pathList.pop()
     # reforms the string
-    skeletonPath = ''
-    for item in pathList:
-        skeletonPath = skeletonPath + '/' + item
+    #skeletonPath = ''
+    #for item in pathList:
+    #    skeletonPath = skeletonPath + '/' + item
     # follows the standard file hierarchy that 'data/' and 'dashboard/' should have the same parent
-    skeletonPath = skeletonPath + '/dashboard/study_management'
+    skeletonPath = get_cfg_var_p(var="root") + '/dashboard/study_management'
     # handle for running on a windows operaing system (removes leading '/')
     if sys.platform == "win32":
         skeletonPath = skeletonPath[1:]
@@ -95,7 +97,8 @@ def add_subject(id, gmail, status='active', path=None):
     # if the path variable is None
     if path == None:
         # then use the current working directory by default
-        currDir = os.getcwd()
+        #currDir = os.getcwd()
+        currDir = get_cfg_var_p(var="data")
     # otherwise
     else:
         # use the path given
