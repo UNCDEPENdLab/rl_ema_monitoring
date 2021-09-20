@@ -4,7 +4,7 @@ output:
   html_document:
     toc: yes
     toc_depth: 1
-    toc_float: false
+    toc_float: true
     #css: !expr here::here("dashboard.css")
     self_contained: false
     lib_dir: "site_libs"
@@ -13,7 +13,7 @@ output:
       before_body: navbar_sub.html
 params:
   id: "221604"
-  data_dir: "/Users/hallquist/Downloads/data"
+  data_dir: "/Users/hallquist/Downloads/subject_reports_09_14"
   output_dir: "/Users/hallquist/Data_Analysis/Momentum/rl_ema_monitoring/rmarkdown_site/rendered_site"
   render_debug: FALSE
 ---
@@ -51,7 +51,8 @@ if (!dir.exists(p_src)) {
   dashboard_warning("Cannot find subject plot directory:", p_src)
 } else {
   #if (!dir.exists(p_dest)) dir.create(p_dest)
-  R.utils::copyDirectory(p_src, p_dest)
+  dashboard_debug(sprintf("Copying images from %s to %s", p_src, p_dest))
+  R.utils::copyDirectory(p_src, p_dest, overwrite=TRUE)
 }
 
 # directory of subject html file in rendered site
@@ -65,18 +66,6 @@ if (!dir.exists(d_base)) {
   dashboard_error("Cannot find subject data directory:", d_base)
 } 
 ```
-
-<!--
-Note: When the top-level headers for each section were in the respective report_generators,
-I tried using top-level blank sections below to force the close of .tabset tabs
-in cases where the rendering fails. Otherwise, the error messages will get
-folded into the preceding tabset and be hard for the user to see. These blank
-sections are not added to the TOC and should not have any negative effects.
-# {.unlisted .unnumbered .toc-ignore}
-https://stackoverflow.com/questions/38062706/rmarkdown-how-to-end-tabbed-content
-I have now moved to including the top-level headers inline in the Rmd so that these are always
-rendered prior to any knitting of the child report
--->
 
 # Overview
 ```{r overview-report, echo=FALSE, results='asis', eval=TRUE}

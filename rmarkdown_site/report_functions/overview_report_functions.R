@@ -37,11 +37,10 @@ render_overview_table <- function(overview_data, field=NULL, add_links=FALSE) {
   tbl
 }
 
-get_overview_data <- function(id, data_dir) {
-  overview_data <- get_cleaned_data(id, data_dir, "overview")
+get_overview_data <- function(id, data_dir, quiet=FALSE) {
+  overview_data <- get_cleaned_data(id, data_dir, "overview", quiet=quiet)
    
   #unclear if the all/unchecked distinction applies to overview -- seems like 'no'
-  
   
   # overview-specific transformations applied to both checked and unchecked
   wrangle_overview <- function(df) {
@@ -54,7 +53,8 @@ get_overview_data <- function(id, data_dir) {
   if (!is.null(overview_data$all)) {
     overview_data$all <- overview_data$all %>% wrangle_overview()
   } else {
-    dashboard_warning("No overview data found. overview_data$all is NULL in get_overview_data.")
+    if (isFALSE(quiet)) { dashboard_warning("No overview data found. overview_data$all is NULL in get_overview_data.") }
+    dashboard_debug("No overview data found. overview_data$all is NULL in get_overview_data.")
   }
   
   if (!is.null(overview_data$unchecked)) {

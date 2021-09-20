@@ -15,7 +15,7 @@ render_task_performance_table(task_performance_data, "unchecked")
 ```
 
 ## Accuracy by block
-```{r task-exp, echo=FALSE, warning=FALSE, results="asis"}
+```{r task-exp, echo=FALSE, warning=FALSE, results="asis", fig.width = 9, fig.height = 2.5, dpi=300, fig.retina=1}
 exp_graph <- file.path(p_dest, "acc_from_exp_prob.png")
 des_graph <- file.path(p_dest, "acc_from_des_prob.png")
 

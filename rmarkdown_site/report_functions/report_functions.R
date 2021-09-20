@@ -7,18 +7,17 @@ get_subject_list <- function(data_dir) {
 
 #helper function to render report in separate R session to avoid environment contamination
 render_separately <- function(...) callr::r(
-  function(...) rmarkdown::render(..., envir = globalenv()), args = list(...), show = TRUE)
-
+  function(...) rmarkdown::render(..., envir = parent.frame()), args = list(...), show = TRUE)
 
 #general wrapper that implements all, unchecked, summaries 3-file approach
-get_cleaned_data <- function(id, data_dir, what) {
+get_cleaned_data <- function(id, data_dir, what, quiet=FALSE) {
   ret_list <- list(all=NULL, unchecked=NULL, summaries=NULL)
   
   main_file <- unchecked_file <- summaries_file <- NULL
   if (what == "sleep") {
     main_file <- dashboard_file_check(id, data_dir, "sleep.rds", "sleep diary")
     unchecked_file <- dashboard_file_check(id, data_dir, "sleep_unchecked.rds", "unchecked sleep diary", signal="none")
-    summaries_file <- dashboard_file_check(id, data_dir, "sleep_summaries.rds", "sleep summaries", signal="warning") # should exist
+    summaries_file <- dashboard_file_check(id, data_dir, "sleep_summaries.rds", "sleep summaries", signal=ifelse(isTRUE(quiet), "none", "warning")) # should exist
   } else if (what == "hr") {
     main_file <- dashboard_file_check(id, data_dir, "hr.rds", "heart rate")
     unchecked_file <- dashboard_file_check(id, data_dir, "hr_unchecked.rds", "unchecked heart rate", signal="none")
@@ -38,9 +37,9 @@ get_cleaned_data <- function(id, data_dir, what) {
   } else if (what == "mood") {
     main_file <- dashboard_file_check(id, data_dir, "mood.rds", "mood diary")
     unchecked_file <- dashboard_file_check(id, data_dir, "mood_unchecked.rds", "unchecked mood diary", signal="none")
-    summaries_file <- dashboard_file_check(id, data_dir, "mood_summaries.rds", "mood diary summaries", signal="warning") #should exist
+    summaries_file <- dashboard_file_check(id, data_dir, "mood_summaries.rds", "mood diary summaries", signal=ifelse(isTRUE(quiet), "none", "warning")) #should exist
   } else if (what == "overview") {
-    main_file <- dashboard_file_check(id, data_dir, "overall.rds", "subject overview")
+    main_file <- dashboard_file_check(id, data_dir, "overall.rds", "subject overview", signal=ifelse(isTRUE(quiet), "none", "error"))
   } else {
     stop("Unclear what to load")
   }
@@ -102,29 +101,61 @@ dashboard_file_check <- function(id, data_dir, file_name, file_desc, signal="err
 }
 
 
-#need to amend this for formatting
-dashboard_message<- function(...) {
-  msg <- paste(...)
-  htmltools::HTML(paste0("<p class='dashboard-message'><b>Message:</b> ", msg, "</p>"))
+#by default, $ is converted to a mathjax expression in pandoc.
+#need to escape this
+escape_msg <- function(msg) {
+  gsub("$", "\\$", msg, fixed=TRUE)
 }
 
 #need to amend this for formatting
-dashboard_warning <- function(...) {
-  msg <- paste(...)
-  htmltools::HTML(paste0("<p class='dashboard-warning'><b>Warning:</b> ", msg, "</p>"))
+dashboard_message<- function(..., print=TRUE) {
+  msg <- escape_msg(paste(...))
+  tag <- htmltools::HTML(paste0("<p class='dashboard-message'><b>Message:</b> ", msg, "</p>"))
+  if (isTRUE(print)) {
+    cat(tag)
+    return(invisible(NULL))
+  } else {
+    return(tag)
+  }
 }
 
 #need to amend this for formatting
-dashboard_error <- function(...) {
-  msg <- paste(...)
-  htmltools::HTML(paste0("<p class='dashboard-error'><b>Error:</b> ", msg, "</p>"))
+dashboard_warning <- function(..., print=TRUE) {
+  msg <- escape_msg(paste(...))
+  tag <- htmltools::HTML(paste0("<p class='dashboard-warning'><b>Warning:</b> ", msg, "</p>"))
+  if (isTRUE(print)) {
+    cat(tag)
+    return(invisible(NULL))
+  } else {
+    return(tag)
+  }
 }
 
 #need to amend this for formatting
-dashboard_debug <- function(...) {
+dashboard_error <- function(..., print=TRUE) {
+  msg <- escape_msg(paste(...))
+  tag <- htmltools::HTML(paste0("<p class='dashboard-error'><b>Error:</b> ", msg, "</p>"))
+  if (isTRUE(print)) {
+    cat(tag)
+    return(invisible(NULL))
+  } else {
+    return(tag)
+  }
+}
+
+#need to amend this for formatting
+dashboard_debug <- function(..., print=TRUE) {
   if (isTRUE(render_debug)) { #global var
-    msg <- paste(...)
-    htmltools::HTML(paste0("<p class='dashboard-debug'><b>Debug:</b> ", msg, "</p>"))
+    msg <- escape_msg(paste(...))
+    tag <- htmltools::HTML(paste0("<p class='dashboard-debug'><b>Debug:</b> ", msg, "</p>"))
+    if (isTRUE(print)) {
+      cat(tag)
+      return(invisible(NULL))
+    } else {
+      return(tag)
+    }
+  } else {
+    return(invisible(NULL))
   }
 }
 
@@ -163,17 +194,21 @@ include_subject_figure <- function(fname, desc=NULL) {
   }
 }
 
-get_all_overviews <- function(data_dir) {
+get_all_overviews <- function(data_dir, quiet=TRUE) {
   slist <- get_subject_list(data_dir)
   overview_data <- do.call(rbind, lapply(slist$id, function(id) {
-    df <- get_overview_data(id, data_dir)$all
+    df <- get_overview_data(id, data_dir, quiet=TRUE)$all
     return(df)
   }))
   
   #populate missing subject overviews with NAs
   all_df <- slist %>% left_join(overview_data, by="id")
   return(list(
-    active=all_df %>% dplyr::filter(status=="active"),
-    inactive=all_df %>% dplyr::filter(status=="inactive")
+    active=all_df %>% 
+      dplyr::filter(status=="active") %>% 
+      dplyr::select(-status),
+    inactive=all_df %>% 
+      dplyr::filter(status=="inactive") %>%
+      dplyr::select(-status)
   ))
 }
