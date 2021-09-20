@@ -1,0 +1,25 @@
+```{r mood-data, echo=FALSE, warning=FALSE, message=FALSE, results="asis"}
+source("../report_functions/mood_report_functions.R")
+mood_data <- get_mood_data(id, data_dir)
+```
+
+## All blocks
+```{r mood-questionnaire-all-table, echo=FALSE, warning=FALSE, results="asis"}
+render_mood_table(mood_data, "all")
+```
+
+## Unchecked
+```{r mood-questionnaire-unchecked-table, echo=FALSE, warning=FALSE, results="asis"}
+#mood questionnaire table
+render_mood_table(mood_data, "unchecked")
+```
+
+## Arousal-Energetic plot
+```{r mood-ae, echo=FALSE, warning=FALSE, results="asis"}
+include_subject_figure("arousal_energetic_graph.png", "Arousal-Energetic")
+```
+
+## Elated-Sad plot
+```{r mood-es, echo=FALSE, warning=FALSE, results="asis"}
+include_subject_figure("elated_sad_graph.png", "Elated-Sad")
+```

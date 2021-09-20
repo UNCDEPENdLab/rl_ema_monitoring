@@ -62,7 +62,7 @@ if(Sys.getenv("USER")=="dp"){
 
 rc<- redcap_pull(uri="https://www.ctsiredcap.pitt.edu/redcap/api/", token='7EB4987CE6130619646F4919D53EB0DD', activeList="221504")
 
-/Users/hallquist/Downloads/data/redcap.json
+#/Users/hallquist/Downloads/data/redcap.json
 
 ```
 
@@ -90,121 +90,6 @@ blk_dt <- transmute(blk_dt,"Date"=date,"Block"=block, checklist=`Checklist Compl
 
 
 
-```{r mood, include=FALSE}
-#Mood report table wrangling
-mood <- proc_sched$form_dfs$`Mood Questionnaire`
-mood$answer_time <- str_extract(mood$answer_time,"\\d{4}-\\d{2}-\\d{2}") #chop off the hour from the answer time
-mood <- rename(mood,"Date"=answer_time)
-mood$Date <- as.character(mood$Date)
-mood <- left_join(mood,checklist, by="Date")
-mood$Date <- lapply(mood$Date,date_format) #format appropriately
-
-mood_check <- output$redcap %>% filter(ID==params$id) %>% select(`Mood`,`Mood Notes`,Date)
-mood_check$Date <- as.character(mood_check$Date)
-mood$Date <- as.character(mood$Date)
-
-mood <- left_join(mood, mood_check, by="Date")#adding RA check column
-mood <- arrange(mood, -row_number()) #make the most recent block come first
-
-#this will be used to determine the color of the font of the mood ratings
-val_avg_row <- filter(output$sample_form_summary, ID==params$id)
-val_avg <- sl_di_avg_row$val_arr_dis_avg
-
-mood_unchecked <- filter(mood,`Checklist Complete?`=="No")
-mood_unchecked <- transmute(mood_unchecked, "Date"=Date, "Problems"=Mood,"Notes"=`Mood Notes`,"Number of events"=number_of_events, "Valence"=Valence, "Arousal"=Arousal, "Anxious"=Anxious, "Elated"=Elated, "Irritable"=Irritable,"Energetic"=Energetic)
-mood <- transmute(mood, "Date"=Date, "Problems"=Mood,"Notes"=`Mood Notes`,"Number of events"=number_of_events, "Valence"=Valence, "Arousal"=Arousal, "Anxious"=Anxious, "Elated"=Elated, "Irritable"=Irritable,"Energetic"=Energetic)
-```
-
-```{r performance, include=FALSE}
-
-#task performance table wrangling
-task <- rename(perf,"Date"=date) #get rid of blocks not played
-task <- left_join(task,checklist, by="Date")
-task$Date <- lapply(task$Date,date_format) #reformat dates (these dates don't come from blk_dt)
-task <- arrange(task, -row_number()) #flip df so that most recent dates are first
-
-#create cumulative earnings column
-task$c_earn <- c()
-task$c_earn[nrow(task)] <- task$earning[nrow(task)]
-for(i in (nrow(task)-1):1){
-  task$c_earn[i] <- task$earning[i] + task$c_earn[i+1]
-}
-
-#TEMPORARY: adding in an intox response with a very early start time to make sure that all blocks match. This will not be necessary with real data, when there will be an intox response preceding every block.
-temp <- data.frame("time"=1504931510000,"answer"="Yes")
-output$proc_data[[params$id]]$raw_data$drugs_check <- rbind(output$proc_data[[params$id]]$raw_data$drugs_check,temp)
-
-#create intoxication column
-raw_s_data <- output$proc_data[[params$id]]$raw_data$sessions
-block_times <- as.numeric(raw_s_data$start_time_ms)
-raw_s_data$intox <- lapply(block_times, get_intox_resp, id=params$id)
-intox_df <- select(raw_s_data, block, intox)
-
-#join column to task df
-task <- left_join(task, intox_df, by="block")
-
-task$abs_accurate_feed <- task$abs_accurate_feed*100
-task$relative_accuracy_feed <- task$relative_accuracy_feed*100
-task$relative_accuracy_nofeed <- task$relative_accuracy_nofeed*100
-task$abs_accurate_nofeed <- task$abs_accurate_nofeed*100
-task$IDe_bias <- task$IDe_bias*100
-task$mean_rt <- task$mean_rt*1000
-
-task[,c(3:8)] <- round(task[,c(3:8)]) #round percentages to nearest whole percent
-
-
-rownames(task) <- NULL
-
-task_unchecked <- filter(task,`Checklist Complete?`=="No")
-task_unchecked <- transmute(task_unchecked, "Date"=Date, "Block"=block, "Objective % correct (feed.)"=abs_accurate_feed, "Experienced % correct (feed.)"=relative_accuracy_feed, "Objective % correct (no feed.)"=abs_accurate_nofeed, "Experienced % correct (no feed.)"=relative_accuracy_nofeed, "RT(ms)"=mean_rt, "Left %"=IDe_bias, "Intoxicated?"=intox, "Cumulative earnings"=c_earn)
-task <- transmute(task, "Date"=Date, "Block"=block, "Objective % correct (feed.)"=abs_accurate_feed, "Experienced % correct (feed.)"=relative_accuracy_feed, "Objective % correct (no feed.)"=abs_accurate_nofeed, "Experienced % correct (no feed.)"=relative_accuracy_nofeed, "RT(ms)"=mean_rt, "Left %"=IDe_bias, "Intoxicated?" = intox, "Cumulative earnings"=c_earn)
-```
-
-```{r eeg, include=FALSE}
-#EEG table wrangling
-
-eeg <- rename(eeg,"Block"=block)
-
-eeg_dates <- left_join(eeg,blk_dt,by="Block") #add date and checklist column
-
-eeg_avg <- mutate(eeg_dates,"avg"=(per_Ch_1 + per_Ch_2 + per_Ch_3 +per_Ch_4)/4) #create column for avg EEG signal 
-
-eeg_row_ordered <- arrange(eeg_avg, -row_number()) #flip df so most recent blocks are first
-
-#convert all to percentages, rounded
-eeg_row_ordered$per_Ch_1 <- eeg_row_ordered$per_Ch_1*100
-eeg_row_ordered$per_Ch_1 <- round(eeg_row_ordered$per_Ch_1)
-eeg_row_ordered$per_Ch_2 <- eeg_row_ordered$per_Ch_2*100 
-eeg_row_ordered$per_Ch_2 <- round(eeg_row_ordered$per_Ch_2)
-eeg_row_ordered$per_Ch_3 <- eeg_row_ordered$per_Ch_3*100 
-eeg_row_ordered$per_Ch_3 <- round(eeg_row_ordered$per_Ch_3)
-eeg_row_ordered$per_Ch_4 <- eeg_row_ordered$per_Ch_4*100
-eeg_row_ordered$per_Ch_4 <- round(eeg_row_ordered$per_Ch_4)
-eeg_row_ordered$avg <- eeg_row_ordered$avg*100
-eeg_row_ordered$avg <- round(eeg_row_ordered$avg)
-
-eeg_col_named <- transmute(eeg_row_ordered, "Date"=Date, "Block"=Block, "Overall % good"=avg, "Ch. 1 % good"=per_Ch_1, "Ch. 2 % good"=per_Ch_2, "Ch. 3 % good"=per_Ch_3, "Ch. 4 % good"=per_Ch_4) 
-eeg_unchecked <- filter(eeg_row_ordered, checklist=="No")
-eeg_unchecked <- transmute(eeg_unchecked, "Date"=Date, "Block"=Block, "Overall % good"=avg, "Ch. 1 % good"=per_Ch_1, "Ch. 2 % good"=per_Ch_2, "Ch. 3 % good"=per_Ch_3, "Ch. 4 % good"=per_Ch_4) 
-```
- 
-```{r hr, include=FALSE}
-#HR table wrangling
-hr <- rename(hr,"Block"=block)
-
-hr_dates <- left_join(hr,blk_dt,by="Block") #add date column
-
-hr_ordered <- arrange(hr_dates, -row_number()) #most recent blocks first
-
-#convert all to percentages, rounded
-hr_ordered$per_Good <- hr_ordered$per_Good*100
-hr_ordered$per_Good <- round(hr_ordered$per_Good)
-
-hr_unchecked <- filter(hr_ordered, checklist=="No")
-hr_ordered <- transmute(hr_ordered, "Date"=Date, "Block"=Block, "Good signal %"=per_Good) 
-hr_unchecked <- transmute(hr_unchecked, "Date"=Date, "Block"=Block, "Good signal %"=per_Good) 
-```
-
 ```{r video, include=FALSE}
 video <- output$redcap %>% filter(ID==params$id) %>% select(`Video`,`Video Notes`,Date)
 video$Date <- lapply(video$Date,date_format) %>% as.character(.)#format appropriately
@@ -217,84 +102,8 @@ video_unchecked <- transmute(video_unchecked, "Date"= Date, "Problems" = `Video`
 video <- transmute(video, "Date"=Date, "Problems" = `Video`, "Notes" = `Video Notes`, "Video" = links)
 ```
 
-```{r compliance, include=FALSE}
-compliance <-info[c("scheduled_time","delay","type", "duration")]
-compliance$scheduled_time <- as.Date(compliance$scheduled_time)
-compliance$delay <- round(as.numeric(compliance$delay), digits = 0)
-compliance$s_type[compliance$type=="trials"] <- "Behavioral Game"
-compliance$s_type[compliance$type=="questionnaires"] <- sapply(info$spec[compliance$type=="questionnaires"],`[[`,3)
-compliance$delay <- round(compliance$delay)
-
-#filters out NA/incomplete/upcoming data
-compliance_filtered <- compliance %>% filter(!is.na(s_type))
 
 
-compliance_filtered$is_missing <- is.na(compliance_filtered$duration)|compliance_filtered$delay>=1440
-compliance_filtered$delayednotmissing <- ifelse(compliance_filtered$is_missing, NA, compliance_filtered$delay)
-
-compliance_addon <- compliance_filtered[compliance_filtered$is_missing, ]
-
-compliance_addon$days_delayed <- floor(compliance_addon$delay/1440)
-
-compliance_addon$scheduled_time <- compliance_addon$scheduled_time + (compliance_addon$days_delayed)
-
-compliance_addon$delayednotmissing <- compliance_addon$delay - (compliance_addon$days_delayed * 1440)
-
-compliance_addon$days_delayed <- NULL
-compliance_addon$is_missing <- FALSE
-compliance_filtered_2 <- rbind(compliance_filtered, compliance_addon)
-
-#line 164 (call redcap_pull via Rdata file) will need to be redone once we know how redcap integration works (with multiple subjects)
-
-
-ema_checklist <- rc[c("Date", "Checklist Complete?")] 
-
-compliance_filtered_2$checklist <- ema_checklist$`Checklist Complete?`[match(compliance_filtered_2$scheduled_time, ema_checklist$Date)]
-print(compliance_filtered_2$checklist)
-
-compliance_filtered_2<- filter(compliance_filtered_2, scheduled_time < "2020-12-11" )
-
-compliance_unchecked <- compliance_filtered_2[compliance_filtered_2$checklist != "Yes"| is.na(compliance_filtered_2$checklist), ]
-
-#pivot tables
-
-
-library("pivottabler")
-compliance_pf <- PivotTable$new()
-compliance_pf$addData(compliance_filtered_2)
-compliance_pf$addColumnDataGroups("s_type", addTotal=FALSE)
-compliance_pf$addRowDataGroups("scheduled_time", addTotal=FALSE)
-compliance_pf$defineCalculation(calculationName = "delayednotmissing", summariseExpression = "ifelse(is.na(mean(as.numeric(delayednotmissing), na.rm=TRUE)), 0, mean(as.numeric(delayednotmissing), na.rm=TRUE))", caption = "avg delay")
-compliance_pf$defineCalculation(calculationName = "is_missing", summariseExpression = "length(which(is_missing))", caption = "number missing")
-compliance_pf$evaluatePivot()
-
-compliance_pun <- PivotTable$new()
-compliance_pun$addData(compliance_unchecked)
-compliance_pun$addColumnDataGroups("s_type", addTotal=FALSE)
-compliance_pun$addRowDataGroups("scheduled_time", addTotal=FALSE)
-compliance_pun$defineCalculation(calculationName = "delayednotmissing", summariseExpression = "ifelse(is.na(mean(as.numeric(delayednotmissing), na.rm=TRUE)), 0, mean(as.numeric(delayednotmissing), na.rm=TRUE))", caption = "avg delay")
-compliance_pun$defineCalculation(calculationName = "is_missing", summariseExpression = "length(which(is_missing))", caption = "number missing")
-compliance_pun$evaluatePivot()
-
-cells <- compliance_pun$findCells(minValue=121, maxValue=240, includeNull=FALSE, includeNA=FALSE)
-compliance_pun$setStyling(cells=cells, declarations=list("background-color"="#FFEB9C", "color"="#9C5700"))
-
-# apply the red style for an average delay of 4 hours or greater
-cells <- compliance_pun$findCells(minValue=241, includeNull=FALSE, includeNA=FALSE)
-compliance_pf$setStyling(cells=cells, declarations=list("background-color"="#FFC7CE", "color"="#9C0006"))
-
-# apply the green style for an average delay of between 0 and 2 hours
-#cells <- compliance_pf$findCells(minValue=0, maxValue=120, includeNull=FALSE, includeNA=FALSE)
-#compliance_pf$setStyling(cells=cells, declarations=list("background-color"="#C6EFCE", "color"="#006100"))
-
-# apply the yellow style for an average delay of between 2 and 4 hours
-cells <- compliance_pf$findCells(minValue=121, maxValue=240, includeNull=FALSE, includeNA=FALSE)
-compliance_pf$setStyling(cells=cells, declarations=list("background-color"="#FFEB9C", "color"="#9C5700"))
-
-# apply the red style for an average delay of 4 hours or greater
-cells <- compliance_pf$findCells(minValue=241, includeNull=FALSE, includeNA=FALSE)
-compliance_pf$setStyling(cells=cells, declarations=list("background-color"="#FFC7CE", "color"="#9C0006"))
-```
 \newline
 ## Overview
 ```{r overview table, echo = FALSE, warning=FALSE}
@@ -388,21 +197,6 @@ kbl(Individual_Overview) %>%
 ## Individual Areas
 
 
-\newline
-
-### Task Compliance {.tabset}
-
-#### Unchecked
-```{r compliance table, echo=FALSE}
-compliance_pun$renderPivot()
-```
-
-#### All 
-```{r compliance full, echo=FALSE}
-compliance_pf$renderPivot()
-```
-
-
 
 
 
@@ -441,47 +235,6 @@ if(nrow(diary) > 0){
 }
 ```
 
-\newline
-### Mood questionnaire {.tabset}
-#### Unchecked
-```{r mood unchecked, echo=FALSE, warning=FALSE}
-#Mood table
-#Will need to change the figure for val_arr_dis_avg when we figure out that threshold
-if(nrow(mood_unchecked) > 0){
-  kbl(mood_unchecked) %>%
-  kable_styling(fixed_thead = T) %>%
-  column_spec(1, bold = T) %>%
-  column_spec(2, background=if_else(is.na(mood_unchecked[2]), "#C6EFCE", "#ffc7ce")) %>%
-  column_spec(3, background=if_else(is.na(mood_unchecked[3]), "#C6EFCE", "#ffc7ce")) %>%
-  column_spec(4, color="#D8D8D8") %>%
-  column_spec(5, color=if_else(val_avg > 50, "#D8D8D8", "black")) %>%
-  column_spec(6, color=if_else(val_avg > 50, "#D8D8D8", "black")) %>%
-  column_spec(7, color=if_else(val_avg > 50, "#D8D8D8", "black")) %>%
-  column_spec(8, color=if_else(val_avg > 50, "#D8D8D8", "black")) %>%
-  column_spec(9, color=if_else(val_avg > 50, "#D8D8D8", "black")) %>%
-  column_spec(10, color=if_else(val_avg > 50, "#D8D8D8", "black"))
-}
-```
-
-#### All blocks
-```{r mood table, echo=FALSE, warning=FALSE}
-#Mood table
-#Will need to change the figure for val_arr_dis_avg when we figure out that threshold
-if(nrow(mood) > 0){
-  kbl(mood) %>%
-  kable_styling(fixed_thead = T) %>%
-  column_spec(1, bold = T) %>%
-  column_spec(2, background=if_else(is.na(mood[2]), "#C6EFCE", "#ffc7ce")) %>%
-  column_spec(3, background=if_else(is.na(mood[3]), "#C6EFCE", "#ffc7ce")) %>%
-  column_spec(4, color="#D8D8D8") %>%
-  column_spec(5, color=if_else(val_avg > 50, "#D8D8D8", "black")) %>%
-  column_spec(6, color=if_else(val_avg > 50, "#D8D8D8", "black")) %>%
-  column_spec(7, color=if_else(val_avg > 50, "#D8D8D8", "black")) %>%
-  column_spec(8, color=if_else(val_avg > 50, "#D8D8D8", "black")) %>%
-  column_spec(9, color=if_else(val_avg > 50, "#D8D8D8", "black")) %>%
-  column_spec(10, color=if_else(val_avg > 50, "#D8D8D8", "black"))
-}
-```
 
 \newline
 ### Videos {.tabset}

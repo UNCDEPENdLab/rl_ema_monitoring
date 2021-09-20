@@ -1,0 +1,56 @@
+body { 
+  max-width: 2200px; 
+  margin: auto;
+  padding: 1em;
+  padding-top: 50px;
+}
+
+a {
+  color: inherit; 
+  text-decoration: inherit; 
+}
+
+h1 {
+  font-size: 28px;
+  margin-top: 1.5em;
+}
+
+h1.title {
+  font-size: 34px;
+  margin-top: 1em;
+}
+
+.mood-detail {
+  padding: 12px;
+  box-shadow: inset 0 1px 3px #dbdbdb;
+  background: hsl(213, 20%, 99%);
+  font-size: 12px;
+}
+
+.sleep-detail {
+  padding: 12px;
+  box-shadow: inset 0 1px 3px #dbdbdb;
+  background: hsl(213, 20%, 99%);
+  font-size: 12px;
+}
+
+
+.dashboard-warning {
+  font-size: 15px;
+  color: red;
+}
+
+.dashboard-error {
+  font-size: 20px;
+  color: red;
+}
+
+.dashboard-message {
+  font-size: 15px;
+  color: green;
+}
+
+.dashboard-debug {
+  font-size: 15px;
+  color: orange;
+}

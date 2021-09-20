@@ -1,0 +1,8 @@
+```{r overview-data, echo=FALSE, warning=FALSE, message=FALSE, results="asis"}
+source("../report_functions/overview_report_functions.R")
+overview_data <- get_overview_data(id, data_dir)
+```
+
+```{r overview-table, echo=FALSE, warning=FALSE, results="asis"}
+render_overview_table(overview_data, "all")
+```

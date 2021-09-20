@@ -1,0 +1,103 @@
+---
+title: Subject `r params$id` RL-EMA report
+output:
+  html_document:
+    toc: yes
+    toc_depth: 1
+    toc_float: true
+    #css: !expr here::here("dashboard.css")
+    self_contained: false
+    lib_dir: "site_libs"
+    theme: spacelab
+    includes:
+      before_body: navbar_sub.html
+params:
+  id: "221604"
+  data_dir: "/Users/hallquist/Downloads/subject_reports_09_14"
+  output_dir: "/Users/hallquist/Data_Analysis/Momentum/rl_ema_monitoring/rmarkdown_site/rendered_site"
+  render_debug: FALSE
+---
+
+```{r css-force, echo=FALSE, results="asis"}
+rr <- readLines("dashboard.css")
+cat(c("<style type='text/css'>", rr, "</style>"), sep="\n")
+```
+
+Generated on `r format(Sys.time(), "%a %b %d, %Y %I:%M %p")`
+
+```{r setup, echo=FALSE, warning=FALSE, message=FALSE, results="asis"}
+knitr::opts_chunk$set(echo = TRUE)
+knit_base <- knitr::opts_current$get("root.dir")
+options(knitr.graphics.error = FALSE) # don't complain about missing figures
+library(pacman)
+pacman::p_load(REDCapR, dplyr, tidyr, ggplot2, cowplot, rjson, reactable, reactablefmtr, checkmate, htmltools)
+
+# Suppress summarise messages about grouping
+options(dplyr.summarise.inform = FALSE)
+source("report_functions/report_functions.R")
+
+#dds stands for dashboard display settings -- contains colors and thresholds
+dds <- yaml::read_yaml("report_generators/dashboard_display.yaml")
+
+id <- params$id
+data_dir <- params$data_dir
+output_dir <- params$output_dir
+render_debug <- params$render_debug
+
+#handle plot copying into output folder
+p_src <- file.path(data_dir, "Subjects", id, "plots")
+p_dest <- file.path(output_dir, "plots", id)
+if (!dir.exists(p_src)) {
+  dashboard_warning("Cannot find subject plot directory:", p_src)
+} else {
+  #if (!dir.exists(p_dest)) dir.create(p_dest)
+  dashboard_debug(sprintf("Copying images from %s to %s", p_src, p_dest))
+  R.utils::copyDirectory(p_src, p_dest, overwrite=TRUE)
+}
+
+# directory of subject html file in rendered site
+s_base <- file.path(output_dir, "Subjects")
+
+#path must be relative to output directory
+p_base <- R.utils::getRelativePath(p_dest, relativeTo=s_base)
+
+d_base <- file.path(data_dir, "Subjects", id)
+if (!dir.exists(d_base)) {
+  dashboard_error("Cannot find subject data directory:", d_base)
+} 
+```
+
+# Overview
+```{r overview-report, echo=FALSE, results='asis', eval=TRUE}
+render_child("report_generators/overview_report.Rmd", "Subject overview")
+```
+
+# Task compliance {.tabset}
+```{r compliance-report, echo=FALSE, results='asis', eval=TRUE}
+render_child("report_generators/task_compliance_report.Rmd", "Task compliance")
+```
+
+# EEG signal quality {.tabset}
+```{r eeg-report, echo=FALSE, results='asis'}
+render_child("report_generators/eeg_report.Rmd", "EEG signal quality")
+```
+
+# Sleep diary {.tabset}
+```{r sleep-report, echo=FALSE, results='asis'}
+render_child("report_generators/sleep_report.Rmd", "Sleep diary")
+```
+
+# Heart rate {.tabset}
+```{r hr-report, echo=FALSE, results='asis'}
+render_child("report_generators/hr_report.Rmd", "Heart rate")
+```
+
+# Task performance {.tabset}
+```{r task-performance-report, echo=FALSE, results='asis'}
+render_child("report_generators/task_performance_report.Rmd", "Task performance")
+```
+
+# Mood questionnaire {.tabset}
+```{r mood-report, echo=FALSE, results='asis'}
+render_child("report_generators/mood_report.Rmd", "Mood")
+```

@@ -1,18 +1,61 @@
-```{r task-performance-data, include=FALSE}
-source("task_performance_report_functions.R")
+```{r task-performance-data, echo=FALSE, warning=FALSE, message=FALSE, results="asis"}
+source("../report_functions/task_performance_report_functions.R")
 task_performance_data <- get_task_performance_data(id, data_dir)
 ```
 
-\newline
-### Task performance {.tabset}
-#### Unchecked
+## All blocks
+```{r task-performance-all-table, echo=FALSE, warning=FALSE, results="asis"}
+render_task_performance_table(task_performance_data, "all")
+```
 
+## Unchecked
 ```{r task-performance-unchecked-table, echo=FALSE, warning=FALSE, results="asis"}
 #task performance table
 render_task_performance_table(task_performance_data, "unchecked")
 ```
 
-#### All blocks
-```{r task-performance-all-table, echo=FALSE, warning=FALSE, results="asis"}
-render_task_performance_table(task_performance_data, "all")
+## Accuracy by block
+```{r task-exp, echo=FALSE, warning=FALSE, results="asis", fig.width = 9, fig.height = 2.5, dpi=300, fig.retina=1}
+exp_graph <- file.path(p_dest, "acc_from_exp_prob.png")
+des_graph <- file.path(p_dest, "acc_from_des_prob.png")
+
+g1 <- g2 <- NULL
+if (file.exists(exp_graph)) {
+  #knitr::include_graphics(exp_graph)
+  g1 <- ggdraw() + draw_image(exp_graph)
+} else {
+  dashboard_warning("No experienced probabilities graph at: ", exp_graph)
+}
+
+if (file.exists(des_graph)) {
+  #knitr::include_graphics(c(exp_graph, des_graph))
+  g2 <- ggdraw() + draw_image(des_graph)
+} else {
+  dashboard_warning("No designated probabilities graph at: ", des_graph)
+}
+
+if (is.ggplot(g1) && is.ggplot(g2)) {
+  cowplot::plot_grid(g1, g2, nrow=1) #, rel_widths = c(0.5, 0.5), align="hv", greedy = FALSE)
+} else if (is.ggplot(g1)) {
+  plot(g1)
+} else if (is.ggplot(g2)) {
+  plot(g2)
+}
+
+```
+
+
+## Learning curve
+```{r task-lr, echo=FALSE, warning=FALSE, results="asis"}
+include_subject_figure("lr_plot.png", "learning curve")
+```
+
+## Reaction times
+```{r task-rt, echo=FALSE, warning=FALSE, results="asis"}
+include_subject_figure("rt_graph.png", "reaction time")
+```
+
+## Side bias
+```{r task-bias, echo=FALSE, warning=FALSE, results="asis"}
+include_subject_figure("sb_graph.png", "side bias")
 ```
