@@ -68,7 +68,7 @@ render_task_performance_table <- function(task_performance_data, field=NULL) {
       }),
       IDe_bias=colDef(name="Left bias", format=colFormat(suffix = "%"), style=function(value) {
         bias <- abs(value - 50)
-        if (bias > dds$task_performance$side_bias$bad$min) {
+        if (bias >= dds$task_performance$side_bias$bad$min) {
           list(background = dds$task_performance$side_bias$bad$background, color=dds$task_performance$side_bias$bad$text)
         } else {
           list(background = dds$task_performance$side_bias$good$background, color=dds$task_performance$side_bias$good$text)
