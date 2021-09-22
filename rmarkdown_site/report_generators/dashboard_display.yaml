@@ -89,26 +89,26 @@ task_performance:
   rt:
     bad:
       max: 1400 # RTs of 1400ms or less are considered too fast
-      background: "white"
-      text: "black"
+      background: *bad-background
+      text: *bad-text
     good:
-      background: "white"
-      text: "#999999" # (gray60) gray out good RTs
+      background: *good-background
+      text: *good-text
   side_bias:
     bad:
       min: 17 # 17% or higher deviation from 50%
-      background: "white"
-      text: "black"
+      background: *bad-background
+      text: *bad-text
     good:
-      background: "white"
-      text: "#B3B3B3" # (gray70) gray out acceptable side distribution
+      background: *good-background
+      text: *good-text
   intoxicated:
     "yes":
-      background: "white"
-      text: "black"
+      background: *bad-background
+      text: *bad-text
     "no":
-      background: "white"
-      text: "#B3B3B3" # (gray70) gray out not intoxicated samples
+      background: *good-background
+      text: *good-text
 
 #### Heart rate table
 hr:
@@ -119,11 +119,11 @@ hr:
   plot_window_width: 900
 
   good_hr_colors:
-    background: "white"
-    text: "#ffc7ce"
+    background: *good-background
+    text: *good-text
   bad_hr_colors:
-    background: "#FFC7CE"
-    text: "black"
+    background: *bad-background
+    text: *bad-text
 
 sleep:
   sleep_dist_gray_gt_x: 50 #gray out reports above this threshold in sleep summary
@@ -139,8 +139,8 @@ eeg:
 
   #display colors for good and bad channels
   bad_ch_colors:
-    background: "#FFC7CE"
-    text: "black"
+    background: *bad-background
+    text: *bad-text
   good_ch_colors:
     #background: "#C6EFCE"
     background: *good-background
