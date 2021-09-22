@@ -160,7 +160,7 @@ dashboard_debug <- function(..., print=TRUE) {
 }
 
 #small helper function for formatting dates for display
-dashboard_date <- function(d, in_func=anytime::anydate, out_fmt="%m/%d/%Y") {
+dashboard_date <- function(d, in_func=anytime::anytime, out_fmt="%m/%d/%Y") {
   if (is.list(d)) d <- unlist(d) #some nested lists being passed
   dobj <- in_func(d)
   dobj %>% format(out_fmt)
@@ -212,3 +212,14 @@ get_all_overviews <- function(data_dir, quiet=TRUE) {
       dplyr::select(-status)
   ))
 }
+
+## tabled function for getting stuff directly from proc schedule
+# get_subject_compliance <- function(data_dir) {
+#   sched_file <- file.path(data_dir, "output_schedule.Rdata")
+#   checkmate::assert_file_exists(sched_file)
+#   
+#   proc_sched <- local(get(load(sched_file)))
+#   
+# }
+# 
+# x <- get_subject_compliance("/Users/hallquist/Downloads/subject_reports_09_15")

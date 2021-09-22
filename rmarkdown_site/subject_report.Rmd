@@ -77,6 +77,11 @@ render_child("report_generators/overview_report.Rmd", "Subject overview")
 render_child("report_generators/task_compliance_report.Rmd", "Task compliance")
 ```
 
+# Task compliance long {.tabset}
+```{r compliance-report-long, echo=FALSE, results='asis', eval=TRUE}
+render_child("report_generators/task_compliance_report_long.Rmd", "Task compliance (long)")
+```
+
 # EEG signal quality {.tabset}
 ```{r eeg-report, echo=FALSE, results='asis'}
 render_child("report_generators/eeg_report.Rmd", "EEG signal quality")
