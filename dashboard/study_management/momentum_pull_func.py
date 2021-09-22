@@ -3,6 +3,7 @@ import os
 import shutil
 import sys
 import hashlib
+import glob
 from datetime import datetime
 from pydrive.auth import GoogleAuth
 from pydrive.drive import GoogleDrive
@@ -160,16 +161,23 @@ def compare_checksum(local_text, gdrive_checksum):
     print("Gdrive: " + checksum2)
     return checksum1 == checksum2
     
-def get_pull_files(id, path, clinical_path, drive, include_failed=True, check_local=True, pull_video=False, pull_all=False):
+def get_pull_files(id, path, clinical_path, drive, include_failed=True, check_local=True, check_md5=True, pull_video=True, pull_all=False):
     '''
     Method for determining the files to pull from the given Google Drive.
     '''
     # Reconnect to Google Drive
+    # if checking md5, must check local
+    if check_md5 == True:
+        check_local = True
     drive = google_drive_connect(id=id, path=path)
     # Get a set of files already downloaded
     json_dict = None
     with open(path + '/Subjects/' + id + '/subject.json') as f:
         json_dict = json.load(f)
+    # get the actual files that exist for the subject
+    on_system_sched = [os.path.basename(x) for x in glob.glob(path + '/Subjects/' + id + '/**/*schedule*.db', recursive=True) if "archive" not in x][0]
+    on_system_physio = [os.path.basename(x) for x in glob.glob(path + '/Subjects/' + id + '/**/*physio*.db', recursive=True)]
+    on_system_video = [os.path.basename(x) for x in glob.glob(clinical_path + '/' + id + '**/**video*.mp4', recursive=True)]
     file_dict = json_dict["subject"]["files"]
     # initialize our local varibales for the three data modalities
     schedule_local = None
@@ -238,18 +246,48 @@ def get_pull_files(id, path, clinical_path, drive, include_failed=True, check_lo
     schedule_pull = schedule_gdrive #['title']
     # current schedule file 
     curr_sched = None
+    # TODO: Add the local and md5 check here
     # Remove physio files that do not need pulled
     physio_pull = list()
     for physio_file in physio_gdrive:
         #print(updatePhysioName(old_name=physio_file['title']))
         #print('')
+        # check against the json cache
         if updatePhysioName(old_name=physio_file['title']) not in physio_local:
             physio_pull.append(physio_file)
+        # if checking for local existence
+        if check_local == True:
+            # check that the file exists locally
+            if updatePhysioName(old_name=physio_file['title']) not in on_system_physio:
+                physio_pull.append(physio_file)
+            # check_local must be true to check md5
+            if check_md5 == True and os.path.isfile(path + '/Subjects/' + id + '/physio/' + updatePhysioName(old_name=physio_file['title'])):
+                # get the local checksum
+                local_checksum = hashlib.md5(open(path + '/Subjects/' + id + '/physio/' + updatePhysioName(old_name=physio_file['title']),'rb').read()).hexdigest()
+                # get the GDrive checksum
+                gdrive_checksum = physio_file["md5Checksum"]
+                # check the the md5 checksums match
+                if local_checksum != gdrive_checksum:
+                    physio_pull.append(physio_file)
     # Remove video files that do not need pulled
     video_pull = list()
     for video_file in video_gdrive:
         if updateVideoName(old_name=video_file['title']) not in video_local:
             video_pull.append(video_file)
+        # if checking for local existence
+        if check_local == True:
+            # check that the file exists locally
+            if updateVideoName(old_name=video_file['title']) not in on_system_video:
+                video_pull.append(video_file)
+            # check_local must be true to check md5
+            if check_md5 == True and os.path.isfile(clinical_path + '/' + id + '/' + updateVideoName(old_name=video_file['title'])):
+                # get the local checksum
+                local_checksum = hashlib.md5(open(clinical_path + '/' + id + '/' + updateVideoName(old_name=video_file['title']),'rb').read()).hexdigest()
+                # get the GDrive checksum
+                gdrive_checksum = video_file["md5Checksum"]
+                # check the the md5 checksums match
+                if local_checksum != gdrive_checksum:
+                    video_pull.append(video_file)
     #physio_pull = physio_gdrive - physio_local
     #video_pull = video_gdrive - video_local
     # Create the pull list

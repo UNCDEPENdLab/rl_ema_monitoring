@@ -76,9 +76,11 @@
 #       A list of subjects pages to render.
 #     Note: "main" can be used to signify rendering of the home page.
 #
-#   site:
-#     Path to where the directory hosting the hugo site is located.
-#     default:
+#   push:
+#     Whether or not to push the site
+#     default: FALSE -> will not push site
+#     other:
+#       TRUE -> will push site
 #
 #   force_proc:
 #     Whether or not to force reprocessing.
@@ -106,9 +108,11 @@ source("dashboard_aggregate.R")
 source("render_utils.R")
 source("../../ECG_Dashboard2.R")
 source("../../EEG_Dashboard.R")
+source("../../rmarkdown_site/report_functions/report_functions.R")
+
 
 # main function to be run
-run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=TRUE, redcap=TRUE, nthreads=4, output=NULL, render=TRUE, force_proc=FALSE, force_reload=FALSE, save_lite=FALSE, cleanup_data=TRUE) {
+run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=TRUE, redcap=TRUE, nthreads=4, output=NULL, render=TRUE, force_proc=FALSE, force_reload=TRUE, save_lite=FALSE, cleanup_data=TRUE, push=FALSE) {
   # SET ROOT
   ## Need to refactor the repo first ##
   #if(is.null(root) != TRUE) {
@@ -129,12 +133,14 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=TRU
   #print(dataPath)
   videoPath <<- get_cfg_var_p(var="videos")
   videoURL <<- get_cfg_var_p(var="video_url")
-  site <<- get_cfg_var_p(var="site_path")
+  sitePath <<- get_cfg_var_p(var="site_path")
+  sitePush <<- get_cfg_var_p(var="site_push")
   # Currently overrides root to be rl_ema_monitoring
   #root <- "rl_ema_monitoring"
   root <- basename(get_cfg_var_p(var="root"))
+  repoRoot <<- get_cfg_var_p(var="root")
   # Get the list of active subjects (statically set for now)
-  active <<- getActiveList(root_dir = root)
+  active <<- getActiveList(root_dir = root) 
   print(active)
   # get the list of subjects to run
   if(subjects != "all") {
@@ -284,63 +290,41 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=TRU
       saveRDS(rds_combo, paste0(dataPath, "/Subjects/overall_overview.rds"))
     })
   }
+  # if rendering the site
+  if(render==TRUE) {
+    # if the site_dir does not exist, create it
+    if(dir.exists(sitePath)==FALSE){
+      dir.create(sitePath)
+    }
+    # run the render
+    source("../../rmarkdown_site/render_site.R")
+  }
   
-  # Make a new page on the site for these subjects
-  #for(new_subj in output$newdata_IDs) {
-  #  tryCatch(
-  #    {
-  #      print(paste0("Making page for ", new_subj, "..."))
-  #      addPage(page_archetype="subjects", 
-  #                          page_name=new_subj, 
-  #                          source_path=paste0(site) 
-  #      )
-  #    }
-  #  )
-  #}
-  
-  # RENDER THE SITE
-  #if(render == TRUE) {
-  #  setwd(paste0(site, '/content'))
-  #  # render the home page
-  #  
-  #  # render any subjects
-  #  for(id in active) {
-  #    curr_path <- paste0('subjects/', id)
-  #    # if the md and the Rmd for the subject does not exist
-  #    if(file.exists(paste0(curr_path, '/_index.Rmd')) == FALSE) {
-  #      tryCatch({
-  #        # then create a subject Rmd from the template
-  #        blogdown::hugo_cmd(paste0("new subjects/", id, " -s .."))
-  #      })
-  #      tryCatch({
-  #        # rename the .md file to a .Rmd (this allows Go to be used properly in archetypes)
-  #        file.rename(paste0(curr_path, "/_index.md"), paste0(curr_path, "/_index.Rmd"))
-  #      })
-  #    }
-  #    # attempt to render the subject's graph pages
-  #    if(file.exists(paste0(curr_path, '/plot_ecg.Rmd')) == FALSE) {
-  #      tryCatch({
-  #        # rename the .md file to a .Rmd (this allows Go to be used properly in archetypes)
-  #        file.rename(paste0(curr_path, '/plot_ecg.md'), paste0(curr_path, '/plot_ecg.Rmd'))
-  #      })
-  #    }
-  #    # attempt to render the subject's graph pages
-  #    if(file.exists(paste0(curr_path, '/plot_eeg.Rmd')) == FALSE) {
-  #      tryCatch({
-  #        # rename the .md file to a .Rmd (this allows Go to be used properly in archetypes)
-  #        file.rename(paste0(curr_path, '/plot_eeg.md'), paste0(curr_path, '/plot_eeg.Rmd'))
-  #      })
-  #    }
-  #  }
-  #}
+  # if pushing the site
+  if(push==TRUE) {
+    # Michael's push function (rsync wrapper)
+    push_site <- function(output_dir, push_dir) {
+      checkmate::assert_directory_exists(output_dir)
+      #have exe permission on files will yield 403 errors (some images are getting +x when sent to me)
+      system(paste("find", output_dir, "-type f -print0 | xargs -0 chmod 644"))
+      system(paste0("rsync -av ", output_dir, "/ ", push_dir))
+    }
+    # run the site push
+    push_site(sitePath, sitePush)
+  }
 }
+  
 
 #run_ema(pull=FALSE, sched=TRUE, physio=FALSE, redcap=FALSE, force_proc=TRUE, nthreads = 1, site="/Users/shanebuckley/desktop/rl_ema_monitoring/site", render=FALSE) # , force_reload=TRUE
 #run_ema(redcap=TRUE, save_lite=TRUE, render=FALSE, pull=TRUE, sched=TRUE, physio=TRUE, force_proc=TRUE, force_reload=TRUE, nthreads = 4, site="/Users/shanebuckley/desktop/rl_ema_monitoring/site") # , force_reload=TRUE
 # pull only
 #run_ema(redcap=FALSE, save_lite=FALSE, render=FALSE, pull=TRUE, sched=FALSE, physio=FALSE, cleanup_data=FALSE, nthreads = 4) #, site="/Users/shanebuckley/desktop/rl_ema_monitoring/site"
-# everything but the render and redcap pull
+# everything but the render and redcap pull and site push
 #run_ema(redcap=FALSE, save_lite=TRUE, render=FALSE, pull=TRUE, sched=TRUE, physio=TRUE, force_proc=TRUE, force_reload=TRUE, cleanup_data=TRUE, nthreads = 4) #, site="/Users/shanebuckley/desktop/rl_ema_monitoring/site")
+# everything but the redcap pull and site push
+#run_ema(redcap=FALSE, save_lite=TRUE, render=TRUE, pull=TRUE, sched=TRUE, physio=TRUE, force_proc=FALSE, force_reload=TRUE, cleanup_data=TRUE, nthreads = 4)
 # only run cleanup layer
-run_ema(redcap=FALSE, save_lite=FALSE, render=FALSE, pull=FALSE, sched=FALSE, physio=FALSE, force_proc=FALSE, force_reload=FALSE, cleanup_data=TRUE, nthreads = 4)
+#run_ema(redcap=FALSE, save_lite=FALSE, render=FALSE, pull=FALSE, sched=FALSE, physio=FALSE, force_proc=FALSE, force_reload=FALSE, cleanup_data=TRUE, nthreads = 4)
+# render only
+run_ema(redcap=FALSE, save_lite=FALSE, render=TRUE, pull=FALSE, sched=FALSE, physio=FALSE, cleanup_data=FALSE, nthreads = 4, push=FALSE)
 #subjects=list("221604", "221849"),

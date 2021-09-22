@@ -194,4 +194,5 @@ dependencies:
     - tzlocal==2.1
     - uritemplate==3.0.1
     - urllib3==1.26.3
+    - glob3
 prefix: conda_env

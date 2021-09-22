@@ -248,11 +248,12 @@ sourceFromCfg('rl_ema_monitoring', 'data_management_functions.py')
 sourceFromCfg('rl_ema_monitoring', 'RC_pull.R') # functions for REDCap implementation
 
 # function to pull the list of active subjects
-getActiveList <- function(root_dir=NULL) {
+getActiveList <- function(root_dir=NULL, root_cfg_var='data', cfg='data.json') { #  
   # get the root directory path
   root_path <- findRoot(root_dir)
+  #root_path <- get_cfg_var(cfg="cfg.yaml", var=root_cfg_var)
   # get the whole path to cfg.json
-  cfg_path <- paste0(root_path, '/', root_dir, '/cfg.json')
+  cfg_path <- paste0(root_path, '/', root_dir, '/', cfg)
   # import python built-ins
   py <- import_builtins()
   # import json from python

@@ -1,8 +1,8 @@
 bids: null
 data: /Volumes/bierka_root/datamesh/RAW/Momentum_App/data
 fmri: null
-host: null
 root: /Users/dnplserv/rl_ema_monitoring
 video_url: https://pitt.sharepoint.com/:v:/r/sites/Momentum/Shared%20Documents/ema_app_videos
 videos: /Users/dnplserv/Desktop/Momentum_Videos
-site_path: /Users/dnplserv/rl_ema_monitoring/site
+site_path: /Users/dnplserv/momentum_site
+site_push: michago3@michaelhallquist.com:public_html/dashboard

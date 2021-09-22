@@ -1,12 +1,20 @@
+#site_settings <- list(
+#  data_dir="/Users/hallquist/Downloads/subject_reports_09_15",
+#  site_dir="/Users/hallquist/Data_Analysis/Momentum/rl_ema_monitoring/rmarkdown_site",
+#  output_dir="/Users/hallquist/Data_Analysis/Momentum/rl_ema_monitoring/rmarkdown_site/rendered_site",
+#  debug=FALSE
+#)
+
+# site settings using yaml config params
 site_settings <- list(
-  data_dir="/Users/hallquist/Downloads/subject_reports_09_15",
-  site_dir="/Users/hallquist/Data_Analysis/Momentum/rl_ema_monitoring/rmarkdown_site",
-  output_dir="/Users/hallquist/Data_Analysis/Momentum/rl_ema_monitoring/rmarkdown_site/rendered_site",
+  data_dir=dataPath,
+  site_dir=paste0(repoRoot, '/rmarkdown_site'),
+  output_dir=sitePath,
   debug=FALSE
 )
 
-setwd(site_settings$site_dir)
-source("report_functions/report_functions.R")
+#setwd(site_settings$site_dir)
+#source("report_functions/report_functions.R")
 
 render_subject_reports <- function(data_dir, site_dir, output_dir, rerender_mins=10, force=FALSE, debug=FALSE) {
   checkmate::assert_directory_exists(data_dir)
@@ -100,4 +108,4 @@ render_main_pages <- function(data_dir, site_dir, output_dir, debug=FALSE) {
 do.call(render_subject_reports, site_settings)
 do.call(render_main_pages, site_settings)
 
-source("push_site.R")
+#source("push_site.R")
