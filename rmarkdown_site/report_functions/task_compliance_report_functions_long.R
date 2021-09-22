@@ -14,14 +14,15 @@ render_task_compliance_table_long <- function(task_compliance_data, field=NULL) 
   #formatter for delay columns
   delay_fmt <- function(...) {
     colDef(
-      style=function(value) {
-        if (is.na(value)) {
+      style=function(value, index) {
+        this_delay <- to_render$delayednotmissing[index]
+        if (is.na(this_delay)) {
           list(background = dds$task_compliance$delay$missing$background, color=dds$task_compliance$delay$missing$text)
-        } else if (value < dds$task_compliance$delay$good$max) {
+        } else if (this_delay < dds$task_compliance$delay$good$max) {
           list(background = dds$task_compliance$delay$good$background, color=dds$task_compliance$delay$good$text)
-        } else if (value >= dds$task_compliance$delay$good$max && value <= dds$task_compliance$delay$bad$min) {
+        } else if (this_delay >= dds$task_compliance$delay$good$max && this_delay <= dds$task_compliance$delay$bad$min) {
           list(background = dds$task_compliance$delay$mediocre$background, color=dds$task_compliance$delay$mediocre$text)
-        } else { # value > dds$task_compliance$delay$bad$min
+        } else { # this_delay > dds$task_compliance$delay$bad$min
           list(background = dds$task_compliance$delay$bad$background, color=dds$task_compliance$delay$bad$text)
         }
       },
@@ -32,16 +33,17 @@ render_task_compliance_table_long <- function(task_compliance_data, field=NULL) 
   tbl <- dashboard_reactable(
     data = to_render,
     columns=list(
-      scheduled_time=colDef(name="Scheduled"),
-      start_time=colDef(name="Started"),
-      completed_time=colDef(name="Completed"),
-      # scheduled_time=delay_fmt(name="Scheduled"),
-      # start_time=delay_fmt(name="Started"),
-      # completed_time=delay_fmt(name="Completed"),
+      # scheduled_time=colDef(name="Scheduled"),
+      # start_time=colDef(name="Started"),
+      # completed_time=colDef(name="Completed"),
+      scheduled_time=delay_fmt(name="Scheduled"),
+      start_time=delay_fmt(name="Started"),
+      completed_time=delay_fmt(name="Completed"),
       delayednotmissing=delay_fmt(name="Delay (min)", format=colFormat(digits=2)),
       is_missing=colDef(name="Missing")
     ),
     defaultSorted="scheduled_time",
+    defaultSortOrder="asc",
     defaultColDef = colDef(minWidth = 60),
     fullWidth=TRUE,
     theme = reactablefmtr::journal(font_size = 12, header_font_size = 12)
@@ -54,12 +56,15 @@ get_task_compliance_data_long <- function(id, data_dir) {
   task_compliance_data <- get_cleaned_data(id, data_dir, "task_compliance")
   n_miss <- sum(is.na(task_compliance_data$all$scheduled_time))
   if (n_miss > 0) {
-    dashboard_warning("The task compliance RDS object contains", n_miss, "missing dates. These rows will be dropped before proceeding!")
+    dashboard_warning(
+      "The task compliance RDS object contains", n_miss, 
+      "missing dates. These rows will be dropped before proceeding!"
+    )
   }
   
   # task compliance-specific transformations applied to both checked and unchecked
   wrangle_task_compliance <- function(df) {
-    long_dt <- df %>%   
+    long_dt <- df %>%
       #dplyr::rename(Date=scheduled_time) %>%
       dplyr::mutate(
         scheduled_time=dashboard_date(scheduled_time, out_fmt="%m/%d/%Y %I:%M %p"),
@@ -69,10 +74,23 @@ get_task_compliance_data_long <- function(id, data_dir) {
                            "Daily recording"="Video", "5m Resting State"="5 min Resting", "End questionnaire"="End Qs")
       ) %>%
       dplyr::select(scheduled_time, start_time, completed_time, type, is_missing, delayednotmissing) %>%
-      arrange(desc(scheduled_time)) #%>% setDT()
+      arrange(scheduled_time)
+
+    if (any(long_dt$type == "End Qs")) {
+      which_end <- which(long_dt$type == "End Qs")
+      if (length(which_end) > 1L) {
+        dashboard_warning("Cannot filter out fields beyond end questionnaires because there are", length(which_end), "records")
+      } else {
+        completed_experiment <- long_dt$completed_time[which_end]
+        n_future <- which(long_dt$scheduled_time > completed_experiment)
+        dashboard_debug("There are", n_future, "records in compliance that occur after the experiment was complete.")
+        long_dt <- long_dt %>%
+          dplyr::filter(scheduled_time < !!completed_experiment)
+      }
+    }
     return(long_dt)
   }
-  
+
   if (!is.null(task_compliance_data$all)) {
     task_compliance_data$all <- task_compliance_data$all %>%
       dplyr::filter(!is.na(scheduled_time)) %>%
@@ -80,18 +98,21 @@ get_task_compliance_data_long <- function(id, data_dir) {
   } else {
     dashboard_warning("No task compliance data found. task_compliance_data$all is NULL in get_task_compliance_data.")
   }
-  
+
   if (!is.null(task_compliance_data$unchecked)) {
     n_miss <- sum(is.na(task_compliance_data$unchecked$scheduled_time))
     if (n_miss > 0) {
-      dashboard_warning("The unchecked task compliance RDS object contains", n_miss, "missing dates. These rows will be dropped before proceeding!")
+      dashboard_warning(
+        "The unchecked task compliance RDS object contains", n_miss,
+        "missing dates. These rows will be dropped before proceeding!"
+      )
     }
     
     task_compliance_data$unchecked <- task_compliance_data$unchecked %>% 
       dplyr::filter(!is.na(scheduled_time)) %>%
       wrangle_task_compliance()
   }
-  
+
   return(task_compliance_data)
 }
 

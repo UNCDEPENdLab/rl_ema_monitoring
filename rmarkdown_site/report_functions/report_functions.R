@@ -81,6 +81,14 @@ dashboard_reactable <- function(...) {
     if (!nn %in% r_names) r_list[[nn]] <- defaults[[nn]]
   }
   
+  # TODO: add href tag here and write.csv data to destination
+  if (isTRUE(dds$data_download_links)) {
+    #path must be relative to output directory
+    #p_base <- R.utils::getRelativePath(p_dest, relativeTo=s_base)
+    
+    #tags$a(href = , url)
+  }
+  
   do.call(reactable, r_list) #, envir=knitr::knit_global())
 }
 

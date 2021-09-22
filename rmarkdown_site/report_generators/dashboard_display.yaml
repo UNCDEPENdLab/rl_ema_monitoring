@@ -1,3 +1,6 @@
+#### Include data download links
+data_download_links: yes
+
 #### Shared color scheme
 colors:
   good:

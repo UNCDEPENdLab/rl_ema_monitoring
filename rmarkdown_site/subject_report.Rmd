@@ -30,7 +30,8 @@ knitr::opts_chunk$set(echo = TRUE)
 knit_base <- knitr::opts_current$get("root.dir")
 options(knitr.graphics.error = FALSE) # don't complain about missing figures
 library(pacman)
-pacman::p_load(REDCapR, dplyr, tidyr, ggplot2, cowplot, rjson, reactable, reactablefmtr, checkmate, htmltools)
+pacman::p_load(REDCapR, dplyr, tidyr, ggplot2, cowplot, rjson,
+               reactable, reactablefmtr, checkmate, htmltools, anytime)
 
 # Suppress summarise messages about grouping
 options(dplyr.summarise.inform = FALSE)
@@ -73,13 +74,12 @@ render_child("report_generators/overview_report.Rmd", "Subject overview")
 ```
 
 # Task compliance {.tabset}
-```{r compliance-report, echo=FALSE, results='asis', eval=TRUE}
-render_child("report_generators/task_compliance_report.Rmd", "Task compliance")
-```
-
-# Task compliance long {.tabset}
 ```{r compliance-report-long, echo=FALSE, results='asis', eval=TRUE}
 render_child("report_generators/task_compliance_report_long.Rmd", "Task compliance (long)")
+```
+
+```{r compliance-report, echo=FALSE, results='asis', eval=TRUE}
+render_child("report_generators/task_compliance_report.Rmd", "Task compliance")
 ```
 
 # EEG signal quality {.tabset}

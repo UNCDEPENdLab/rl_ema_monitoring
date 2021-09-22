@@ -9,9 +9,9 @@ task_compliance_data <- get_task_compliance_data(id, data_dir)
 render_task_compliance_table(task_compliance_data, "all") 
 ```
 
-## Unchecked
+<!-- ## Unchecked -->
 
-```{r task-compliance-unchecked-table, echo=FALSE, warning=FALSE, message=FALSE, results="asis"}
+```{r task-compliance-unchecked-table, eval=FALSE, echo=FALSE, warning=FALSE, message=FALSE, results="asis"}
 #task compliance table
 render_task_compliance_table(task_compliance_data, "unchecked")
 ```
