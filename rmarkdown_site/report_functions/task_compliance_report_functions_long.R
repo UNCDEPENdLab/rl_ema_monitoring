@@ -16,7 +16,21 @@ render_task_compliance_table_long <- function(task_compliance_data, field=NULL) 
     colDef(
       style=function(value, index) {
         this_delay <- to_render$delayednotmissing[index]
-        if (is.na(this_delay)) {
+        report_type <- to_render$type[index]
+        
+        #exempt sleep diaries from delay highlighting if the diary is scheduled between 1am and 5am
+        sleep_okay <- FALSE
+        if (report_type == "Sleep") {
+          this_time <- to_render$scheduled_posixct[index]
+          day_start <- lubridate::floor_date(this_time, "day") #12am
+          early_block <- day_start + dhours(1) # should be 1am
+          late_block <- day_start + dhours(5) # should be 5am
+          sleep_okay <- this_time > early_block & this_time < late_block
+        }
+          
+        if (isTRUE(sleep_okay)) { # exemption
+          list(background = dds$task_compliance$delay$good$background, color=dds$task_compliance$delay$good$text)
+        } else if (is.na(this_delay)) {
           list(background = dds$task_compliance$delay$missing$background, color=dds$task_compliance$delay$missing$text)
         } else if (this_delay < dds$task_compliance$delay$good$max) {
           list(background = dds$task_compliance$delay$good$background, color=dds$task_compliance$delay$good$text)
@@ -36,6 +50,7 @@ render_task_compliance_table_long <- function(task_compliance_data, field=NULL) 
       # scheduled_time=colDef(name="Scheduled"),
       # start_time=colDef(name="Started"),
       # completed_time=colDef(name="Completed"),
+      scheduled_posixct=colDef(show=FALSE), #hidden column only used for delay formatting
       scheduled_time=delay_fmt(name="Scheduled"),
       start_time=delay_fmt(name="Started"),
       completed_time=delay_fmt(name="Completed"),
@@ -67,13 +82,14 @@ get_task_compliance_data_long <- function(id, data_dir) {
     long_dt <- df %>%
       #dplyr::rename(Date=scheduled_time) %>%
       dplyr::mutate(
+        scheduled_posixct=scheduled_time,
         scheduled_time=dashboard_date(scheduled_time, out_fmt="%m/%d/%Y %I:%M %p"),
         start_time=dashboard_date(start_time, out_fmt="%m/%d/%Y %I:%M %p"),
         completed_time=dashboard_date(completed_time, out_fmt="%m/%d/%Y %I:%M %p"),
         type=dplyr::recode(type, trials="Games", "Mood Questionnaire"="Mood", "Sleep Diary"="Sleep", 
                            "Daily recording"="Video", "5m Resting State"="5 min Resting", "End questionnaire"="End Qs")
       ) %>%
-      dplyr::select(scheduled_time, start_time, completed_time, type, is_missing, delayednotmissing) %>%
+      dplyr::select(scheduled_posixct, scheduled_time, start_time, completed_time, type, is_missing, delayednotmissing) %>%
       arrange(scheduled_time)
 
     if (any(long_dt$type == "End Qs")) {
