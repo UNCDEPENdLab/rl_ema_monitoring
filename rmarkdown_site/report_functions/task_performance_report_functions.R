@@ -8,7 +8,7 @@ render_task_performance_table <- function(task_performance_data, field=NULL) {
   #select fields to display
   to_render <- task_performance_data[[field]] %>%
     dplyr::select(Date, Block, abs_accurate_feed, relative_accuracy_feed, abs_accurate_nofeed, 
-                  relative_accuracy_nofeed, mean_rt, IDe_bias, intox, c_earn)
+                  relative_accuracy_nofeed, mean_rt, IDe_bias, intox, c_earn, d_earn)
   
   
   #formatter for feedback columns
@@ -54,19 +54,19 @@ render_task_performance_table <- function(task_performance_data, field=NULL) {
     data = to_render,
     columns=list(
       Date=colDef(style=list(fontWeight = "bold")),
-      Block=colDef(style=list(fontWeight = "bold")),
+      Block=colDef(style=list(fontWeight = "bold"), minWidth=70),
       abs_accurate_feed=feedback_fmt(name="Objective % correct (feed.)"),
       relative_accuracy_feed=feedback_fmt(name="Experienced % correct (feed.)"),
       abs_accurate_nofeed=no_feedback_fmt(name="Objective % correct (no feed.)"),
       relative_accuracy_nofeed=no_feedback_fmt(name="Experienced % correct (no feed.)"),
-      mean_rt=colDef(name="RT (ms)", style=function(value) {
+      mean_rt=colDef(name="RT (ms)", minWidth=70, style=function(value) {
         if (value < dds$task_performance$rt$bad$max) {
           list(background = dds$task_performance$rt$bad$background, color=dds$task_performance$rt$bad$text)
         } else {
           list(background = dds$task_performance$rt$good$background, color=dds$task_performance$rt$good$text)
         }
       }),
-      IDe_bias=colDef(name="Left bias", format=colFormat(suffix = "%"), style=function(value) {
+      IDe_bias=colDef(name="Left bias", minWidth=70, format=colFormat(suffix = "%"), style=function(value) {
         bias <- abs(value - 50)
         if (bias >= dds$task_performance$side_bias$bad$min) {
           list(background = dds$task_performance$side_bias$bad$background, color=dds$task_performance$side_bias$bad$text)
@@ -74,14 +74,15 @@ render_task_performance_table <- function(task_performance_data, field=NULL) {
           list(background = dds$task_performance$side_bias$good$background, color=dds$task_performance$side_bias$good$text)
         }
       }),
-      intox=colDef(name="Intoxicated?", style=function(value) {
+      intox=colDef(name="Intox?", minWidth=70, style=function(value) {
         if (value == "No") {
           list(background = dds$task_performance$intoxicated$no$background, color=dds$task_performance$intoxicated$no$text)
         } else {
           list(background = dds$task_performance$intoxicated$yes$background, color=dds$task_performance$intoxicated$yes$text)
         }
       }),
-      c_earn=colDef(name="Cumulative earnings", format = colFormat(currency = "USD")) #format $
+      c_earn=colDef(name="Cumulative earnings", format = colFormat(currency = "USD")), #format $
+      d_earn=colDef(name="Daily earnings", format = colFormat(currency = "USD")) #format $
     )
   )
   
@@ -96,7 +97,8 @@ get_task_performance_data <- function(id, data_dir) {
     df %>%    
       dplyr::mutate(
         Date=dashboard_date(Date),
-      ) %>%
+      ) %>% group_by(Date) %>%
+      mutate(d_earn=max(c_earn, na.rm=T) - min(c_earn, na.rm=T)) %>% ungroup() %>%
       arrange(desc(Date))
   }
   
