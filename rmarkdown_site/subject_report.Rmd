@@ -30,7 +30,7 @@ knitr::opts_chunk$set(echo = TRUE)
 knit_base <- knitr::opts_current$get("root.dir")
 options(knitr.graphics.error = FALSE) # don't complain about missing figures
 library(pacman)
-pacman::p_load(REDCapR, dplyr, tidyr, ggplot2, cowplot, rjson,
+pacman::p_load(REDCapR, dplyr, tidyr, ggplot2, cowplot, rjson, lubridate,
                reactable, reactablefmtr, checkmate, htmltools, anytime)
 
 # Suppress summarise messages about grouping
