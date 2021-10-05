@@ -41,6 +41,36 @@ def make_json(id, gmail, path):
     with open(dataPath + '/Subjects/' + id + '/subject.json', 'w+') as json_file:
         json.dump(data, json_file, indent=4)
 
+def make_pydrive_yaml(id, path):
+    '''
+    Method to create a pydrive yaml file for the subject.
+    '''
+    # Initialize an empty data object
+    data = None
+    # save the path given and note with variable it is a path to the data
+    dataPath = path
+    # follows the standard file hierarchy that 'data/' and 'dashboard/' should have the same parent
+    skeletonPath = get_cfg_var_p(var="root") + '/dashboard/study_management'
+    # handle for running on a windows operaing system (removes leading '/')
+    if sys.platform == "win32":
+        skeletonPath = skeletonPath[1:]
+    # Open the json file and convert it to a dict
+    with open(skeletonPath + '/' + 'pydrive_skeleton.yaml', ) as f:
+        data = yaml.load(f)
+        #print(data)
+    # if the client_config_file exists
+    if os.path.isfile(skeletonPath + "/client_secrets.json"):
+        # set the client_config_file
+        data["client_config_file"] = skeletonPath + "/client_secrets.json"
+    else:
+        print("The client_secrets.json file does not exist under the following path.")
+        exit()
+    # set the save_credentials_file
+    data["save_credentials_file"] = dataPath + '/Subjects/' + id + '/mycreds.txt'
+    # Export to a new json file in the subject's directory
+    with open(dataPath + '/Subjects/' + id + '/pydrive.yaml', 'w+') as yaml_file:
+        yaml.dump(data, yaml_file)
+
 def make_sqlite_files():
     '''
     Method to create the sqlite files for the subject.
@@ -126,14 +156,19 @@ def add_subject(id, gmail, status='active', path=None):
     if os.path.isdir(currDir + '/Subjects/' + id + '/physio') == False:
         # Make the physio directory
         os.mkdir(currDir + '/Subjects/' + id + '/physio')
+    # NOTE: no longer create the video dir, this is deprecated as the videos must be handles separately
     # Make the video directory for the subject
-    if os.path.isdir(currDir + '/Subjects/' + id + '/video') == False:
-        # Make the video directory
-        os.mkdir(currDir + '/Subjects/' + id + '/video')
+    #if os.path.isdir(currDir + '/Subjects/' + id + '/video') == False:
+    #    # Make the video directory
+    #    os.mkdir(currDir + '/Subjects/' + id + '/video')
     # Make the json file for the subject
     if os.path.isfile(currDir + '/Subjects/' + id + '/subject.json') == False:
         # Make the json file for the subject
         make_json(id=id, gmail=gmail, path=currDir)
+    # Make the pydrive yaml file for theb subject
+    if os.path.isfile(currDir + '/Subjects/' + id + '/pydrive.yaml') == False:
+        # Make the pydrive settings file for the subject
+        make_pydrive_yaml(id=id, path=currDir)
     # Authorize the gmail with the subject id
     google_auth(id=id, path=currDir)
     #print("here 3")

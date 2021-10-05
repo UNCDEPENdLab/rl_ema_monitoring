@@ -5,13 +5,20 @@
 #  debug=FALSE
 #)
 
-# site settings using yaml config params
 site_settings <- list(
-  data_dir=dataPath,
-  site_dir=paste0(repoRoot, '/rmarkdown_site'),
-  output_dir=sitePath,
+  data_dir="/Volumes/bierka_root/datamesh/RAW/Momentum_App/data",
+  site_dir="/Users/dnplserv/rl_ema_monitoring/rmarkdown_site",
+  output_dir="/Users/dnplserv/momentum_site",
   debug=FALSE
 )
+
+# site settings using yaml config params
+# site_settings <- list(
+#   data_dir=dataPath,
+#   site_dir=paste0(repoRoot, '/rmarkdown_site'),
+#   output_dir=sitePath,
+#   debug=FALSE
+# )
 
 #setwd(site_settings$site_dir)
 #source("report_functions/report_functions.R")
@@ -23,7 +30,7 @@ render_subject_reports <- function(data_dir, site_dir, output_dir, rerender_mins
   #extant <- get_report_cache(data_dir)$page_summary 
   
   slist <- get_subject_list(data_dir)
-  
+
   for (ss in seq_len(nrow(slist))) {
     this_subj <- slist[ss, , drop=FALSE]
     # look at whether the compliance report is older than the latest data
@@ -58,7 +65,7 @@ render_subject_reports <- function(data_dir, site_dir, output_dir, rerender_mins
       # and global variable scope within the knitted markdown. To mirror what happens when you hit 'Knit' in
       # Rstudio (which works well here), we need to initialize a clean R session that includes the globalenv()
       # See here: https://stackoverflow.com/questions/32257970/knitr-inherits-variables-from-a-users-environment-even-with-envir-new-env
-
+      
       result <- tryCatch(expr={
         #rmarkdown::render(
         render_separately(
