@@ -2,6 +2,8 @@
 # This function analyzes EEG from an SQLlite .db file and extracts %avg per block and per channel for use in the Dashboard
 # 2021-04-01 JiazhouC
 # Modify the functions to be compatible with table generating funcs
+# 2021-10-05 AndyP
+# Multiple updates, Alon's original %good output now computed, missing data now computed, NAs not implemented for saving physio, but calculated during %good calculation
 
 load_EEG <- function(subject_name,physio_file,abs_path=NULL,EEGd=NULL,sample_rate=256.03, sd_times=10){
   if(is.null(EEGd)) {
@@ -72,34 +74,22 @@ load_EEG <- function(subject_name,physio_file,abs_path=NULL,EEGd=NULL,sample_rat
   Ch2 <- as.numeric(EEGd$EEG2)
   Ch3 <- as.numeric(EEGd$EEG3)
   Ch4 <- as.numeric(EEGd$EEG4)
+  
+  md_ch1 <- sum(is.na(Ch1))
+  md_ch2 <- sum(is.na(Ch2))
+  md_ch3 <- sum(is.na(Ch3))
+  md_ch4 <- sum(is.na(Ch4))
 
   g1 <- as.numeric(EEGd$ISGOOD1)
   g2 <- as.numeric(EEGd$ISGOOD2)
   g3 <- as.numeric(EEGd$ISGOOD3)
   g4 <- as.numeric(EEGd$ISGOOD4)
 
-  Ch1[g1==0 | g1==4] = NA
-  Ch2[g1==0 | g1==4] = NA
-  Ch3[g1==0 | g1==4] = NA
-  Ch4[g1==0 | g1==4] = NA
-
-
-  mn <- median(Ch1,na.rm=TRUE)
-  sd0 <- sd(Ch1,na.rm=TRUE)
-  Ch1[Ch1 > mn+sd_times*sd0 | Ch1 < mn-sd_times*sd0 | Ch1 < 1650/20 | Ch1 > 19*1650/20] = NA
-  mn <- median(Ch2,na.rm=TRUE)
-  sd0 <- sd(Ch2,na.rm=TRUE)
-  Ch2[Ch2 > mn+sd_times*sd0 | Ch2 < mn-sd_times*sd0 | Ch2 < 1650/20 | Ch2 > 19*1650/20] = NA
-  mn <- median(Ch3,na.rm=TRUE)
-  sd0 <- sd(Ch3,na.rm=TRUE)
-  Ch3[Ch3 > mn+sd_times*sd0 | Ch3 < mn-sd_times*sd0 | Ch3 < 1650/20 | Ch3 > 19*1650/20] = NA
-  mn <- median(Ch4,na.rm=TRUE)
-  sd0 <- sd(Ch4,na.rm=TRUE)
-  Ch4[Ch4 > mn+sd_times*sd0 | Ch4 < mn-sd_times*sd0 | Ch4 < 1650/20 | Ch4 > 19*1650/20] = NA
-
-  EEG_data <- dplyr::tibble(rrt,Ch1,Ch2,Ch3,Ch4)
-
-  return(EEG_data)
+  EEG_data <- dplyr::tibble(rrt,Ch1,Ch2,Ch3,Ch4,g1,g2,g3,g4) # 2021-10-01 AndyP added g1-g4 as outputs
+  Missing_data <- dplyr::tibble(md_ch1,md_ch2,md_ch3,md_ch4) # 2021-10-05 AndyP added md_ch1 i.e. missing data as outputs
+  EEG_list <- list(EEG_data,Missing_data)
+  
+  return(EEG_list) # 2021-10-05 AndyP now returns a list of EEG_data, Missing_data
 
 }
 
@@ -123,7 +113,11 @@ eeg_epochs_around_feedback <- function(EEG_data,pre=500,post=1500,sample_rate=NU
   ch2_a2f <- matrix(NA,nrow=length(fbt),ncol=pre+post+1);
   ch3_a2f <- matrix(NA,nrow=length(fbt),ncol=pre+post+1);
   ch4_a2f <- matrix(NA,nrow=length(fbt),ncol=pre+post+1);
-
+  g1_a2f <- matrix(NA,nrow=length(fbt),ncol=pre+post+1);
+  g2_a2f <- matrix(NA,nrow=length(fbt),ncol=pre+post+1);
+  g3_a2f <- matrix(NA,nrow=length(fbt),ncol=pre+post+1);
+  g4_a2f <- matrix(NA,nrow=length(fbt),ncol=pre+post+1);
+  
   for (i in 1:length(fbt)){
     fbt0 <- which(rrt>fbt[i])
     if (length(fbt0)>0){
@@ -156,26 +150,38 @@ eeg_epochs_around_feedback <- function(EEG_data,pre=500,post=1500,sample_rate=NU
       ch2_a2f[i,] <- c(Ch2[ind],1:addpost)
       ch3_a2f[i,] <- c(Ch3[ind],1:addpost)
       ch4_a2f[i,] <- c(Ch4[ind],1:addpost)
+      g1_a2f[i,] <- c(g1[ind],1:addpost)
+      g2_a2f[i,] <- c(g2[ind],1:addpost)
+      g3_a2f[i,] <- c(g3[ind],1:addpost)
+      g4_a2f[i,] <- c(g4[ind],1:addpost)
     } else if (aL >0 & is.null(addpost)){
       ch1_a2f[i,] <- c(Ch1[ind]) # 2021-05-24 AndyP corrected addpost bug
       ch2_a2f[i,] <- c(Ch2[ind])
       ch3_a2f[i,] <- c(Ch3[ind])
       ch4_a2f[i,] <- c(Ch4[ind])
+      g1_a2f[i,] <- c(g1[ind])
+      g2_a2f[i,] <- c(g2[ind])
+      g3_a2f[i,] <- c(g3[ind])
+      g4_a2f[i,] <- c(g4[ind])
     }
   }
   ch1_a2f <- as.data.frame(ch1_a2f)
   ch2_a2f <- as.data.frame(ch2_a2f)
   ch3_a2f <- as.data.frame(ch3_a2f)
   ch4_a2f <- as.data.frame(ch4_a2f)
-
-  a2f <- list(ch1=ch1_a2f,ch2=ch2_a2f,ch3=ch3_a2f,ch4=ch4_a2f)
+  g1_a2f <- as.data.frame(g1_a2f)
+  g2_a2f <- as.data.frame(g2_a2f)
+  g3_a2f <- as.data.frame(g3_a2f)
+  g4_a2f <- as.data.frame(g4_a2f)
+  
+  a2f <- list(ch1=ch1_a2f,ch2=ch2_a2f,ch3=ch3_a2f,ch4=ch4_a2f,g1=g1_a2f,g2=g2_a2f,g3=g3_a2f,g4=g4_a2f)
 
   return(a2f) # rows = number of trials, columns = number of timestamps
 }
 
 get_good_EEG <- function(blocks,a2f){
 
-  library("dplyr")
+  library("dplyr") # 2021-10-01 AndyP  do we need this library call here?
 
   nbl <- unique(blocks)
 
@@ -183,7 +189,33 @@ get_good_EEG <- function(blocks,a2f){
   ch2_a2f <- as.matrix(a2f$ch2)
   ch3_a2f <- as.matrix(a2f$ch3)
   ch4_a2f <- as.matrix(a2f$ch4)
+  g1 <- as.matrix(a2f$g1)
+  g2 <- as.matrix(a2f$g2)
+  g3 <- as.matrix(a2f$g3)
+  g4 <- as.matrix(a2f$g4)
+  
+  # 2021-10-01 AndyP corrected bug, all g1 -> g1-g4
+  ch1_a2f[g1==0 | g1==4] = NA
+  ch2_a2f[g2==0 | g2==4] = NA
+  ch3_a2f[g3==0 | g3==4] = NA
+  ch4_a2f[g4==0 | g4==4] = NA
 
+
+  mn <- median(ch1_a2f,na.rm=TRUE)
+  sd0 <- sd(ch1_a2f,na.rm=TRUE)
+  ch1_a2f[ch1_a2f > mn+sd_times*sd0 | ch1_a2f < mn-sd_times*sd0 | ch1_a2f < 1650/20 | ch1_a2f > 19*1650/20] = NA
+  mn <- median(ch2_a2f,na.rm=TRUE)
+  sd0 <- sd(ch2_a2f,na.rm=TRUE)
+  ch2_a2f[ch2_a2f > mn+sd_times*sd0 | ch2_a2f < mn-sd_times*sd0 | ch2_a2f < 1650/20 | ch2_a2f > 19*1650/20] = NA
+  mn <- median(ch3_a2f,na.rm=TRUE)
+  sd0 <- sd(ch3_a2f,na.rm=TRUE)
+  ch3_a2f[ch3_a2f > mn+sd_times*sd0 | ch3_a2f < mn-sd_times*sd0 | ch3_a2f < 1650/20 | ch3_a2f > 19*1650/20] = NA
+  mn <- median(ch4_a2f,na.rm=TRUE)
+  sd0 <- sd(ch4_a2f,na.rm=TRUE)
+  ch4_a2f[ch4_a2f > mn+sd_times*sd0 | ch4_a2f < mn-sd_times*sd0 | ch4_a2f < 1650/20 | ch4_a2f > 19*1650/20] = NA
+
+  
+  
   # output of function
   # avgNgood is the average number of good sample percentage across all channels for each block
   # NgoodX is the number of good samples for channel X.  To get the percentage divide by Ntotal
@@ -193,17 +225,32 @@ get_good_EEG <- function(blocks,a2f){
   Ngood4 <- NULL
   Ntotal <- NULL
   avgNgood <- NULL
+  Ngood_byBlock <- NULL
   for (i in 1:length(nbl)){
     ix <-which(blocks==nbl[i])
-    Ngood1[i] <- sum(!is.na(ch1_a2f[ix]))
-    Ngood2[i] <- sum(!is.na(ch2_a2f[ix]))
-    Ngood3[i] <- sum(!is.na(ch3_a2f[ix]))
-    Ngood4[i] <- sum(!is.na(ch4_a2f[ix]))
+    Ngood1[i] <- sum(!is.na(ch1_a2f[ix,])) # 2021-10-05 AndyP added comma, was this correct before?
+    Ngood2[i] <- sum(!is.na(ch2_a2f[ix,]))
+    Ngood3[i] <- sum(!is.na(ch3_a2f[ix,]))
+    Ngood4[i] <- sum(!is.na(ch4_a2f[ix,]))
     Ntotal[i] <- length(ix)
+    nT <- nrow(ch1_a2f[ix,])
+    ch1_a2f_byB <- ch1_a2f[ix,];
+    ch2_a2f_byB <- ch2_a2f[ix,];
+    ch3_a2f_byB <- ch3_a2f[ix,];
+    ch4_a2f_byB <- ch4_a2f[ix,];
+    Ngood_by_Block_temp <- NULL
+    for (iT in 1:nT){
+      if (sum(rbind(is.na(ch1_a2f_byB[iT,]),is.na(ch2_a2f_byB[iT,]),is.na(ch3_a2f_byB[iT,]),is.na(ch4_a2f_byB[iT,])))>0){
+        Ngood_by_Block_temp[iT] <- 0
+      } else {
+        Ngood_by_Block_temp[iT] <- 1
+      }
+    }
+    Ngood_by_Block[i] <- mean(Ngood_by_Block_temp)
     avgNgood[i] <- mean(rbind(Ngood1[i]/Ntotal[i],Ngood2[i]/Ntotal[i],Ngood3[i]/Ntotal[i],Ngood4[i]/Ntotal[i]))
   }
   ntrial <- as.numeric(table(blocks))
-  Ngood_df <- dplyr::tibble(Ngood1,Ngood2,Ngood3,Ngood4,Ntotal,avgNgood,nbl,ntrial)
+  Ngood_df <- dplyr::tibble(Ngood1,Ngood2,Ngood3,Ngood4,Ntotal,avgNgood,nbl,ntrial,Ngood_by_Block)
 
   return(Ngood_df)
 
