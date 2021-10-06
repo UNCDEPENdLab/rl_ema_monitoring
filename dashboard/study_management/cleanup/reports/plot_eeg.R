@@ -82,7 +82,7 @@ for (i in loopseq) {
         dq1 <- dq1 %>% mutate(t0=as.numeric(substr(ix,2,nchar(ix))))
         dq1 <- dq1 %>% mutate(t=rep(y,nrow(dq1)/length(y)))
         dq1 <- dq1 %>% group_by(channel) %>% mutate(zscore=(V-mean(V,na.rm=TRUE))/sd(V,na.rm=TRUE))
-        dq1 <- dq1 %>% filter(abs(zscore) <= 5)
+        #dq1 <- dq1 %>% filter(abs(zscore) <= 5)
         dq1 <- dq1 %>% mutate(V1 = case_when(
           V < 700 ~ 700,
           V >=700 & V<=900 ~ V,
@@ -90,7 +90,7 @@ for (i in loopseq) {
         ))
       }
       dq0 <- dq0 %>% mutate(zscore=(V-mean(V,na.rm=TRUE))/sd(V,na.rm=TRUE))
-      dq0 <- dq0 %>% filter(abs(zscore) <= 5)  
+      #dq0 <- dq0 %>% filter(abs(zscore) <= 5)  
       # check that file system expected exists and create the plot
       #fpath <- paste0(site, "/static/static/subjects/", subj)
       # create the directory if it doesn't exist
@@ -100,7 +100,7 @@ for (i in loopseq) {
         fig_name = paste0("eeg_plot_overall.png")
         if (!file.exists(paste0(plots_path, "/", fig_name))) {
           try({
-            eeg_plot <- ggplot(dq1, aes(t,totaltrial,fill=V1)) + 
+            eeg_plot <- ggplot(dq1, aes(t,totaltrial,fill=V)) + 
               geom_raster(interpolate=TRUE) + facet_wrap(~channel) + 
               scale_y_continuous(breaks=dq1$totaltrial[which(diff(as.matrix(dq1$blocks))==1)],labels=dq1$blocks[which(diff(as.matrix(dq1$blocks))==1)]) +
               scale_x_continuous(breaks=c(-500,0,500,1000,1500),name='time [ms]') +
@@ -131,7 +131,7 @@ for (i in loopseq) {
               eeg_plot <- ggplot(dq0, aes(t,trial,fill=V)) + geom_tile() + facet_wrap(~channel) + 
                 scale_x_continuous(breaks=c(-500,0,500,1000,1500),name='time [ms]') +
                 geom_vline(xintercept = 0, lty = "dashed", color = "#FF0000", size = 2) + 
-                scale_fill_viridis_c(option = "plasma",begin=0,end=1) +
+                scale_fill_gradientn(colours=parula(1000),guide="colourbar",limits=c(0, 1650)) +
                 ggtitle(sprintf("Subject %s EEG Blocks %s - %s", subj, toString(i-4), toString(i)))
               # save the image
               #plotly::export(p=eeg_plot, file=paste0(site, "/", fpath, "/", fig_name))
@@ -142,7 +142,7 @@ for (i in loopseq) {
               eeg_plot <- ggplot(dq0, aes(t,trial,fill=V)) + geom_tile() + facet_wrap(~channel) + 
                 scale_x_continuous(breaks=c(-500,0,500,1000,1500),name='time [ms]') +
                 geom_vline(xintercept = 0, lty = "dashed", color = "#FF0000", size = 2) + 
-                scale_fill_viridis_c(option = "plasma",begin=0,end=1) +
+                scale_fill_gradientn(colours=parula(1000),guide="colourbar",limits=c(0, 1650)) +
                 ggtitle(sprintf("Subject %s EEG Blocks %s - %s", subj, toString(1), toString(4)))
               # save the image
               #plotly::export(p=eeg_plot, file=paste0(site, "/", fpath, "/", fig_name))
@@ -155,7 +155,7 @@ for (i in loopseq) {
               geom_raster(interpolate=TRUE) + facet_wrap(~channel) + 
               scale_x_continuous(breaks=c(-500,0,500,1000,1500),name='time [ms]') +
               geom_vline(xintercept = 0, lty = "dashed", color = "#FF0000", size = 2) + 
-              scale_fill_viridis_c(option = "plasma",begin=0,end=1) +
+              scale_fill_gradientn(colours=parula(1000),guide="colourbar",limits=c(0, 1650))+
               ggtitle(sprintf("Subject %s EEG Block %s", subj, toString(i)))
             # save the image
             #plotly::export(p=eeg_plot, file=paste0(site, "/", fpath, "/", fig_name))
