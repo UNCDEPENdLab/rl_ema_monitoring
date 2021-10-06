@@ -236,7 +236,7 @@ get_good_EEG <- function(blocks,a2f,sd_times=10){
     Ngood2[i] <- sum(!is.na(ch2_a2f[ix,]))
     Ngood3[i] <- sum(!is.na(ch3_a2f[ix,]))
     Ngood4[i] <- sum(!is.na(ch4_a2f[ix,]))
-    Ntotal[i] <- length(ix)
+    Ntotal[i] <- nrow(ch1_a2f[ix,])*ncol(ch1_a2f[ix,])
     nT <- nrow(ch1_a2f[ix,])
     ch1_a2f_byB <- ch1_a2f[ix,];
     ch2_a2f_byB <- ch2_a2f[ix,];
@@ -251,10 +251,10 @@ get_good_EEG <- function(blocks,a2f,sd_times=10){
       }
     }
     Ngood_by_Block[i] <- mean(Ngood_by_Block_temp)
-    avgNgood[i] <- mean(rbind(Ngood1[i]/Ntotal[i],Ngood2[i]/Ntotal[i],Ngood3[i]/Ntotal[i],Ngood4[i]/Ntotal[i]))
+    #avgNgood[i] <- mean(rbind(Ngood1[i]/Ntotal[i],Ngood2[i]/Ntotal[i],Ngood3[i]/Ntotal[i],Ngood4[i]/Ntotal[i])) not useful
   }
   ntrial <- as.numeric(table(blocks))
-  Ngood_df <- dplyr::tibble(Ngood1,Ngood2,Ngood3,Ngood4,Ntotal,avgNgood,nbl,ntrial,Ngood_by_Block)
+  Ngood_df <- dplyr::tibble(Ngood1,Ngood2,Ngood3,Ngood4,Ntotal,nbl,ntrial,Ngood_by_Block)
 
   return(Ngood_df)
 

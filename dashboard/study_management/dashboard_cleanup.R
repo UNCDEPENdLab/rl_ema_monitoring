@@ -29,7 +29,10 @@ list_to_cv <- function(x) {
 perf <- filter(output$subj_performance,ID==subj) %>% filter(!is.na(date))
 proc_sched <- output$proc_data[[subj]]
 info <- output$subj_info[[subj]]
-eeg <- output_physio$eeg$summary[[subj]]
+#eeg <- output_physio$eeg$summary[[subj]]
+# 2021-10-06 AndyP changed eeg$summary[[subj]] to eeg$rawsum[[subj]]
+warning('2021-10-06 AndyP changed eeg$summary[[subj]] to eeg$rawsum[[subj]], delete warning when fixed')
+eeg <- output_physio$eeg$rawsum[[subj]]
 hr <- output_physio$ecg$summary[[subj]]
 #if(exists("redcap_data")) {
 #  if(redcap_data != "The RL-EMA QA checklist on RedCAP is blank for all participants in the active participants list.") {
