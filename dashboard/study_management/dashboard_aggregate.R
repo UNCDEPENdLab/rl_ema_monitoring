@@ -92,7 +92,7 @@ ms_to_date <- function(ms, t0="1970-01-01", timezone=Sys.timezone()) {
 
 proc_schedule <- function(schedule_df = NULL,days_limit=35,task_limit=56,force_reproc=FALSE,tz="EST") {
   #load in data using shane's function
-  raw_data <- lapply(1:nrow(schedule_df),function(i){
+  raw_data <<- lapply(1:nrow(schedule_df),function(i){
     dbpath <- schedule_df$file_path[[i]] # paste0(schedule_df$file_path[[i]], '/', schedule_df$file_name[[i]])
     db_raw <- load_db(dbpath=dbpath,table_names = NULL)
     db_raw$ID <- schedule_df$subject_id[[i]]
@@ -100,8 +100,13 @@ proc_schedule <- function(schedule_df = NULL,days_limit=35,task_limit=56,force_r
     db_raw$data_folder <- dirname(schedule_df$file_path[[i]])
     return(db_raw)
   })
+  # run the proc_schedule_single
   proc_data <- lapply(raw_data,proc_schedule_single,tz=tz,days_limit=days_limit,force_reproc=force_reproc)
+  # drop any NA produced
+  proc_data <- proc_data[!is.na(proc_data)]
   names(proc_data) <- sapply(proc_data,`[[`,"ID")
+  # drop any items in the raw_data that failed schedule processing
+  #raw_data_dropped <- 
   ####do more aggregation here:
   #####NEED MORE SUBJ DATA FOR AGGREGATION########
   sample_info <- do.call(rbind,lapply(proc_data,`[[`,"info_df"))
@@ -156,277 +161,282 @@ calcu_accuracy<- function(trials_1,stimuli) {
 
 proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz="EST") {
   #print(raw_single$ID)
-
-  output_path <- file.path(raw_single$data_folder,paste(raw_single$ID,"_schedule_proc.rdata",sep = ""))
-  if(file.exists(output_path) && !force_reproc) {
-    load(output_path)
-    if(difftime(raw_single$data_mtime,output$raw_data$data_mtime,units = "mins") < 60){
-      #if data less than 60 minutes in different don't proc
-      output$new_data <- FALSE
-      message("No new schedule data for: ",output$ID)
-      return(output)
-    }
-  }
-  message("Processing schedule file for: ",raw_single$ID)
-
-  ###Part I: Trial
-  time_vars <- c("scheduled_time","stim_time","choice_time","feedback_time")
-  for (tx in time_vars) {
-    raw_single$trials[[tx]] <- ms_to_date(raw_single$trials[[tx]],timezone = tz)
-  }
-
-
-  trials_df<-calcu_accuracy(trials_1=raw_single$trials,stimuli=raw_single$stimuli)
-
-  #get RT
-  trials_df$rt <- as.numeric(difftime(trials_df$choice_time,trials_df$stim_time,units = "secs"))
-
-  info_by_block<-lapply(split(trials_df,trials_df$block),function(ix){
-    #print(unique(ix$block))
-    #Compliance:
-    rx<-ix[1,c("block","scheduled_time")]
-    rx$start_time <- ix$stim_time[1]
-    #adding max here to show that possible 2 repsonse time? idk; change down below as well
-    rx$completed_time <- max(ix$feedback_time)
-    rx$duration <- difftime(rx$completed_time,rx$start_time,units = "mins")
-    rx$delay <- difftime(rx$start_time,rx$scheduled_time,units = "mins")
-
-    ##Performance data:
-    px <- data.frame(block=unique(ix$block),
-                     date=max(as.Date(ix$feedback_time)),
-                     IDe_bias=mean(ix$choice,na.rm = T),
-                     mean_rt = mean(ix$rt,na.rm = T),
-                     abs_accurate_feed = mean(as.numeric(ix[which(ix$feedback==1),]$accuracy),na.rm = T),
-                     relative_accuracy_feed = mean(as.numeric(ix[which(ix$feedback==1),]$relative_accuracy),na.rm = T),
-                     abs_accurate_nofeed = mean(as.numeric(ix[which(ix$feedback==0),]$accuracy),na.rm = T),
-                     relative_accuracy_nofeed = mean(as.numeric(ix[which(ix$feedback==0),]$relative_accuracy),na.rm = T),
-                     earning = sum(ix$outcome * 0.15,na.rm = T),
-                     stringsAsFactors = F)
-
-
-    return(list(compliance=rx,performance=px))
-  })
-  tr_info_by_block <- do.call(rbind,lapply(info_by_block,`[[`,"compliance"))
-  pr_info_by_block <- do.call(rbind,lapply(info_by_block,`[[`,"performance"))
-  #Process compliance
-  trial_info_df<-merge(raw_single$sessions,tr_info_by_block,by = "block",all = T)
-  trial_info_df<-trial_info_df[,-grep("_ms",names(trial_info_df))]
-  trial_info_df$spec <-unlist(apply(trial_info_df[c("block","start_trial","last_trial")],1,list),recursive = F)
-
-  trial_info_df<-trial_info_df[c("scheduled_time","start_time","completed_time","duration","delay","spec")]
-  trial_info_df$type <- "trials"
-
-
-
-  if (max(trials_df$block)>14){
-    pr_info_by_block$bad <- NA
-    pr_info_by_block$bad[6:nrow(pr_info_by_block)] <- (pr_info_by_block$relative_accuracy_feed<0.7)[6:nrow(pr_info_by_block)]
-    percentage_last_ten<-as.numeric(which(pr_info_by_block$bad[(nrow(pr_info_by_block)-9):nrow(pr_info_by_block)])*10)
-    percentage_last_ten<-ifelse(length(percentage_last_ten)<1,0,percentage_last_ten)
-
-    if (percentage_last_ten>20){
-      mean_RT_low_performance=mean(pr_info_by_block$mean_rt[which(pr_info_by_block$bad & c(rep(FALSE,(nrow(pr_info_by_block)-10)),rep(TRUE,10)))])
-      mean_side_bias_low_performance=mean(pr_info_by_block$IDe_bias[which(pr_info_by_block$bad & c(rep(FALSE,(nrow(pr_info_by_block)-10)),rep(TRUE,10)))])
-    } else {
-      mean_RT_low_performance <- NA
-      mean_side_bias_low_performance <- NA
-    }
-  }
-  px_overall <- data.frame(ID=raw_single$ID,
-                           IDe_bias=mean(trials_df$choice,na.rm = T),
-                           mean_rt = mean(trials_df$rt,na.rm = T),
-                           abs_accurate_overall = mean(c(pr_info_by_block$abs_accurate_feed,pr_info_by_block$abs_accurate_nofeed),na.rm = T),
-                           relative_accuracy_overall = mean(c(pr_info_by_block$relative_accuracy_feed,pr_info_by_block$relative_accuracy_nofeed),na.rm = T),
-                           abs_accurate_feed = mean(pr_info_by_block$abs_accurate_feed,na.rm = T),
-                           relative_accuracy_feed = mean(pr_info_by_block$relative_accuracy_feed,na.rm = T),
-                           abs_accurate_nofeed = mean(pr_info_by_block$abs_accurate_nofeed,na.rm = T),
-                           relative_accuracy_nofeed = mean(pr_info_by_block$relative_accuracy_nofeed,na.rm = T),
-                           stringsAsFactors = F)
-                            #percentage_last_ten=percentage_last_ten,
-                            #mean_RT_low_performance=mean_RT_low_performance,
-                            #mean_side_bias_low_performance=mean_side_bias_low_performance,
-
-  ##Part II: questionnaires:
-  time_vars <- c("scheduled_time","start_time","completed_time")
-  for (tx in time_vars) {
-    raw_single$questionnaires[[tx]] <- ms_to_date(raw_single$questionnaires[[tx]],timezone = tz)
-  }
-  raw_single$answers$answer_time <- ms_to_date(raw_single$answers$answer_time,timezone = tz)
-
-  raw_single$questionnaires$session_number<-sapply(raw_single$questionnaires$scheduled_time,function(x){
-    dx<-difftime(x,trial_info_df$scheduled_time,units = "mins")
-    dx[abs(dx)>30] <- NA
-    if(length(which.min(dx))>0){
-      trial_info_df$session_number[which.min(abs(dx))]
-    } else {
-      return(NA)
-    }
-  },USE.NAMES = F)
-
-
-  ##Part 0: Session Assignment:
-  #### Session information data frame ####
-  session_info_df <- raw_single$questionnaires
-  session_info_df <- session_info_df[order(session_info_df$scheduled_time),]
-  session_info_df$duration<-difftime(session_info_df$completed_time,session_info_df$start_time,units = "mins")
-  session_info_df$delay<-difftime(session_info_df$start_time,session_info_df$scheduled_time,units = "mins")
-  session_info_df$spec <- unlist(apply(session_info_df[c("type","number","description")],1,list),recursive = F)
-  session_info_df<-session_info_df[c("scheduled_time","start_time","completed_time","duration","delay","spec")]
-  session_info_df$type <- "questionnaires"
-
-  #######Info session##########
-  info_df <- rbind(session_info_df,trial_info_df)
-  info_df <- info_df[order(info_df$scheduled_time),]
-  info_df$ID <- raw_single$ID
-  rownames(info_df) <- NULL
-  rownames(pr_info_by_block) <- NULL
-
-  ###Filter out entries after data pulled:
-  info_df <- info_df[which(difftime(info_df$scheduled_time,raw_single$data_mtime) <= 0),]
-
-  ##Get start date:
-  startdate <- as.Date(info_df$scheduled_time[1],tz = tz)
-  info_df$days <- difftime(as.Date(info_df$scheduled_time,tz = tz),startdate,units = "day")
-
-  #clean up:
-  info_df <- info_df[!duplicated(round(info_df$scheduled_time)),]
-  info_df$type[info_df$type=="questionnaires"] <- as.character(sapply(info_df$spec[info_df$type=="questionnaires"],`[[`,3))
-  info_df$spec <- NULL
-
-  ##For each day
-  info_sp<-split(info_df,info_df$days)
-
-  #hard code this for now, an expected events and corresponding number for each day:
-  expected_df <- data.frame(type = c("Sleep Diary","Mood Questionnaire","Daily recording","trials","5m Resting State"),
-                            num = c(1,3,1,2,2),stringsAsFactors = F)
-
-
-  info_df<-rbind(info_sp[[1]],do.call(rbind,lapply(info_sp[2:length(info_sp)],function(ifp){
-    for(i in 1:nrow(expected_df)) {
-      if(length(which(ifp$type == expected_df$type[i])) != expected_df$num[i]) {
-        toadd <- expected_df$num[i] - length(which(ifp$type == expected_df$type[i]))
-        arg <- as.list(rep(NA,toadd+1))
-        arg[[1]] <- ifp
-        ifp <- do.call(rbind,arg)
-        ifp[(nrow(ifp)-toadd+1):nrow(ifp),c("type","ID","days")] <- data.frame(type=expected_df$type[i],ID=ifp$ID[1],days=ifp$days[1])
+  tryCatch({
+    output_path <- file.path(raw_single$data_folder,paste(raw_single$ID,"_schedule_proc.rdata",sep = ""))
+    if(file.exists(output_path) && !force_reproc) {
+      load(output_path)
+      if(difftime(raw_single$data_mtime,output$raw_data$data_mtime,units = "mins") < 60){
+        #if data less than 60 minutes in different don't proc
+        output$new_data <- FALSE
+        message("No new schedule data for: ",output$ID)
+        return(output)
       }
     }
-    return(ifp)
-  })))
-
-
-  #update answer DF as well"
-  raw_single$answers$session_number<-session_info_df$session_number[match(round(as.numeric(raw_single$answers$answer_time,0)),round(as.numeric(session_info_df$completed_time),0))]
-  ##Part II: proc answer df:
-  ##Proc questionnaire data here: not yet
-  #Find answer:
-  form_data <- raw_single$answers
-  form_data <- form_data[form_data$answer!="",]
-
-  if(nrow(raw_single$sleep)>0) {
-    tk <- form_data[rep(1,nrow(raw_single$sleep)),]
-    tk$questionnaire_type <- NA
-    tk$questionnaire_name <- "Sleep Diary"
-    tk$questionnaire_number <- (100-nrow(raw_single$sleep)):99
-    tk$question <- 0
-    tk$answer <- "sleep latency=NA, woke many times=NA, woke early=NA, overall=NA"
-    tk$answer_time <- raw_single$sleep$time
-    if(unique(class(tk$answer_time))=="integer64") {
-      tk$answer_time <- ms_to_date(tk$answer_time,timezone = tz)
+    message("Processing schedule file for: ",raw_single$ID)
+  
+    ###Part I: Trial
+    time_vars <- c("scheduled_time","stim_time","choice_time","feedback_time")
+    for (tx in time_vars) {
+      raw_single$trials[[tx]] <- ms_to_date(raw_single$trials[[tx]],timezone = tz)
     }
-    form_data <- rbind(form_data,tk)
-  }
-
-  form_data$answer_prog <- text_proc(form_data$answer)
-  fdata_sp <- split(form_data,form_data$questionnaire_name)
-  #proc all the other first
-  form_proc <- lapply(fdata_sp,function(tkd){
-    #print(unique(tkd$questionnaire_name))
-    if(unique(tkd$questionnaire_name) %in% c("Mood Questionnaire","Sleep Diary","End questionnaire")) {
-      evt_q_index <- ifelse(unique(tkd$questionnaire_name) == "Mood Questionnaire",2,1)
-      if(unique(tkd$questionnaire_name) == "Mood Questionnaire") {
-        evt_q_index <- 2
-      } else if (unique(tkd$questionnaire_name) == "Sleep Diary") {
-        evt_q_index <- 1
+  
+  
+    trials_df<-calcu_accuracy(trials_1=raw_single$trials,stimuli=raw_single$stimuli)
+  
+    #get RT
+    trials_df$rt <- as.numeric(difftime(trials_df$choice_time,trials_df$stim_time,units = "secs"))
+  
+    info_by_block<-lapply(split(trials_df,trials_df$block),function(ix){
+      #print(unique(ix$block))
+      #Compliance:
+      rx<-ix[1,c("block","scheduled_time")]
+      rx$start_time <- ix$stim_time[1]
+      #adding max here to show that possible 2 repsonse time? idk; change down below as well
+      rx$completed_time <- max(ix$feedback_time)
+      rx$duration <- difftime(rx$completed_time,rx$start_time,units = "mins")
+      rx$delay <- difftime(rx$start_time,rx$scheduled_time,units = "mins")
+  
+      ##Performance data:
+      px <- data.frame(block=unique(ix$block),
+                       date=max(as.Date(ix$feedback_time)),
+                       IDe_bias=mean(ix$choice,na.rm = T),
+                       mean_rt = mean(ix$rt,na.rm = T),
+                       abs_accurate_feed = mean(as.numeric(ix[which(ix$feedback==1),]$accuracy),na.rm = T),
+                       relative_accuracy_feed = mean(as.numeric(ix[which(ix$feedback==1),]$relative_accuracy),na.rm = T),
+                       abs_accurate_nofeed = mean(as.numeric(ix[which(ix$feedback==0),]$accuracy),na.rm = T),
+                       relative_accuracy_nofeed = mean(as.numeric(ix[which(ix$feedback==0),]$relative_accuracy),na.rm = T),
+                       earning = sum(ix$outcome * 0.15,na.rm = T),
+                       stringsAsFactors = F)
+  
+  
+      return(list(compliance=rx,performance=px))
+    })
+    tr_info_by_block <- do.call(rbind,lapply(info_by_block,`[[`,"compliance"))
+    pr_info_by_block <- do.call(rbind,lapply(info_by_block,`[[`,"performance"))
+    #Process compliance
+    trial_info_df<-merge(raw_single$sessions,tr_info_by_block,by = "block",all = T)
+    trial_info_df<-trial_info_df[,-grep("_ms",names(trial_info_df))]
+    trial_info_df$spec <-unlist(apply(trial_info_df[c("block","start_trial","last_trial")],1,list),recursive = F)
+  
+    trial_info_df<-trial_info_df[c("scheduled_time","start_time","completed_time","duration","delay","spec")]
+    trial_info_df$type <- "trials"
+  
+  
+  
+    if (max(trials_df$block)>14){
+      pr_info_by_block$bad <- NA
+      pr_info_by_block$bad[6:nrow(pr_info_by_block)] <- (pr_info_by_block$relative_accuracy_feed<0.7)[6:nrow(pr_info_by_block)]
+      percentage_last_ten<-as.numeric(which(pr_info_by_block$bad[(nrow(pr_info_by_block)-9):nrow(pr_info_by_block)])*10)
+      percentage_last_ten<-ifelse(length(percentage_last_ten)<1,0,percentage_last_ten)
+  
+      if (percentage_last_ten>20){
+        mean_RT_low_performance=mean(pr_info_by_block$mean_rt[which(pr_info_by_block$bad & c(rep(FALSE,(nrow(pr_info_by_block)-10)),rep(TRUE,10)))])
+        mean_side_bias_low_performance=mean(pr_info_by_block$IDe_bias[which(pr_info_by_block$bad & c(rep(FALSE,(nrow(pr_info_by_block)-10)),rep(TRUE,10)))])
       } else {
-        evt_q_index <- 99
+        mean_RT_low_performance <- NA
+        mean_side_bias_low_performance <- NA
       }
-      tkf<-do.call(rbind,lapply(split(tkd,tkd$questionnaire_number),function(mda){
-        mdb<-do.call(cbind,lapply(mda$answer_prog[mda$question!=evt_q_index],as.data.frame))
-        if(evt_q_index %in% mda$question) {
-          ###Event df proc
-          if(is.null(names(mda$answer_prog[[which(mda$question==evt_q_index)]]))) {
-            md_evt <- do.call(rbind,lapply(mda$answer_prog[[which(mda$question==evt_q_index)]],as.data.frame))
-          } else {
-            md_evt <- as.data.frame(mda$answer_prog[[which(mda$question==evt_q_index)]])
-          }
-
-          names(md_evt)[names(md_evt)=="V_1"] <- "description"
-          names(md_evt)[names(md_evt)=="V_2"] <- "time_ago"
-          if(is.null(md_evt$category)) {
-            md_evt$category <- "event/activity:unknown"
-          }
-          names(md_evt)<-gsub(".","_",names(md_evt),fixed = T)
-          mdb$event_df <- list(event_df=md_evt)
-          mdb$number_of_events <- nrow(mdb$event_df$event_df)
-        } else {
-          mdb$event_df <- NA
-          mdb$number_of_events <- 0
-        }
-        mdc <- cbind(mda[1,c("questionnaire_name","questionnaire_type","answer_time")],mdb)
-        return(mdc)
-      }))
-    } else {
-      tke<-do.call(rbind,lapply(tkd$answer_prog,as.data.frame,sep="_"))
-      tkf <- cbind(tkd[c("questionnaire_name","questionnaire_type","answer_time","question")],tke)
     }
-    names(tkf)<-gsub(".","_",names(tkf),fixed = T)
-    tkf$ID <- raw_single$ID
-    #tkf[tkf=="NA"] <- NA
-    tkf <- tkf[order(tkf$answer_time),]
-    rownames(tkf)<-NULL
-    return(tkf)
+    px_overall <- data.frame(ID=raw_single$ID,
+                             IDe_bias=mean(trials_df$choice,na.rm = T),
+                             mean_rt = mean(trials_df$rt,na.rm = T),
+                             abs_accurate_overall = mean(c(pr_info_by_block$abs_accurate_feed,pr_info_by_block$abs_accurate_nofeed),na.rm = T),
+                             relative_accuracy_overall = mean(c(pr_info_by_block$relative_accuracy_feed,pr_info_by_block$relative_accuracy_nofeed),na.rm = T),
+                             abs_accurate_feed = mean(pr_info_by_block$abs_accurate_feed,na.rm = T),
+                             relative_accuracy_feed = mean(pr_info_by_block$relative_accuracy_feed,na.rm = T),
+                             abs_accurate_nofeed = mean(pr_info_by_block$abs_accurate_nofeed,na.rm = T),
+                             relative_accuracy_nofeed = mean(pr_info_by_block$relative_accuracy_nofeed,na.rm = T),
+                             stringsAsFactors = F)
+                              #percentage_last_ten=percentage_last_ten,
+                              #mean_RT_low_performance=mean_RT_low_performance,
+                              #mean_side_bias_low_performance=mean_side_bias_low_performance,
+  
+    ##Part II: questionnaires:
+    time_vars <- c("scheduled_time","start_time","completed_time")
+    for (tx in time_vars) {
+      raw_single$questionnaires[[tx]] <- ms_to_date(raw_single$questionnaires[[tx]],timezone = tz)
+    }
+    raw_single$answers$answer_time <- ms_to_date(raw_single$answers$answer_time,timezone = tz)
+  
+    raw_single$questionnaires$session_number<-sapply(raw_single$questionnaires$scheduled_time,function(x){
+      dx<-difftime(x,trial_info_df$scheduled_time,units = "mins")
+      dx[abs(dx)>30] <- NA
+      if(length(which.min(dx))>0){
+        trial_info_df$session_number[which.min(abs(dx))]
+      } else {
+        return(NA)
+      }
+    },USE.NAMES = F)
+  
+  
+    ##Part 0: Session Assignment:
+    #### Session information data frame ####
+    session_info_df <- raw_single$questionnaires
+    session_info_df <- session_info_df[order(session_info_df$scheduled_time),]
+    session_info_df$duration<-difftime(session_info_df$completed_time,session_info_df$start_time,units = "mins")
+    session_info_df$delay<-difftime(session_info_df$start_time,session_info_df$scheduled_time,units = "mins")
+    session_info_df$spec <- unlist(apply(session_info_df[c("type","number","description")],1,list),recursive = F)
+    session_info_df<-session_info_df[c("scheduled_time","start_time","completed_time","duration","delay","spec")]
+    session_info_df$type <- "questionnaires"
+  
+    #######Info session##########
+    info_df <- rbind(session_info_df,trial_info_df)
+    info_df <- info_df[order(info_df$scheduled_time),]
+    info_df$ID <- raw_single$ID
+    rownames(info_df) <- NULL
+    rownames(pr_info_by_block) <- NULL
+  
+    ###Filter out entries after data pulled:
+    info_df <- info_df[which(difftime(info_df$scheduled_time,raw_single$data_mtime) <= 0),]
+  
+    ##Get start date:
+    startdate <- as.Date(info_df$scheduled_time[1],tz = tz)
+    info_df$days <- difftime(as.Date(info_df$scheduled_time,tz = tz),startdate,units = "day")
+  
+    #clean up:
+    info_df <- info_df[!duplicated(round(info_df$scheduled_time)),]
+    info_df$type[info_df$type=="questionnaires"] <- as.character(sapply(info_df$spec[info_df$type=="questionnaires"],`[[`,3))
+    info_df$spec <- NULL
+  
+    ##For each day
+    info_sp<-split(info_df,info_df$days)
+  
+    #hard code this for now, an expected events and corresponding number for each day:
+    expected_df <- data.frame(type = c("Sleep Diary","Mood Questionnaire","Daily recording","trials","5m Resting State"),
+                              num = c(1,3,1,2,2),stringsAsFactors = F)
+  
+  
+    info_df<-rbind(info_sp[[1]],do.call(rbind,lapply(info_sp[2:length(info_sp)],function(ifp){
+      for(i in 1:nrow(expected_df)) {
+        if(length(which(ifp$type == expected_df$type[i])) != expected_df$num[i]) {
+          toadd <- expected_df$num[i] - length(which(ifp$type == expected_df$type[i]))
+          arg <- as.list(rep(NA,toadd+1))
+          arg[[1]] <- ifp
+          ifp <- do.call(rbind,arg)
+          ifp[(nrow(ifp)-toadd+1):nrow(ifp),c("type","ID","days")] <- data.frame(type=expected_df$type[i],ID=ifp$ID[1],days=ifp$days[1])
+        }
+      }
+      return(ifp)
+    })))
+  
+  
+    #update answer DF as well"
+    raw_single$answers$session_number<-session_info_df$session_number[match(round(as.numeric(raw_single$answers$answer_time,0)),round(as.numeric(session_info_df$completed_time),0))]
+    ##Part II: proc answer df:
+    ##Proc questionnaire data here: not yet
+    #Find answer:
+    form_data <- raw_single$answers
+    form_data <- form_data[form_data$answer!="",]
+  
+    if(nrow(raw_single$sleep)>0) {
+      tk <- form_data[rep(1,nrow(raw_single$sleep)),]
+      tk$questionnaire_type <- NA
+      tk$questionnaire_name <- "Sleep Diary"
+      tk$questionnaire_number <- (100-nrow(raw_single$sleep)):99
+      tk$question <- 0
+      tk$answer <- "sleep latency=NA, woke many times=NA, woke early=NA, overall=NA"
+      tk$answer_time <- raw_single$sleep$time
+      if(unique(class(tk$answer_time))=="integer64") {
+        tk$answer_time <- ms_to_date(tk$answer_time,timezone = tz)
+      }
+      form_data <- rbind(form_data,tk)
+    }
+  
+    form_data$answer_prog <- text_proc(form_data$answer)
+    fdata_sp <- split(form_data,form_data$questionnaire_name)
+    #proc all the other first
+    form_proc <- lapply(fdata_sp,function(tkd){
+      #print(unique(tkd$questionnaire_name))
+      if(unique(tkd$questionnaire_name) %in% c("Mood Questionnaire","Sleep Diary","End questionnaire")) {
+        evt_q_index <- ifelse(unique(tkd$questionnaire_name) == "Mood Questionnaire",2,1)
+        if(unique(tkd$questionnaire_name) == "Mood Questionnaire") {
+          evt_q_index <- 2
+        } else if (unique(tkd$questionnaire_name) == "Sleep Diary") {
+          evt_q_index <- 1
+        } else {
+          evt_q_index <- 99
+        }
+        tkf<-do.call(rbind,lapply(split(tkd,tkd$questionnaire_number),function(mda){
+          mdb<-do.call(cbind,lapply(mda$answer_prog[mda$question!=evt_q_index],as.data.frame))
+          if(evt_q_index %in% mda$question) {
+            ###Event df proc
+            if(is.null(names(mda$answer_prog[[which(mda$question==evt_q_index)]]))) {
+              md_evt <- do.call(rbind,lapply(mda$answer_prog[[which(mda$question==evt_q_index)]],as.data.frame))
+            } else {
+              md_evt <- as.data.frame(mda$answer_prog[[which(mda$question==evt_q_index)]])
+            }
+  
+            names(md_evt)[names(md_evt)=="V_1"] <- "description"
+            names(md_evt)[names(md_evt)=="V_2"] <- "time_ago"
+            if(is.null(md_evt$category)) {
+              md_evt$category <- "event/activity:unknown"
+            }
+            names(md_evt)<-gsub(".","_",names(md_evt),fixed = T)
+            mdb$event_df <- list(event_df=md_evt)
+            mdb$number_of_events <- nrow(mdb$event_df$event_df)
+          } else {
+            mdb$event_df <- NA
+            mdb$number_of_events <- 0
+          }
+          mdc <- cbind(mda[1,c("questionnaire_name","questionnaire_type","answer_time")],mdb)
+          return(mdc)
+        }))
+      } else {
+        tke<-do.call(rbind,lapply(tkd$answer_prog,as.data.frame,sep="_"))
+        tkf <- cbind(tkd[c("questionnaire_name","questionnaire_type","answer_time","question")],tke)
+      }
+      names(tkf)<-gsub(".","_",names(tkf),fixed = T)
+      tkf$ID <- raw_single$ID
+      #tkf[tkf=="NA"] <- NA
+      tkf <- tkf[order(tkf$answer_time),]
+      rownames(tkf)<-NULL
+      return(tkf)
+    })
+  
+    form_proc$`Mood Questionnaire`$v_a_distance <- sqrt((as.numeric(form_proc$`Mood Questionnaire`$Valence)^2) + (as.numeric(form_proc$`Mood Questionnaire`$Arousal)^2) )
+    form_proc$`Sleep Diary`$did_not_sleep<-is.na(form_proc$`Sleep Diary`$questionnaire_type)
+    if(!is.null(form_proc$`End questionnaire`)) {
+      names(form_proc$`End questionnaire`)[grepl("X[[i]]",names(form_proc$`End questionnaire`),fixed = T)] <- paste0("V",1:length(which(grepl("X[[i]]",names(form_proc$`End questionnaire`),fixed = T))))
+      form_proc$`End questionnaire`$event_df <- NULL
+      form_proc$`End questionnaire`$number_of_events <- NULL
+    }
+    ##summary stats for how much they answered
+    q_sum <- data.frame(ID = raw_single$ID,val_arr_dis_avg = mean(form_proc$`Mood Questionnaire`$v_a_distance,na.rm = T))
+    e_sum <- data.frame(as.list(apply(form_proc$`Mood Questionnaire`[c("Anxious","Elated","Sad","Irritable","Energetic")],2,function(x){mean(as.numeric(x),na.rm = T)})))
+    names(e_sum) <- paste(names(e_sum),"avg",sep = "_")
+    s_sum <- data.frame(as.list(apply(form_proc$`Sleep Diary`[c("sleep_latency","woke_many_times","woke_early","overall")],2,function(x){mean(as.numeric(x),na.rm = T)})))
+    names(s_sum) <- paste(names(s_sum),"avg",sep = "_")
+  
+    q_sum <- cbind(q_sum,e_sum,s_sum)
+    q_sum$emo_rate_avg <- mean(unlist(e_sum),na.rm = T)
+    q_sum$sleep_di_avg <- mean(unlist(s_sum),na.rm = T)
+    q_sum$avg_evt_num <- mean(form_proc$`Mood Questionnaire`$number_of_events)
+    q_sum$avg_sleep_evt_num <- mean(form_proc$`Sleep Diary`$number_of_events)
+    q_sum$num_no_sleep <- length(which(form_proc$`Sleep Diary`$did_not_sleep))
+    q_sum$val_emo_cor <- cor(apply(form_proc$`Mood Questionnaire`[c("Anxious","Elated","Sad","Irritable","Energetic")],1,function(x){mean(as.numeric(x),na.rm = T)}),form_proc$`Mood Questionnaire`$v_a_distance)
+    ###return proc_answer object###########
+  
+  
+    pr_info_by_block$ID <- raw_single$ID
+    raw_single$trials <- trials_df
+  
+    output <- list(raw_data=raw_single,
+                   info_df = info_df,
+                   performance_info=pr_info_by_block,performance_overall=px_overall,
+                   form_dfs=form_proc,form_summary=q_sum,
+                   ID=raw_single$ID)
+    save(output, file = output_path)
+  
+    return(list(raw_data=raw_single, new_data=TRUE,
+                info_df = info_df,
+                performance_info=pr_info_by_block,performance_overall=px_overall,
+                form_dfs=form_proc,form_summary=q_sum,
+                ID=raw_single$ID))
+  }, error = function(err){
+    traceback()
+    print(paste0(raw_single$ID, " did not successfully have their schedule file processed."))
+    return(NA)
   })
-
-  form_proc$`Mood Questionnaire`$v_a_distance <- sqrt((as.numeric(form_proc$`Mood Questionnaire`$Valence)^2) + (as.numeric(form_proc$`Mood Questionnaire`$Arousal)^2) )
-  form_proc$`Sleep Diary`$did_not_sleep<-is.na(form_proc$`Sleep Diary`$questionnaire_type)
-  if(!is.null(form_proc$`End questionnaire`)) {
-    names(form_proc$`End questionnaire`)[grepl("X[[i]]",names(form_proc$`End questionnaire`),fixed = T)] <- paste0("V",1:length(which(grepl("X[[i]]",names(form_proc$`End questionnaire`),fixed = T))))
-    form_proc$`End questionnaire`$event_df <- NULL
-    form_proc$`End questionnaire`$number_of_events <- NULL
-  }
-  ##summary stats for how much they answered
-  q_sum <- data.frame(ID = raw_single$ID,val_arr_dis_avg = mean(form_proc$`Mood Questionnaire`$v_a_distance,na.rm = T))
-  e_sum <- data.frame(as.list(apply(form_proc$`Mood Questionnaire`[c("Anxious","Elated","Sad","Irritable","Energetic")],2,function(x){mean(as.numeric(x),na.rm = T)})))
-  names(e_sum) <- paste(names(e_sum),"avg",sep = "_")
-  s_sum <- data.frame(as.list(apply(form_proc$`Sleep Diary`[c("sleep_latency","woke_many_times","woke_early","overall")],2,function(x){mean(as.numeric(x),na.rm = T)})))
-  names(s_sum) <- paste(names(s_sum),"avg",sep = "_")
-
-  q_sum <- cbind(q_sum,e_sum,s_sum)
-  q_sum$emo_rate_avg <- mean(unlist(e_sum),na.rm = T)
-  q_sum$sleep_di_avg <- mean(unlist(s_sum),na.rm = T)
-  q_sum$avg_evt_num <- mean(form_proc$`Mood Questionnaire`$number_of_events)
-  q_sum$avg_sleep_evt_num <- mean(form_proc$`Sleep Diary`$number_of_events)
-  q_sum$num_no_sleep <- length(which(form_proc$`Sleep Diary`$did_not_sleep))
-  q_sum$val_emo_cor <- cor(apply(form_proc$`Mood Questionnaire`[c("Anxious","Elated","Sad","Irritable","Energetic")],1,function(x){mean(as.numeric(x),na.rm = T)}),form_proc$`Mood Questionnaire`$v_a_distance)
-  ###return proc_answer object###########
-
-
-  pr_info_by_block$ID <- raw_single$ID
-  raw_single$trials <- trials_df
-
-  output <- list(raw_data=raw_single,
-                 info_df = info_df,
-                 performance_info=pr_info_by_block,performance_overall=px_overall,
-                 form_dfs=form_proc,form_summary=q_sum,
-                 ID=raw_single$ID)
-  save(output, file = output_path)
-
-  return(list(raw_data=raw_single, new_data=TRUE,
-              info_df = info_df,
-              performance_info=pr_info_by_block,performance_overall=px_overall,
-              form_dfs=form_proc,form_summary=q_sum,
-              ID=raw_single$ID))
 }
 ####Proc physio
 proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4,
@@ -488,11 +498,13 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
 
     ###EEG
     message("Processing new EEG data for: ",IDx)
-    eeg_raw <- load_EEG(EEGd = physio_concat$eeg,sample_rate = eeg_sample_rate,sd_times = sd_times)
+    eeg_list <- load_EEG(EEGd = physio_concat$eeg,sample_rate = eeg_sample_rate,sd_times = sd_times)
+    eeg_raw <- eeg_list[[1]]
+    eeg_missing <- eeg_list[[2]]
     eeg_fb <- eeg_epochs_around_feedback(EEG_data = eeg_raw,
                                            pre = eeg_pre,post = eeg_post,sample_rate = eeg_sample_rate,
                                            fbt = as.numeric(behav_df$feedback_time)*1000)
-    eeg_rawsum <- get_good_EEG(blocks=behav_df$block,a2f=eeg_fb)
+    eeg_rawsum <- get_good_EEG(blocks=behav_df$block,a2f=eeg_fb,sd_times=sd_times)
     eeg_summary <- eeg_rawsum[1:4] / eeg_rawsum$ntrial
     names(eeg_summary) <- paste("per_Ch",1:4,sep = "_")
     eeg_summary$block <- eeg_rawsum$nbl
@@ -518,13 +530,13 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
     ecg_ov$worst_allblocks <- min(ecg_summary$per_Good)
 
     output <- list(new_data=TRUE,ID=IDx,lite=F,
-                   eeg_proc = eeg_raw,eeg_fb = eeg_fb, eeg_summary = eeg_summary, eeg_ov = eeg_ov,
+                   eeg_proc = eeg_raw,eeg_fb = eeg_fb, eeg_summary = eeg_summary, eeg_ov = eeg_ov, eeg_missing = eeg_missing, eeg_rawsum = eeg_rawsum,
                    ecg_proc = ecg_raw,ecg_fb = ecg_fb, ecg_summary = ecg_summary, ecg_ov = ecg_ov)
     save(output,file = physio_proc_file)
 
     if(save_lite) {
       output <- list(new_data=TRUE,ID=IDx,lite=T,
-                     eeg_fb = eeg_fb,eeg_summary = eeg_summary, eeg_ov = eeg_ov,
+                     eeg_fb = eeg_fb,eeg_summary = eeg_summary, eeg_ov = eeg_ov,eeg_missing = eeg_missing, eeg_rawsum = eeg_rawsum,
                      ecg_fb = ecg_fb,ecg_summary = ecg_summary, ecg_ov = ecg_ov)
 
       return(output)

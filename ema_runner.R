@@ -328,7 +328,7 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=TRU
 # load data only, run nothing
 #run_ema(redcap=FALSE, save_lite=FALSE, render=FALSE, pull=FALSE, sched=FALSE, physio=FALSE, cleanup_data=FALSE, nthreads = 4)
 # pull only
-run_ema(redcap=FALSE, save_lite=FALSE, render=FALSE, pull=TRUE, sched=FALSE, physio=FALSE, cleanup_data=FALSE, nthreads = 4) #, site="/Users/shanebuckley/desktop/rl_ema_monitoring/site"
+#run_ema(redcap=FALSE, save_lite=FALSE, render=FALSE, pull=TRUE, sched=FALSE, physio=FALSE, cleanup_data=FALSE, nthreads = 4) #, site="/Users/shanebuckley/desktop/rl_ema_monitoring/site"
 # everything but the render and redcap pull and site push
 #run_ema(redcap=FALSE, save_lite=TRUE, render=FALSE, pull=TRUE, sched=TRUE, physio=TRUE, force_proc=TRUE, force_reload=TRUE, cleanup_data=TRUE, nthreads = 4) #, site="/Users/shanebuckley/desktop/rl_ema_monitoring/site")
 # everything but the redcap pull and site push
@@ -340,5 +340,12 @@ run_ema(redcap=FALSE, save_lite=FALSE, render=FALSE, pull=TRUE, sched=FALSE, phy
 # push only
 #run_ema(redcap=FALSE, save_lite=FALSE, render=FALSE, pull=FALSE, sched=FALSE, physio=FALSE, cleanup_data=FALSE, nthreads = 4, push=TRUE)
 # run everything but redcap
-#run_ema(redcap=FALSE, save_lite=FALSE, render=TRUE, pull=TRUE, sched=TRUE, physio=TRUE, cleanup_data=TRUE, nthreads = 4, push=TRUE)
+#run_ema(redcap=FALSE, save_lite=TRUE, render=TRUE, pull=TRUE, sched=TRUE, physio=TRUE, cleanup_data=TRUE, nthreads = 4, push=TRUE)
+# run everything, but force proc and reload
+#run_ema(redcap=FALSE, save_lite=TRUE, render=TRUE, pull=TRUE, sched=TRUE, physio=TRUE, cleanup_data=TRUE, nthreads = 4, push=TRUE, force_reload=TRUE, force_proc=TRUE)
 #subjects=list("221604", "221849"),
+# run schedule only
+#run_ema(redcap=FALSE, save_lite=FALSE, render=FALSE, pull=FALSE, sched=TRUE, physio=FALSE, cleanup_data=FALSE, nthreads = 4)
+# run schedule and physio only
+run_ema(redcap=FALSE, save_lite=FALSE, render=FALSE, pull=FALSE, sched=TRUE, physio=TRUE, cleanup_data=FALSE, nthreads = 4)
+

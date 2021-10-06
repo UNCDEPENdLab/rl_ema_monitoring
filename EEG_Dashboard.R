@@ -108,6 +108,10 @@ eeg_epochs_around_feedback <- function(EEG_data,pre=500,post=1500,sample_rate=NU
   Ch2 <- EEG_data$Ch2
   Ch3 <- EEG_data$Ch3
   Ch4 <- EEG_data$Ch4
+  g1 <- EEG_data$g1
+  g2 <- EEG_data$g2
+  g3 <- EEG_data$g3
+  g4 <- EEG_data$g4
 
   ch1_a2f <- matrix(NA,nrow=length(fbt),ncol=pre+post+1);
   ch2_a2f <- matrix(NA,nrow=length(fbt),ncol=pre+post+1);
@@ -179,7 +183,7 @@ eeg_epochs_around_feedback <- function(EEG_data,pre=500,post=1500,sample_rate=NU
   return(a2f) # rows = number of trials, columns = number of timestamps
 }
 
-get_good_EEG <- function(blocks,a2f){
+get_good_EEG <- function(blocks,a2f,sd_times=10){
 
   library("dplyr") # 2021-10-01 AndyP  do we need this library call here?
 
@@ -225,7 +229,7 @@ get_good_EEG <- function(blocks,a2f){
   Ngood4 <- NULL
   Ntotal <- NULL
   avgNgood <- NULL
-  Ngood_byBlock <- NULL
+  Ngood_by_Block <- NULL
   for (i in 1:length(nbl)){
     ix <-which(blocks==nbl[i])
     Ngood1[i] <- sum(!is.na(ch1_a2f[ix,])) # 2021-10-05 AndyP added comma, was this correct before?
