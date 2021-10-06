@@ -7,13 +7,19 @@ import glob
 from datetime import datetime
 from pydrive.auth import GoogleAuth
 from pydrive.drive import GoogleDrive
+from data_management_functions import get_cfg_var_p
 
-def google_drive_connect(id, path):
+def google_drive_connect(id, path, auto_auth=True):
     '''
     Method for connecting to the subject's Google Drive
     '''
     # Initialize Google Auth object
-    gauth = GoogleAuth()
+    try:
+        gauth = GoogleAuth(settings_file=path + '/Subjects/' + id + '/pydrive.yaml')
+        local_set = True
+    except:
+        gauth = GoogleAuth()
+        local_set = False
     # String to the credentials file
     credPath = path + '/Subjects/' + id + "/mycreds.txt"
     # Try to load saved client credentials
@@ -25,7 +31,14 @@ def google_drive_connect(id, path):
     elif gauth.access_token_expired:
         # Refresh them if expired
         print("Note: This subject's credentials are being renewed.")
-        gauth.Refresh()
+        # try to refresh the access token
+        try:
+            gauth.Refresh()
+        # may fail if the refresh token does not exist
+        except:
+            return None
+    # Save the current credentials to the file
+    #gauth.SaveCredentialsFile(credPath)
     # Initialize the Google Drive Connection
     drive = GoogleDrive(gauth)
     # Return the Google Drive object
@@ -175,7 +188,10 @@ def get_pull_files(id, path, clinical_path, drive, include_failed=True, check_lo
     with open(path + '/Subjects/' + id + '/subject.json') as f:
         json_dict = json.load(f)
     # get the actual files that exist for the subject
-    on_system_sched = [os.path.basename(x) for x in glob.glob(path + '/Subjects/' + id + '/**/*schedule*.db', recursive=True) if "archive" not in x][0]
+    try:
+        on_system_sched = [os.path.basename(x) for x in glob.glob(path + '/Subjects/' + id + '/**/*schedule*.db', recursive=True) if "archive" not in x][0]
+    except:
+        on_system_sched = None
     on_system_physio = [os.path.basename(x) for x in glob.glob(path + '/Subjects/' + id + '/**/*physio*.db', recursive=True)]
     on_system_video = [os.path.basename(x) for x in glob.glob(clinical_path + '/' + id + '**/**video*.mp4', recursive=True)]
     file_dict = json_dict["subject"]["files"]
@@ -263,7 +279,8 @@ def get_pull_files(id, path, clinical_path, drive, include_failed=True, check_lo
             # check_local must be true to check md5
             if check_md5 == True and os.path.isfile(path + '/Subjects/' + id + '/physio/' + updatePhysioName(old_name=physio_file['title'])):
                 # get the local checksum
-                local_checksum = hashlib.md5(open(path + '/Subjects/' + id + '/physio/' + updatePhysioName(old_name=physio_file['title']),'rb').read()).hexdigest()
+                if os.path.isfile(path + '/Subjects/' + id + '/physio/' + updatePhysioName(old_name=physio_file['title'])):
+                    local_checksum = hashlib.md5(open(path + '/Subjects/' + id + '/physio/' + updatePhysioName(old_name=physio_file['title']),'rb').read()).hexdigest()
                 # get the GDrive checksum
                 gdrive_checksum = physio_file["md5Checksum"]
                 # check the the md5 checksums match
@@ -282,7 +299,8 @@ def get_pull_files(id, path, clinical_path, drive, include_failed=True, check_lo
             # check_local must be true to check md5
             if check_md5 == True and os.path.isfile(clinical_path + '/' + id + '/' + updateVideoName(old_name=video_file['title'])):
                 # get the local checksum
-                local_checksum = hashlib.md5(open(clinical_path + '/' + id + '/' + updateVideoName(old_name=video_file['title']),'rb').read()).hexdigest()
+                if os.path.isfile(clinical_path + '/' + id + '/' + updateVideoName(old_name=video_file['title'])):
+                    local_checksum = hashlib.md5(open(clinical_path + '/' + id + '/' + updateVideoName(old_name=video_file['title']),'rb').read()).hexdigest()
                 # get the GDrive checksum
                 gdrive_checksum = video_file["md5Checksum"]
                 # check the the md5 checksums match
@@ -775,6 +793,20 @@ def pull_files(id, path, clinical_path, clinical_url, tries=5, include_failed=Tr
     '''
     Method for pulling data from the given Google Drive and updates the subjects json file.
     '''
+    #####################################################
+    # quick patch to not pull videos for cerrain subjects
+    #####################################################
+    # get the list of subjects to not pull videos for
+    with open(path + "/dont_pull_videos.json", 'r') as f:
+        NO_VIDEOS = json.load(f)
+    # if this is a subject to not pull videos for
+    if id in NO_VIDEOS:
+        pull_these_videos = False
+        print("Not pulling videos for: " + id)
+    else:
+        pull_these_videos = pull_video
+    print("Pulling Videos for " + str(id) + " : " + str(pull_these_videos))
+    #####################################################
     files2pull = True
     pull_schedule = True
     #print(files2pull)
@@ -793,7 +825,7 @@ def pull_files(id, path, clinical_path, clinical_url, tries=5, include_failed=Tr
         # Reconnect to Google Drive
         drive = google_drive_connect(id=id, path=path)
         # Update the files2pull
-        query_results = get_pull_files(id=id, path=path, clinical_path=clinical_path, drive=drive, include_failed=include_failed, check_local=check_local, pull_video=pull_video, pull_all=pull_all)
+        query_results = get_pull_files(id=id, path=path, clinical_path=clinical_path, drive=drive, include_failed=include_failed, check_local=check_local, pull_video=pull_these_videos, pull_all=pull_all)
         files2pull = query_results[0]
         #print(files2pull)
         pull_schedule = query_results[1]

@@ -97,7 +97,8 @@
 
 # import dependent packages
 library("pacman")
-pacman::p_load(reticulate, RSQLite, dplyr, tidyr, lubridate, rjson, R.utils, REDCapR, zoo)
+library("anytime")
+pacman::p_load(reticulate, RSQLite, dplyr, tidyr, lubridate, rjson, R.utils, REDCapR, zoo, anytime)
 
 setwd("dashboard/study_management")
 
@@ -163,10 +164,14 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=TRU
   ## Need to implement multithreaded subject pull to accomodate updating json ##
   if(pull == TRUE) {
     print("Running data pull...")
+    # mount the SharePoint if it is not currently mounted
+    
     # pull data
     # iterate through the active subjects
     for(subj in active) {
-      pull_files(id=subj, path=dataPath, clinical_path=videoPath, clinical_url=videoURL, pull_all=FALSE)
+      try({
+        pull_files(id=subj, path=dataPath, clinical_path=videoPath, clinical_url=videoURL, pull_all=FALSE)
+      })
     }
   }
   
@@ -259,18 +264,20 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=TRU
   if(cleanup_data == TRUE){
     # to run the cleanup function, loop through the subject IDs, resourcing cleanup, re-running it with the current sid
     for(s in active) {
-      subj <<- s
-      if(redcap == TRUE) {
-        checklist <<- get_redcap_checklist_r(rc_url=creds$uri, rc_token=creds$token, subj_id=s)
-      }
-      reports_path <<- paste0(dataPath, '/Subjects/', s, '/reports')
-      plots_path <<- paste0(dataPath, '/Subjects/', s, '/plots')
-      # create a reports directory for the subject if one does not exist
-      dir.create(reports_path, showWarnings = FALSE, recursive=TRUE)
-      # create a plots directory for the subject if one does not exist
-      dir.create(plots_path, showWarnings = FALSE, recursive=TRUE)
-      # try to get the rds file and append it to the list of rds files
-      source("dashboard_cleanup.R")
+      try ({
+        subj <<- s
+        if(redcap == TRUE) {
+          checklist <<- get_redcap_checklist_r(rc_url=creds$uri, rc_token=creds$token, subj_id=s)
+        }
+        reports_path <<- paste0(dataPath, '/Subjects/', s, '/reports')
+        plots_path <<- paste0(dataPath, '/Subjects/', s, '/plots')
+        # create a reports directory for the subject if one does not exist
+        dir.create(reports_path, showWarnings = FALSE, recursive=TRUE)
+        # create a plots directory for the subject if one does not exist
+        dir.create(plots_path, showWarnings = FALSE, recursive=TRUE)
+        # try to get the rds file and append it to the list of rds files
+        source("dashboard_cleanup.R")
+      })
     }
     build_config(rootDir=root_path) # rebuilds the project's cfg.json
     build_config(file_name="data") # rebuilds the data.json
@@ -307,6 +314,7 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=TRU
       checkmate::assert_directory_exists(output_dir)
       #have exe permission on files will yield 403 errors (some images are getting +x when sent to me)
       system(paste("find", output_dir, "-type f -print0 | xargs -0 chmod 644"))
+      cat(paste0("rsync -av ", output_dir, "/ ", push_dir))
       system(paste0("rsync -av ", output_dir, "/ ", push_dir))
     }
     # run the site push
@@ -317,8 +325,10 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=TRU
 
 #run_ema(pull=FALSE, sched=TRUE, physio=FALSE, redcap=FALSE, force_proc=TRUE, nthreads = 1, site="/Users/shanebuckley/desktop/rl_ema_monitoring/site", render=FALSE) # , force_reload=TRUE
 #run_ema(redcap=TRUE, save_lite=TRUE, render=FALSE, pull=TRUE, sched=TRUE, physio=TRUE, force_proc=TRUE, force_reload=TRUE, nthreads = 4, site="/Users/shanebuckley/desktop/rl_ema_monitoring/site") # , force_reload=TRUE
+# load data only, run nothing
+#run_ema(redcap=FALSE, save_lite=FALSE, render=FALSE, pull=FALSE, sched=FALSE, physio=FALSE, cleanup_data=FALSE, nthreads = 4)
 # pull only
-#run_ema(redcap=FALSE, save_lite=FALSE, render=FALSE, pull=TRUE, sched=FALSE, physio=FALSE, cleanup_data=FALSE, nthreads = 4) #, site="/Users/shanebuckley/desktop/rl_ema_monitoring/site"
+run_ema(redcap=FALSE, save_lite=FALSE, render=FALSE, pull=TRUE, sched=FALSE, physio=FALSE, cleanup_data=FALSE, nthreads = 4) #, site="/Users/shanebuckley/desktop/rl_ema_monitoring/site"
 # everything but the render and redcap pull and site push
 #run_ema(redcap=FALSE, save_lite=TRUE, render=FALSE, pull=TRUE, sched=TRUE, physio=TRUE, force_proc=TRUE, force_reload=TRUE, cleanup_data=TRUE, nthreads = 4) #, site="/Users/shanebuckley/desktop/rl_ema_monitoring/site")
 # everything but the redcap pull and site push
@@ -326,5 +336,9 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=TRU
 # only run cleanup layer
 #run_ema(redcap=FALSE, save_lite=FALSE, render=FALSE, pull=FALSE, sched=FALSE, physio=FALSE, force_proc=FALSE, force_reload=FALSE, cleanup_data=TRUE, nthreads = 4)
 # render only
-run_ema(redcap=FALSE, save_lite=FALSE, render=TRUE, pull=FALSE, sched=FALSE, physio=FALSE, cleanup_data=FALSE, nthreads = 4, push=FALSE)
+#run_ema(redcap=FALSE, save_lite=FALSE, render=TRUE, pull=FALSE, sched=FALSE, physio=FALSE, cleanup_data=FALSE, nthreads = 4, push=FALSE)
+# push only
+#run_ema(redcap=FALSE, save_lite=FALSE, render=FALSE, pull=FALSE, sched=FALSE, physio=FALSE, cleanup_data=FALSE, nthreads = 4, push=TRUE)
+# run everything but redcap
+#run_ema(redcap=FALSE, save_lite=FALSE, render=TRUE, pull=TRUE, sched=TRUE, physio=TRUE, cleanup_data=TRUE, nthreads = 4, push=TRUE)
 #subjects=list("221604", "221849"),

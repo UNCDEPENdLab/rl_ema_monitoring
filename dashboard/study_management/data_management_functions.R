@@ -536,12 +536,16 @@ get_ema_subject_metadata <- function(root_dir=NULL, subject_list=NULL, trigger_r
     video_list[[sid]] <- get_video_info(sid=sid) #return multi-row data.frame, one row per subject video file # , data_dir
   }
   print("binding schedule")
+  # drops subjects whose data has not yet been collected (set to active -> are about to start ema, but have not started yet)
+  sched_list <- sched_list[sapply(sched_list, function(x) dim(x)[1]) > 0]
   sched_df <- bind_rows(sched_list)
   # something like
   # subject_id  subject_folder                                                      last_cached   active   cache_failure
   # 9001        /projects/rl_ema_monitoring/Subjects/9001/schedule/9001_schedule.db    2Feb2021     TRUE           FALSE
   # 9002        /projects/rl_ema_monitoring/Subjects/9002/schedule/9002_schedule.db    2Feb2021    FALSE           FALSE
   print("binding physio")
+  # drops subjects whose data has not yet been collected (set to active -> are about to start ema, but have not started yet)
+  physio_list <- physio_list[sapply(physio_list, function(x) dim(x)[1]) > 0]
   physio_df <- bind_rows(physio_list)
   #something like (if forget: do we get one file per recording? If so, we'd have multiple rows per sub)
   # subject_id                                        physio_file    last_cached  active
@@ -549,6 +553,8 @@ get_ema_subject_metadata <- function(root_dir=NULL, subject_list=NULL, trigger_r
   #       9001   /abspath/Subjects/9001/physio/somethingphysio2.db       2Feb2021   TRUE
   #       9002   /abspath/Subjects/9002/physio/somethingphysio.db        2Feb2021   FALSE
   print("binding video")
+  # drops subjects whose data has not yet been collected (set to active -> are about to start ema, but have not started yet)
+  video_list <- video_list[sapply(video_list, function(x) dim(x)[1]) > 0]
   video_df <- bind_rows(video_list)
   #something like
   # subject_id                             video_file     last_cached  active
