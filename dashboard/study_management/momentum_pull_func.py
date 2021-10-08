@@ -232,18 +232,21 @@ def get_pull_files(id, path, clinical_path, drive, include_failed=True, check_lo
     for i, file in enumerate(sorted(file_list, key = lambda x: x['title']), start=1):
         # Name of the file
         file_name = file['title']
-        #print(file_name)
-        # Store in the appropriate location
-        if 'physio' in file_name:
-            physio_gdrive.append(file)
-        elif '.db' not in file_name:
-            video_gdrive.append(file)
-        elif 'schedule' in file_name:
-            if schedule_gdrive == None:
-                schedule_gdrive = file
-            else:
-                raise Warning("Warning: multiple schedule files were found. The first file found was kept: " + schedule_gdrive['title'])
-
+        # ensure that this is not an empty file (Some files have 0 Byte duplicated)
+        if int(file["fileSize"]) > 0:
+            #print(file_name)
+            # Store in the appropriate location
+            if 'physio' in file_name:
+                physio_gdrive.append(file)
+            elif '.db' not in file_name:
+                video_gdrive.append(file)
+            elif 'schedule' in file_name:
+                if schedule_gdrive == None:
+                    schedule_gdrive = file
+                else:
+                    raise Warning("Warning: multiple schedule files were found. The first file found was kept: " + schedule_gdrive['title'])
+        else:
+            print(file_name + " is size: " + str(int(file["fileSize"])) + "; is empty...was not added to files to be pulled.")
     # if pulling all files, otherwise, do not pull files in json cache file
     if pull_all == True:
         # set the pull_dict to everything from the GDrive

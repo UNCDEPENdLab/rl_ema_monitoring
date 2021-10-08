@@ -433,6 +433,10 @@ getSchedDataItem <- function(subjID,abs_path=NULL,item=NA, cols=NA) {
 get_data_info_r <- function(sid, data_type, keywords=vector(mode = "list"), exclusion=vector(mode = "list"), data_cfg="subject.json", cfg_name="data.json", pattern=TRUE) {
   # gets the data running the imported python function as a csv string
   csv_str <- get_data_info(sid=sid, data_type=data_type, keywords=keywords, exclusion=exclusion, data_cfg=data_cfg, cfg_name=cfg_name, pattern=pattern, as_str=TRUE)
+  #print(csv_str)
+  if(csv_str == ''){
+    return(NA)
+  }
   # loads the csv string into a dataframe
   data_df <- read.table(text = csv_str, sep =",", header = TRUE, stringsAsFactors = FALSE)
   # returns the dataframe

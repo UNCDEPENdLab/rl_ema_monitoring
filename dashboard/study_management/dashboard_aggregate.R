@@ -2,6 +2,9 @@
 #root_dir = getwd()
 root_dir <- getwd()
 repo_path <- dirname(root_dir)
+if(exists("failed") == FALSE){
+  failed <<- list()
+}
 #source(file.path(root_dir,"dashboard/study_management/data_management_functions.R"))
 #source(file.path(root_dir,"EEG_Dashboard.R"))
 #source(file.path(root_dir,"ECG_Dashboard2.R"))
@@ -105,6 +108,7 @@ proc_schedule <- function(schedule_df = NULL,days_limit=35,task_limit=56,force_r
   # drop any NA produced
   proc_data <- proc_data[!is.na(proc_data)]
   names(proc_data) <- sapply(proc_data,`[[`,"ID")
+  #print(proc_data)
   # drop any items in the raw_data that failed schedule processing
   #raw_data_dropped <- 
   ####do more aggregation here:
@@ -433,8 +437,13 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
                 form_dfs=form_proc,form_summary=q_sum,
                 ID=raw_single$ID))
   }, error = function(err){
+    # log the traceback
     traceback()
+    # log the step that failed for this subject
     print(paste0(raw_single$ID, " did not successfully have their schedule file processed."))
+    # add the subject to the failed subject list
+    failed <<- append(failed, raw_single$ID)
+    # return NA
     return(NA)
   })
 }
@@ -537,7 +546,7 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
     if(save_lite) {
       output <- list(new_data=TRUE,ID=IDx,lite=T,
                      eeg_fb = eeg_fb,eeg_summary = eeg_summary, eeg_ov = eeg_ov,eeg_missing = eeg_missing, eeg_rawsum = eeg_rawsum,
-                     ecg_fb = ecg_fb,ecg_summary = ecg_summary, ecg_ov = ecg_ov)
+                     ecg_fb = ecg_fb,ecg_summary = ecg_summary, ecg_ov = ecg_ov, ecg_missing = NA, ecg_rawsum = NA)
 
       return(output)
     } else {
@@ -549,9 +558,9 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
 
   })
   if(save_lite) {
-    nax <- c("fb","summary")
+    nax <- c("fb","summary", "missing", "rawsum")
   } else {
-    nax <- c("proc","fb","summary")
+    nax <- c("proc","fb","summary", "missing", "rawsum")
   }
 
   IDlist <- unique(physio_df$subject_id)

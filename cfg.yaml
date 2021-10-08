@@ -4,5 +4,6 @@ fmri: null
 root: /Users/dnplserv/rl_ema_monitoring
 video_url: https://pitt.sharepoint.com/:v:/r/sites/Momentum/Shared%20Documents/ema_app_videos
 videos: /Users/dnplserv/Desktop/Momentum_Videos
+video_rclone: dnplserv_Momentum_Videos:/ema_app_videos
 site_path: /Users/dnplserv/momentum_site
 site_push: michago3@michaelhallquist.com:public_html/dashboard

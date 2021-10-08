@@ -153,68 +153,75 @@ def get_cfg_var_p(cfg="cfg.yaml", start_from=os.getcwd(), var=None):
 	return ret_val
 
 def get_data_info(sid, data_type, keywords=[], exclusion=[], data_cfg="subject.json", cfg_name="data.json", pattern=True, as_str=False):
-	# get the root from the cfg file
-	root = os.path.basename(get_cfg_var_p(var="root"))
-	#print(root)
-	# add sid to keywords
-	kwords = keywords
-	kwords.append(sid)
-	# add "archive" to exclusion
-	exclude = exclusion
-	exclude.append("archive")
-	#print(str(kwords))
-	#print(str(exclude))
-	# get the path to the subject.json file
-	json_path = getPathFromCfg_p(root_dir=root, cfg_name=cfg_name, sourced_file=data_cfg, keywords=kwords, exclusion=exclude, pattern=pattern)
-	#print(str(json_path))
-	# load in the json file
-	json_file = json.load(open(json_path, 'r'))
-	# get the files for the data
-	files = json_file["subject"]["files"][data_type]
-	# create a 1 row dataframe
-	column_names = ["subject_id", "file_name", "file_path", "pull_time", "pull_log", "status", "cache_log"]
-	data_df = pd.DataFrame(columns = column_names)
-	#print(str(type(files)))
-	if type(files) is dict:
-		# get specific json information
-		file_name = files["file_name"]
-		pull_time = files["datetime_of_pull"]
-		pull_log = files["pull_log"]
-		status = json_file["subject"]["status"]
-		# get the file path
-		file_path = getPathFromCfg_p(root_dir=root, cfg_name=cfg_name, sourced_file=file_name, keywords=kwords, exclusion=exclude, pattern=False)
-		# log that the file exists as a boolean
-		cache_log = os.path.isfile(file_path)
+	try:
+		# get the root from the cfg file
+		root = os.path.basename(get_cfg_var_p(var="root"))
+		#print(root)
+		# add sid to keywords
+		kwords = keywords
+		kwords.append(sid)
+		# add "archive" to exclusion
+		exclude = exclusion
+		exclude.append("archive")
+		#print(str(kwords))
+		#print(str(exclude))
+		# get the path to the subject.json file
+		json_path = getPathFromCfg_p(root_dir=root, cfg_name=cfg_name, sourced_file=data_cfg, keywords=kwords, exclusion=exclude, pattern=pattern)
+		#print(str(json_path))
+		# load in the json file
+		json_file = json.load(open(json_path, 'r'))
+		# get the files for the data
+		files = json_file["subject"]["files"][data_type]
 		# create a 1 row dataframe
-		data_df = pd.DataFrame({"subject_id": [str(sid)], "file_name": [file_name], "file_path": [file_path], "pull_time": [pull_time], "pull_log": [pull_log], "status": [status], "cache_log": [cache_log]}) #, last_cached=format(mtime, "%d%b%Y-%H%M%S")
-	# if the returned item is a list
-	elif type(files) is list:
-		# while more than 1 file exists
-		for file in files:
+		column_names = ["subject_id", "file_name", "file_path", "pull_time", "pull_log", "status", "cache_log"]
+		data_df = pd.DataFrame(columns = column_names)
+		#print(str(type(files)))
+		if type(files) is dict:
 			# get specific json information
-			file_name = file["file_name"]
-			pull_time = file["datetime_of_pull"]
-			pull_log = file["pull_log"]
+			file_name = files["file_name"]
+			pull_time = files["datetime_of_pull"]
+			pull_log = files["pull_log"]
 			status = json_file["subject"]["status"]
 			# get the file path
-			try:
-				file_path = getPathFromCfg_p(root_dir=root, cfg_name=cfg_name, sourced_file=file_name, keywords=kwords, exclusion=exclude, pattern=False)
-			except:
-				file_path = ""
+			file_path = getPathFromCfg_p(root_dir=root, cfg_name=cfg_name, sourced_file=file_name, keywords=kwords, exclusion=exclude, pattern=False)
 			# log that the file exists as a boolean
-			if file_path != "": 
-				cache_log = os.path.isfile(file_path)
-			else:
-				cache_log = False
+			cache_log = os.path.isfile(file_path)
 			# create a 1 row dataframe
-			data_df_temp = pd.DataFrame({"subject_id": [str(sid)], "file_name": [file_name], "file_path": [file_path], "pull_time": [pull_time], "pull_log": [pull_log], "status": [status], "cache_log": [cache_log]}) #, last_cached=format(mtime, "%d%b%Y-%H%M%S")
-			# merge the new row into the whole dataframe
-			data_df = data_df.append(data_df_temp)
-	# if set to return as csv string
-	if as_str == True:
-		return data_df.to_csv(index=False)
-	# return the data as a raw pandas dataframe
-	return data_df
+			data_df = pd.DataFrame({"subject_id": [str(sid)], "file_name": [file_name], "file_path": [file_path], "pull_time": [pull_time], "pull_log": [pull_log], "status": [status], "cache_log": [cache_log]}) #, last_cached=format(mtime, "%d%b%Y-%H%M%S")
+		# if the returned item is a list
+		elif type(files) is list:
+			# while more than 1 file exists
+			for file in files:
+				# get specific json information
+				file_name = file["file_name"]
+				pull_time = file["datetime_of_pull"]
+				pull_log = file["pull_log"]
+				status = json_file["subject"]["status"]
+				# get the file path
+				try:
+					file_path = getPathFromCfg_p(root_dir=root, cfg_name=cfg_name, sourced_file=file_name, keywords=kwords, exclusion=exclude, pattern=False)
+				except:
+					file_path = ""
+				# log that the file exists as a boolean
+				if file_path != "": 
+					cache_log = os.path.isfile(file_path)
+				else:
+					cache_log = False
+				# create a 1 row dataframe
+				data_df_temp = pd.DataFrame({"subject_id": [str(sid)], "file_name": [file_name], "file_path": [file_path], "pull_time": [pull_time], "pull_log": [pull_log], "status": [status], "cache_log": [cache_log]}) #, last_cached=format(mtime, "%d%b%Y-%H%M%S")
+				# merge the new row into the whole dataframe
+				data_df = data_df.append(data_df_temp)
+		# if set to return as csv string
+		if as_str == True:
+			return data_df.to_csv(index=False)
+		# return the data as a raw pandas dataframe
+		return data_df
+	except:
+		# if set to return as csv string
+		if as_str == True:
+			return ''
+		# return the data as a raw pandas dataframe
+		return None
 
 # get the subject dataframe
 def get_subj_redcap_checklist(rc_url, rc_token, subj_id, as_str=False):

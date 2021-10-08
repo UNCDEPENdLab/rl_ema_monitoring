@@ -62,11 +62,17 @@
 #     default: Path given by the dataPath argument.
 #
 #   cleanup:
-#     Whether or not to ru  the cleanup of the data and graphs.
+#     Whether or not to run the cleanup of the data and graphs.
 #     default: TRUE -> will run the data cleanup
 #     other: 
 #       FALSE -> will not cleanup the data
 #     Note: will run if render is set to TRUE
+#
+#   replot:
+#     Whether or not to replot all of the graphs.
+#     default: FALSE -> will not replot eeg and ecg graphs
+#     other: 
+#       TRUE -> will replot eeg and ecg graphs
 #
 #   render:
 #     Whether or not to render the landing page or subject pages.
@@ -113,7 +119,7 @@ source("../../rmarkdown_site/report_functions/report_functions.R")
 
 
 # main function to be run
-run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=TRUE, redcap=TRUE, nthreads=4, output=NULL, render=TRUE, force_proc=FALSE, force_reload=TRUE, save_lite=FALSE, cleanup_data=TRUE, push=FALSE) {
+run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=TRUE, redcap=TRUE, nthreads=4, output=NULL, render=TRUE, force_proc=FALSE, force_reload=TRUE, save_lite=FALSE, cleanup_data=TRUE, replot=FALSE, push=FALSE) {
   # SET ROOT
   ## Need to refactor the repo first ##
   #if(is.null(root) != TRUE) {
@@ -128,14 +134,32 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=TRU
   #if(sched == TRUE) {
   #  redcap = TRUE
   #}
+  # instantiate an empty list to save which active subjects have failed
+  failed <<- list() 
   # Currently overrides the data directory to known test machine path
   #dataPath <- "/Users/shanebuckley/desktop/rl_ema_monitoring/data"
   dataPath <<- get_cfg_var_p(var="data")
   #print(dataPath)
   videoPath <<- get_cfg_var_p(var="videos")
   videoURL <<- get_cfg_var_p(var="video_url")
+  videoRclone <<- get_cfg_var_p(var="video_rclone")
   sitePath <<- get_cfg_var_p(var="site_path")
   sitePush <<- get_cfg_var_p(var="site_push")
+  # mount the sharepoint with rclone if it is not mounted
+  mount_str <<- system(paste0("df | awk '{print $9}' | grep -Ex '", videoPath, "'"), intern=TRUE)
+  if(length(mount_str) == 0) {
+    mount_str <<- ""
+  }
+  # if the mount was not found
+  if(mount_str != videoPath) {
+    system(paste0("rclone cmount ", videoRclone, " ", videoPath, " --daemon --vfs-cache-mode full"))
+    print("Mounting the remote data storage:")
+    print(paste0("rclone cmount ", videoRclone, " ", videoPath, " --daemon --vfs-cache-mode full"))
+    #exit()
+  } else {
+    print("Remote data storage was already mounted.")
+    #exit()
+  }
   # Currently overrides root to be rl_ema_monitoring
   #root <- "rl_ema_monitoring"
   root <- basename(get_cfg_var_p(var="root"))
@@ -164,8 +188,6 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=TRU
   ## Need to implement multithreaded subject pull to accomodate updating json ##
   if(pull == TRUE) {
     print("Running data pull...")
-    # mount the SharePoint if it is not currently mounted
-    
     # pull data
     # iterate through the active subjects
     for(subj in active) {
@@ -271,6 +293,10 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=TRU
         }
         reports_path <<- paste0(dataPath, '/Subjects/', s, '/reports')
         plots_path <<- paste0(dataPath, '/Subjects/', s, '/plots')
+        # if set to re-plot
+        if(replot == TRUE) {
+          unlink(paste0(plots_path, "/*"), recursive = T, force = T)
+        }
         # create a reports directory for the subject if one does not exist
         dir.create(reports_path, showWarnings = FALSE, recursive=TRUE)
         # create a plots directory for the subject if one does not exist
@@ -347,5 +373,11 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=TRU
 # run schedule only
 #run_ema(redcap=FALSE, save_lite=FALSE, render=FALSE, pull=FALSE, sched=TRUE, physio=FALSE, cleanup_data=FALSE, nthreads = 4)
 # run schedule and physio only
-run_ema(redcap=FALSE, save_lite=FALSE, render=FALSE, pull=FALSE, sched=TRUE, physio=TRUE, cleanup_data=FALSE, nthreads = 4)
+#run_ema(redcap=FALSE, save_lite=FALSE, render=FALSE, pull=FALSE, sched=TRUE, physio=TRUE, cleanup_data=FALSE, nthreads = 4)
+# run schedule and physio and cleanup only
+#run_ema(redcap=FALSE, save_lite=FALSE, render=FALSE, pull=FALSE, sched=TRUE, physio=TRUE, cleanup_data=TRUE, nthreads = 4)
+# run everything, but force proc and reload, and replot
+#run_ema(redcap=FALSE, save_lite=TRUE, render=TRUE, pull=TRUE, sched=TRUE, physio=TRUE, cleanup_data=TRUE, nthreads = 4, push=TRUE, force_reload=TRUE, force_proc=TRUE, replot=TRUE)
+# render, cleanup, and push only
+run_ema(redcap=FALSE, save_lite=FALSE, render=TRUE, pull=FALSE, sched=FALSE, physio=FALSE, cleanup_data=TRUE, nthreads = 4, push=TRUE)
 

@@ -1,5 +1,5 @@
 Overall_Compliance <- round(0, digits= 3) # output$sample_info_df$compliance
-print(output$sample_info_df$compliance)
+#print(output$sample_info_df$compliance)
 current_date <- Sys.Date()
 
 #Games % Stats
@@ -12,10 +12,12 @@ Avg_Experienced_Percent_Correct_No_Feedback <- round(Avg_Experienced_Percent_Cor
 Avg_Experienced_Percent_Correct_Feedback <- output$proc_data[[subj]]$performance_overall$relative_accuracy_feed
 Avg_Experienced_Percent_Correct_Feedback <- round(Avg_Experienced_Percent_Correct_Feedback, digits = 3)
 #Add EEG Avg Here (named EEG_Average)
-EEG_Average <- mean(mean(output_physio$eeg$summary[[subj]]$per_Ch_1),
-                    mean(output_physio$eeg$summary[[subj]]$per_Ch_2),
-                    mean(output_physio$eeg$summary[[subj]]$per_Ch_3),
-                    mean(output_physio$eeg$summary[[subj]]$per_Ch_4),)*100 #[match(output$sample_info_df[[subj]], output_physio$eeg$sample_summary[[subj]])]
+# EEG_Average <- mean(mean(output_physio$eeg$summary[[subj]]$per_Ch_1),
+#                     mean(output_physio$eeg$summary[[subj]]$per_Ch_2),
+#                     mean(output_physio$eeg$summary[[subj]]$per_Ch_3),
+#                     mean(output_physio$eeg$summary[[subj]]$per_Ch_4),)*100 #[match(output$sample_info_df[[subj]], output_physio$eeg$sample_summary[[subj]])]
+#EEG_Average <- round(EEG_Average, digits = 3)
+EEG_Average <- mean(eeg_rawsum$avg)
 EEG_Average <- round(EEG_Average, digits = 3)
 #Add HR Avg Here (named HR_Average)
 hr_gen <- output_physio$ecg$summary[[subj]]$per_Good
