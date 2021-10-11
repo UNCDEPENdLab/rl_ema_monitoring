@@ -210,7 +210,7 @@ for (i in loopseq) {
               scale_x_continuous(breaks=c(-500,0,500,1000,1500),name='time [ms]') +
               geom_vline(xintercept = 0, lty = "dashed", color = "#FF0000", size = 2) + 
               scale_fill_gradientn(colours=parula(1000),guide="colourbar",limits=c(0, 1650))+
-              ggtitle(sprintf("Subject %s EEG Block %s", subj, toString(i)))
+              ggtitle(sprintf("Subject %s EEG Block %s", subj, toString(i-1)))
             # save the image
             #plotly::export(p=eeg_plot, file=paste0(site, "/", fpath, "/", fig_name))
             #plotly::orca(p=eeg_plot, file=paste0(site, "/", fpath, "/", fig_name))
@@ -258,7 +258,7 @@ for (i in loopseq) {
               scale_x_continuous(breaks=c(-500,0,500,1000,1500),name='time [ms]') +
               geom_vline(xintercept = 0, lty = "dashed", color = "#FF0000", size = 2) + 
               scale_fill_gradientn(colours=parula(4),guide="colourbar",limits=c(0, 3))+
-              ggtitle(sprintf("Subject %s EEG Block %s", subj, toString(i)))
+              ggtitle(sprintf("Subject %s EEG Block %s", subj, toString(i-1)))
             # save the image
             #plotly::export(p=eeg_plot, file=paste0(site, "/", fpath, "/", fig_name))
             #plotly::orca(p=eeg_plot, file=paste0(site, "/", fpath, "/", fig_name))
