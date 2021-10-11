@@ -58,56 +58,58 @@ for (i in loopseq) {
       if (i==1){
         dq1 <- dq %>% mutate(trial=trials,blocks=blocks,totaltrial=rep(1:nT,4))
         dg1 <- dg %>% mutate(trial=trials,blocks=blocks,totaltrial=rep(1:nT,4))
-      }
-
       isX <- dq1 %>% select(starts_with("X"))
       isV <- dq1 %>% select(starts_with("V"))
       if (length(isX)>0){
-        if (i==1){
           dq1 <- dq1 %>% pivot_longer(cols=starts_with("X"),names_to="ix",values_to="V")
           dg1 <- dg1 %>% pivot_longer(cols=starts_with("X"),names_to="ix",values_to="V")
-        }
       } else if (length(isV)>0){
-        if (i==1){
           dq1 <- dq1 %>% pivot_longer(cols=starts_with("V"),names_to="ix", values_to="V")
           dg1 <- dg1 %>% pivot_longer(cols=starts_with("V"),names_to="ix", values_to="V")
-        }
       } else {
         warning('Check column names of dq0 and see what letter R appended to the beginning of them.  Add that as a conditional in the if else here as above')
       }
-      if (i==1){
         sd_times <- 10
         dq1 <- dq1 %>% mutate(t=rep(y,nrow(dq1)/length(y)))
         dg1 <- dg1 %>% mutate(t=rep(y,nrow(dq1)/length(y)))
-        dq1 <- dq1 %>% group_by(channel) %>% mutate(mn=median(V,na.rm=TRUE),sd=sd(V,na.rm=TRUE)) %>% ungroup()
-        dq1 <- dq1 %>% group_by(channel) %>% mutate(nanout = case_when(
-          V > mn+sd_times*sd | V < mn-sd_times*sd | V < 1650/20 | V > 19*1650/20 ~ 1,
-          V <= mn+sd_times*sd | V >= mn-sd_times*sd | V >= 1650/20 | V <= 19*1650/20 ~ 0
-        )) %>% ungroup()
         dq1 <- dq1 %>% filter(blocks < 1000)
         dq1 <- dq1 %>% mutate(t0=as.numeric(substr(ix,2,nchar(ix))))
         dg1 <- dg1 %>% mutate(t0=as.numeric(substr(ix,2,nchar(ix))))
-        A <- dq1 %>% select('channel','totaltrial','t0','nanout')
-        dg1 <- inner_join(A,dg1,by=c('channel','totaltrial','t0'))        
+        A <- dq1 %>% select('channel','totaltrial','t0','V')
+        dg1 <- dg1 %>% rename(G="V")
+        dg1 <- inner_join(A,dg1,by=c('channel','totaltrial','t0'))
+        rm(dq1)
         dg1 <- dg1 %>% mutate(V1 = case_when(
+          G==1 ~ V,
+          G==2 ~ V,
+          G==3 ~ NA_real_,
+          G==4 ~ NA_real_,
+          TRUE~as.numeric(G)
+        ))
+        dg1 <- dg1 %>% mutate(mn=median(V1,na.rm=TRUE),sd=sd(V1,na.rm=TRUE)) %>% ungroup()
+        dg1 <- dg1 %>% group_by(channel) %>% mutate(nanout = case_when(
+          V1 > mn+sd_times*sd | V1 < mn-sd_times*sd | V1 < 1650/20 | V1 > 19*1650/20 ~ 1,
+          V1 <= mn+sd_times*sd | V1 >= mn-sd_times*sd | V1 >= 1650/20 | V1 <= 19*1650/20 ~ 0
+        )) %>% ungroup()
+        dg1 <- dg1 %>% mutate(G1 = case_when(
           is.na(nanout) ~ 3,
-          V==3 ~ 2,
-          V==4 ~ 2,
+          G==3 ~ 2,
+          G==4 ~ 2,
           nanout==1 ~ 1,
-          V==1 & nanout==0 ~ 0,
-          V==2 & nanout==0 ~ 0
+          G==1 & nanout==0 ~ 0,
+          G==2 & nanout==0 ~ 0
         ))
       }
       if (sliding_window){
         if (length(num_block)>=5){
-          dq0 <- dq1 %>% filter(blocks==i-4:i)
+          dq0 <- dg1 %>% filter(blocks==i-4:i)
           dg0 <- dg1 %>% filter(blocks==i-4:i)
         } else {
-          dq0 <- dq1  # do not filter, there is only 1 window to plot
+          dg0 <- dg1  # do not filter, there is only 1 window to plot
           dg0 <- dg1 
         }
       } else {
-        dq0 <- dq1 %>% filter(blocks==i)
+        dq0 <- dg1 %>% filter(blocks==i)
         dg0 <- dg1 %>% filter(blocks==i)
       }
       
@@ -126,9 +128,9 @@ for (i in loopseq) {
         fig_name = paste0("eeg_plot_overall.png")
         if (!file.exists(paste0(plots_path, "/", fig_name))) {
           try({
-            eeg_plot <- ggplot(dq1, aes(t,totaltrial,fill=V)) + 
+            eeg_plot <- ggplot(dg1, aes(t,totaltrial,fill=V)) + 
               geom_raster(interpolate=TRUE) + facet_wrap(~channel,scales="free") + 
-              scale_y_continuous(breaks=dq1$totaltrial[which(diff(as.matrix(dq1$blocks))==1)],labels=dq1$blocks[which(diff(as.matrix(dq1$blocks))==1)]) +
+              scale_y_continuous(breaks=dg1$totaltrial[which(diff(as.matrix(dg1$blocks))==1)],labels=dg1$blocks[which(diff(as.matrix(dg1$blocks))==1)]) +
               scale_x_continuous(breaks=c(-500,0,500,1000,1500),name='time [ms]') +
               theme(axis.text.y = element_text(size=2.5)) +
               ylab('blocks') + 
@@ -149,7 +151,7 @@ for (i in loopseq) {
         fig_name = paste0("eeg_plot_missingness_overall.png")
         if (!file.exists(paste0(plots_path, "/", fig_name))) {  
           try({
-            eeg_plot <- ggplot(dg1, aes(t,totaltrial,fill=V1)) + 
+            eeg_plot <- ggplot(dg1, aes(t,totaltrial,fill=G1)) + 
               geom_raster(interpolate=TRUE) + facet_wrap(~channel,scales="free") + 
               scale_y_continuous(breaks=dg1$totaltrial[which(diff(as.matrix(dg1$blocks))==1)],labels=dg1$blocks[which(diff(as.matrix(dg1$blocks))==1)]) +
               scale_x_continuous(breaks=c(-500,0,500,1000,1500),name='time [ms]') +
@@ -253,7 +255,7 @@ for (i in loopseq) {
               png(paste0(plots_path, "/", fig_name), res=300, width=8, height=8, units="in") 
             }
           } else {
-            eeg_plot <- ggplot(dg0, aes(t,trial,fill=V1)) + 
+            eeg_plot <- ggplot(dg0, aes(t,trial,fill=G1)) + 
               geom_raster(interpolate=TRUE) + facet_wrap(~channel) + 
               scale_x_continuous(breaks=c(-500,0,500,1000,1500),name='time [ms]') +
               geom_vline(xintercept = 0, lty = "dashed", color = "#FF0000", size = 2) + 
