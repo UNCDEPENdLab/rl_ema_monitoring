@@ -109,8 +109,8 @@ for (i in loopseq) {
           dg0 <- dg1 
         }
       } else {
-        dq0 <- dg1 %>% filter(blocks==i)
-        dg0 <- dg1 %>% filter(blocks==i)
+        dq0 <- dg1 %>% filter(blocks==i-1)
+        dg0 <- dg1 %>% filter(blocks==i-1)
       }
       
       dq0 <- dq0 %>% mutate(t0=as.numeric(substr(ix,2,nchar(ix)))) %>% arrange(channel,trial,t0)
