@@ -20,6 +20,10 @@ eeg_rawsum$per_Ch_3 <- round(eeg_rawsum$per_Ch_3*100)
 eeg_rawsum$per_Ch_4 <- round(eeg_rawsum$per_Ch_4*100)
 eeg_rawsum$avg <- round(eeg_rawsum$avg*100)
 eeg_rawsum$goodTrials <- round(eeg_rawsum$Ngood_by_Block*100)
+eeg_rawsum$miss_Ch_1 <- round(100 - eeg_rawsum$per_Ch_1)
+eeg_rawsum$miss_Ch_2 <- round(100 - eeg_rawsum$per_Ch_2) 
+eeg_rawsum$miss_Ch_3 <- round(100 - eeg_rawsum$per_Ch_3) 
+eeg_rawsum$miss_Ch_4 <- round(100 - eeg_rawsum$per_Ch_4)
 #eeg_col_named <- transmute(eeg_rawsum, "Date"=Date, "Block"=Block, "Overall % good"=avg, "Ch. 1 % good"=per_Ch_1, "Ch. 2 % good"=per_Ch_2, "Ch. 3 % good"=per_Ch_3, "Ch. 4 % good"=per_Ch_4)
 
 # create the unchecked mood csv if there is data to do so

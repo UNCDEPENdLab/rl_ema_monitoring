@@ -17,7 +17,7 @@ Avg_Experienced_Percent_Correct_Feedback <- round(Avg_Experienced_Percent_Correc
 #                     mean(output_physio$eeg$summary[[subj]]$per_Ch_3),
 #                     mean(output_physio$eeg$summary[[subj]]$per_Ch_4),)*100 #[match(output$sample_info_df[[subj]], output_physio$eeg$sample_summary[[subj]])]
 #EEG_Average <- round(EEG_Average, digits = 3)
-EEG_Average <- mean(eeg_rawsum$avg)
+EEG_Average <- mean(eeg_rawsum$goodTrials)
 EEG_Average <- round(EEG_Average, digits = 3)
 #Add HR Avg Here (named HR_Average)
 hr_gen <- output_physio$ecg$summary[[subj]]$per_Good

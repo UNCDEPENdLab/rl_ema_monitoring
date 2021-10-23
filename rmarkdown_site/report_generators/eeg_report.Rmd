@@ -12,3 +12,13 @@ render_eeg_table(eeg_data, "all")
 ```{r eeg-unchecked-table, echo=FALSE, warning=FALSE, results="asis"}
 render_eeg_table(eeg_data, "unchecked")
 ```
+
+## Overall graph
+```{r eeg-overall-graph, echo=FALSE, warning=FALSE, results="asis"}
+include_subject_figure("eeg_plot_overall.png", "Overall EEG")
+```
+
+## Overall Missing
+```{r eeg-overall-missingness-graph, echo=FALSE, warning=FALSE, results="asis"}
+include_subject_figure("eeg_plot_missingness_overall.png", "Overall Missing")
+```

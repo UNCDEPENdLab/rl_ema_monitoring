@@ -6,9 +6,14 @@ render_eeg_table <- function(eeg_data, field=NULL) {
   }
   
   to_render <- eeg_data[[field]] %>%
-    dplyr::select(Date, Block, avg, per_Ch_1, per_Ch_2, per_Ch_3, per_Ch_4)
+    dplyr::select(Date, Block, avg, goodTrials, per_Ch_1, per_Ch_2, per_Ch_3, per_Ch_4)
   
-  eeg_ch_fmt <- function(..., thresh=100) {
+  to_render <- to_render %>% rowwise() %>% mutate(missingness= 100 - min(per_Ch_1, per_Ch_2, per_Ch_3, per_Ch_4))
+  
+  to_render <- to_render %>%
+    dplyr::select(Date, Block, missingness, goodTrials, per_Ch_1, per_Ch_2, per_Ch_3, per_Ch_4)
+  
+  eeg_ch_fmt <- function(..., suffix='', thresh=100) {
     colDef(
       html = TRUE,
       style=function(value) {
@@ -19,7 +24,7 @@ render_eeg_table <- function(eeg_data, field=NULL) {
         }
       },
       cell=function(value, index) {
-        eeg_plot <- paste0(file.path(p_base, paste0("eeg_plot_", to_render$Block[index], ".png")))
+        eeg_plot <- paste0(file.path(p_base, paste0("eeg_plot_", suffix, to_render$Block[index], ".png")))
         htmltools::HTML(sprintf("<a href='%s' target='popup' onclick=\"window.open('%s','popup','width=%d,height=%d'); return false;\">%s</a>", 
                                 eeg_plot, eeg_plot, dds$eeg$plot_window_width, dds$eeg$plot_window_height, value))
         # doesn't seem to pass onclick
@@ -36,7 +41,8 @@ render_eeg_table <- function(eeg_data, field=NULL) {
     columns=list(
       Date=colDef(style=list(fontWeight = "bold")),
       Block=colDef(style=list(fontWeight = "bold")),
-      avg=eeg_ch_fmt(name="Overall %", thresh = dds$eeg$overall_bad_lt_x),
+      missingness=eeg_ch_fmt(name="% Missing", suffix="missingness_", thresh = dds$eeg$overall_bad_lt_x),
+      goodTrials=eeg_ch_fmt(name="Overall %", thresh = dds$eeg$overall_bad_lt_x),
       per_Ch_1=eeg_ch_fmt(name="Ch. 1 % good", thresh = dds$eeg$ch_bad_lt_x),
       per_Ch_2=eeg_ch_fmt(name="Ch. 2 % good", thresh = dds$eeg$ch_bad_lt_x),
       per_Ch_3=eeg_ch_fmt(name="Ch. 3 % good", thresh = dds$eeg$ch_bad_lt_x),
@@ -71,8 +77,6 @@ get_eeg_data <- function(id, data_dir) {
   
   return(eeg_data)
 }
-
-
 
 ####### LEFTOVERS FROM MASTER_GENERATOR.RMD and other sources
 

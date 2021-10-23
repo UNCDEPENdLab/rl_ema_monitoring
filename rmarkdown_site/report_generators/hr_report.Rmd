@@ -12,3 +12,8 @@ render_hr_table(hr_data, "all")
 ```{r hr-unchecked-table, echo=FALSE, warning=FALSE, results="asis"}
 render_hr_table(hr_data, "unchecked")
 ```
+
+## Overall graph
+```{r ecg-overall-graph, echo=FALSE, warning=FALSE, results="asis"}
+include_subject_figure("ecg_plot_overall.png", "Overall ECG")
+```

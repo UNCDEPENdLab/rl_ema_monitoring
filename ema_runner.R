@@ -160,6 +160,15 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=TRU
     print("Remote data storage was already mounted.")
     #exit()
   }
+  
+  # ensure that the mount point is mounted (as to not accidentally save locally)
+  post_mount_str <<- system(paste0("df | awk '{print $9}' | grep -Ex '", videoPath, "'"), intern=TRUE)
+  if(post_mount_str != videoPath) {
+    print(paste0("Looking for: ", videoPath))
+    print(paste0("Found: ", post_mount_str))
+    stop("The mount point was not established successfully...terminating.")
+  }
+  
   # Currently overrides root to be rl_ema_monitoring
   #root <- "rl_ema_monitoring"
   root <- basename(get_cfg_var_p(var="root"))
@@ -340,8 +349,8 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=TRU
       checkmate::assert_directory_exists(output_dir)
       #have exe permission on files will yield 403 errors (some images are getting +x when sent to me)
       system(paste("find", output_dir, "-type f -print0 | xargs -0 chmod 644"))
-      cat(paste0("rsync -av ", output_dir, "/ ", push_dir))
-      system(paste0("rsync -av ", output_dir, "/ ", push_dir))
+      cat(paste0("rsync -avh ", output_dir, "/ ", push_dir, ' --delete'))
+      system(paste0("rsync -avh ", output_dir, "/ ", push_dir, ' --delete'))
     }
     # run the site push
     push_site(sitePath, sitePush)
@@ -365,10 +374,13 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=TRU
 #run_ema(redcap=FALSE, save_lite=FALSE, render=TRUE, pull=FALSE, sched=FALSE, physio=FALSE, cleanup_data=FALSE, nthreads = 4, push=FALSE)
 # push only
 #run_ema(redcap=FALSE, save_lite=FALSE, render=FALSE, pull=FALSE, sched=FALSE, physio=FALSE, cleanup_data=FALSE, nthreads = 4, push=TRUE)
+
 # run everything but redcap
 #run_ema(redcap=FALSE, save_lite=TRUE, render=TRUE, pull=TRUE, sched=TRUE, physio=TRUE, cleanup_data=TRUE, nthreads = 4, push=TRUE)
+
 # run everything, but force proc and reload
-#run_ema(redcap=FALSE, save_lite=TRUE, render=TRUE, pull=TRUE, sched=TRUE, physio=TRUE, cleanup_data=TRUE, nthreads = 4, push=TRUE, force_reload=TRUE, force_proc=TRUE)
+run_ema(redcap=FALSE, save_lite=TRUE, render=TRUE, pull=TRUE, sched=TRUE, physio=TRUE, cleanup_data=TRUE, nthreads = 4, push=TRUE, force_reload=TRUE, force_proc=TRUE)
+
 #subjects=list("221604", "221849"),
 # run schedule only
 #run_ema(redcap=FALSE, save_lite=FALSE, render=FALSE, pull=FALSE, sched=TRUE, physio=FALSE, cleanup_data=FALSE, nthreads = 4)
@@ -379,5 +391,16 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=TRU
 # run everything, but force proc and reload, and replot
 #run_ema(redcap=FALSE, save_lite=TRUE, render=TRUE, pull=TRUE, sched=TRUE, physio=TRUE, cleanup_data=TRUE, nthreads = 4, push=TRUE, force_reload=TRUE, force_proc=TRUE, replot=TRUE)
 # render, cleanup, and push only
-run_ema(redcap=FALSE, save_lite=FALSE, render=TRUE, pull=FALSE, sched=FALSE, physio=FALSE, cleanup_data=TRUE, nthreads = 4, push=TRUE)
-
+#run_ema(redcap=FALSE, save_lite=FALSE, render=TRUE, pull=FALSE, sched=FALSE, physio=FALSE, cleanup_data=TRUE, nthreads = 4, push=TRUE)
+# render, cleanup, and push only with replot
+#run_ema(redcap=FALSE, save_lite=FALSE, render=TRUE, pull=FALSE, sched=FALSE, physio=FALSE, cleanup_data=TRUE, nthreads = 4, push=TRUE, replot=TRUE)
+# run everything with replot, no pull
+#run_ema(redcap=FALSE, save_lite=TRUE, render=TRUE, pull=FALSE, sched=TRUE, physio=TRUE, cleanup_data=TRUE, nthreads = 4, push=TRUE, replot=TRUE)
+# run everything with replot
+#run_ema(redcap=FALSE, save_lite=TRUE, render=TRUE, pull=TRUE, sched=TRUE, physio=TRUE, cleanup_data=TRUE, nthreads = 4, push=TRUE, replot=TRUE)
+# render only
+#run_ema(redcap=FALSE, save_lite=FALSE, render=TRUE, pull=FALSE, sched=FALSE, physio=FALSE, cleanup_data=FALSE, nthreads = 4, push=FALSE)
+# cleanup and render only
+#run_ema(redcap=FALSE, save_lite=FALSE, render=TRUE, pull=FALSE, sched=FALSE, physio=FALSE, cleanup_data=TRUE, nthreads = 4, push=FALSE)
+# render and push only
+#run_ema(redcap=FALSE, save_lite=FALSE, render=TRUE, pull=FALSE, sched=FALSE, physio=FALSE, cleanup_data=FALSE, nthreads = 4, push=TRUE)

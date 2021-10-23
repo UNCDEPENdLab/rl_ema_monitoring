@@ -36,6 +36,8 @@ def google_drive_connect(id, path, auto_auth=True):
             gauth.Refresh()
         # may fail if the refresh token does not exist
         except:
+            #gauth.LocalWebserverAuth()
+            #gauth.Authenticate()
             return None
     # Save the current credentials to the file
     #gauth.SaveCredentialsFile(credPath)

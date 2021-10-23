@@ -104,9 +104,9 @@ proc_schedule <- function(schedule_df = NULL,days_limit=35,task_limit=56,force_r
     return(db_raw)
   })
   # run the proc_schedule_single
-  proc_data <- lapply(raw_data,proc_schedule_single,tz=tz,days_limit=days_limit,force_reproc=force_reproc)
+  proc_data <<- lapply(raw_data,proc_schedule_single,tz=tz,days_limit=days_limit,force_reproc=force_reproc)
   # drop any NA produced
-  proc_data <- proc_data[!is.na(proc_data)]
+  #proc_data <- proc_data[!is.na(proc_data)]
   names(proc_data) <- sapply(proc_data,`[[`,"ID")
   #print(proc_data)
   # drop any items in the raw_data that failed schedule processing
@@ -161,6 +161,11 @@ calcu_accuracy<- function(trials_1,stimuli) {
 
   return(trials_1)
 
+}
+
+# version 2 of schedule file processing using Amy and Alon's scripts
+proc_schedule_single2 <- function() {
+  
 }
 
 proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz="EST") {
@@ -240,6 +245,8 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
         mean_RT_low_performance <- NA
         mean_side_bias_low_performance <- NA
       }
+    } else {
+      pr_info_by_block$bad <- NA
     }
     px_overall <- data.frame(ID=raw_single$ID,
                              IDe_bias=mean(trials_df$choice,na.rm = T),
@@ -438,13 +445,13 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
                 ID=raw_single$ID))
   }, error = function(err){
     # log the traceback
-    traceback()
+    #traceback(err)
     # log the step that failed for this subject
     print(paste0(raw_single$ID, " did not successfully have their schedule file processed."))
     # add the subject to the failed subject list
-    failed <<- append(failed, raw_single$ID)
+    active <<- active[active != raw_single$ID]
     # return NA
-    return(NA)
+    #return(NA)
   })
 }
 ####Proc physio
