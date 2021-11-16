@@ -18,6 +18,8 @@ Sys.setenv("PKG_CXXFLAGS"="-std=c++11")
 #print(getwd())
 #Rcpp::sourceCpp(file.path(repo_path, "rl_ema_monitoring/data_utils/timings2samples_block_cpp.cpp"), cacheDir = getwd())
 Rcpp::sourceCpp("../../data_utils/timings2samples_block_cpp.cpp", cacheDir = getwd())
+#Rcpp::sourceCpp("~/Momentum/rl_ema_monitoring/data_utils/timings2samples_block_cpp.cpp")
+#warning('AndyP changed this path to work on his computer to debug ECG, please change back on dashboard if he forgets to reset it')
 
 #test case
 if(FALSE) {
@@ -300,7 +302,7 @@ ecg_epochs_around_feedback <- function(ECG_data,fbt,pre=1000,post=10000,sample_r
   rrt <- ECG_data$times
 
   ch1_a2f <- matrix(NA,nrow=length(fbt),ncol=pre+post+1);
-  for (i in 1:length(fbt)){
+  for (i in 1:length(fbt)){ 
     fbt0 <- which(rrt>fbt[i])
     if (length(fbt0)>0){
       if (fbt0[1]>1){
@@ -374,12 +376,13 @@ get_good_ECG <- function(blocks,ch1_a2f){
   perGood <- NULL
   for (i in 1:length(nbl)){
     ix <-which(blocks==nbl[i])
-    sd0 <- rep(NA,length(ix))
     tempdata <- ch1_a2f[ix,]
+    sd0 <- rep(NA,length(ix))
     for (j in 1:length(ix)){
-      sd0[j] <- sd(as.double(unlist(tempdata[j,])),na.rm=TRUE)
+      data0 <- as.matrix(tempdata[j,])
+      sd0[j] <- sd(data0,na.rm=TRUE)
     }
-    Ngood1[i] <- sum(!is.na(ch1_a2f[ix,]) & sd0 < 5*median(sd0),na.rm=TRUE)
+    Ngood1[i] <- sum(!is.na(tempdata) | sd0 < 5*median(sd0,na.rm=TRUE))
     Ntotal[i] <- ncol(tempdata)*nrow(tempdata)
     perGood[i] <- Ngood1[i]/Ntotal[i]
   }

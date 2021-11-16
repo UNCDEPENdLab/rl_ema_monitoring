@@ -64,6 +64,10 @@ if (FALSE) {
 
 #####Session number is dependent on scheduled time. Possible 1 game per day but with 2 sessions worth of data.
 
+# Notes (AndyP)
+# load_db loads data from a database file, e.g. one physio file or a schedule file
+# 
+
 
 #####Functions:
 load_db <- function(dbpath,table_names=NULL) {
@@ -536,8 +540,10 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
     ###ECG
     message("Processing new ECG data for: ",IDx)
     ecg_raw <- load_ECG(ECGd = physio_concat$ecg,HRstep = HRstep,sample_rate = ecg_sample_rate)
-    ecg_fb <- ecg_epochs_around_feedback2(ECG_data = ecg_raw,fbt = as.numeric(behav_df$feedback_time)*1000,
-                                         pre = ecg_pre,post = ecg_post,sample_rate = ecg_sample_rate,thread=thread)
+    #ecg_fb <- ecg_epochs_around_feedback2(ECG_data = ecg_raw,fbt = as.numeric(behav_df$feedback_time)*1000,
+    #                                     pre = ecg_pre,post = ecg_post,sample_rate = ecg_sample_rate,thread=thread)
+    ecg_fb <- ecg_epochs_around_feedback(ECG_data = ecg_raw,fbt = as.numeric(behav_df$feedback_time)*1000,
+                                          pre = ecg_pre,post = ecg_post,sample_rate = ecg_sample_rate)
     ecg_summary <- get_good_ECG(blocks = behav_df$block,ch1_a2f = ecg_fb)
     ecg_summary$session_number<-sess_map$session_number[match(ecg_summary$block,sess_map$block)]
     ecg_summary$ID <- IDx
