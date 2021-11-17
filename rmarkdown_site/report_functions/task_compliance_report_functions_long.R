@@ -10,12 +10,14 @@ render_task_compliance_table_long <- function(task_compliance_data, field=NULL) 
   #  dplyr::select(scheduled_time, delay, type, is_missing, delayednotmissing)
 
   to_render <- task_compliance_data[[field]]  
+  # convert to tibble
+  to_render <- as_tibble(to_render)
 
   #formatter for delay columns
   delay_fmt <- function(...) {
     colDef(
       style=function(value, index) {
-        this_delay <- to_render$delayednotmissing[index]
+        this_delay <- to_render$delay[index] # $delayednotmissing[index]
         report_type <- to_render$type[index]
         
         #exempt sleep diaries from delay highlighting if the diary is scheduled between 1am and 5am
@@ -43,19 +45,21 @@ render_task_compliance_table_long <- function(task_compliance_data, field=NULL) 
       ...
     )
   }
-  
+
   tbl <- dashboard_reactable(
     data = to_render,
     columns=list(
-      # scheduled_time=colDef(name="Scheduled"),
-      # start_time=colDef(name="Started"),
-      # completed_time=colDef(name="Completed"),
+      #scheduled_time=colDef(name="Scheduled"),
+      #start_time=colDef(name="Started"),
+      #completed_time=colDef(name="Completed"),
       scheduled_posixct=colDef(show=FALSE), #hidden column only used for delay formatting
       scheduled_time=delay_fmt(name="Scheduled"),
       start_time=delay_fmt(name="Started"),
       completed_time=delay_fmt(name="Completed"),
-      delayednotmissing=delay_fmt(name="Delay (min)", format=colFormat(digits=2)),
-      is_missing=colDef(name="Missing")
+      #delayednotmissing=delay_fmt(name="Delay (min)", format=colFormat(digits=2)),
+      delay=delay_fmt(name="Delay (min)", format=colFormat(digits=2)), # delay_fmt
+      missing=colDef(name="Missing") #,
+      #completed_time=colDef(name="Complete")
     ),
     defaultSorted="scheduled_time",
     defaultSortOrder="asc",
@@ -89,7 +93,7 @@ get_task_compliance_data_long <- function(id, data_dir) {
         type=dplyr::recode(type, trials="Games", "Mood Questionnaire"="Mood", "Sleep Diary"="Sleep", 
                            "Daily recording"="Video", "5m Resting State"="5 min Resting", "End questionnaire"="End Qs")
       ) %>%
-      dplyr::select(scheduled_posixct, scheduled_time, start_time, completed_time, type, is_missing, delayednotmissing) %>%
+      dplyr::select(scheduled_posixct, scheduled_time, start_time, completed_time, type, missing, completed, delay) %>% #is_missing, delayednotmissing) %>%
       arrange(scheduled_time)
 
     if (any(long_dt$type == "End Qs")) {

@@ -99,15 +99,16 @@ get_task_compliance_data <- function(id, data_dir) {
       dplyr::rename(Date=scheduled_time) %>%
       dplyr::mutate(
         Date=dashboard_date(Date),
-        type=dplyr::recode(type, trials="Games", "Mood Questionnaire"="Mood", "Sleep Diary"="Sleep", 
-                           "Daily recording"="Video", "5m Resting State"="5 min Resting", "End questionnaire"="End Qs")
+        type=dplyr::recode(type, "Mood Questionnaire"="Mood", "Sleep Diary"="Sleep", 
+                           "Daily recording"="Video", "5m Resting State"="5 min Resting", "End questionnaire"="End Qs") # trials="Games AM",
       ) %>%
-      dplyr::select(Date, type, is_missing, delayednotmissing) %>%
+      dplyr::select(Date, type, missing, delay) %>% # is_missing, delayednotmissing) %>%
       
       group_by(Date, type) %>%
       dplyr::summarise(
-        n_miss=sum(is_missing),
-        avg_delay=round(mean(delayednotmissing))
+        n_miss=sum(missing), #is_missing),
+        #avg_delay=round(mean(delayednotmissing))
+        avg_delay=round(mean(delay))
       ) %>% ungroup() %>%
       arrange(desc(Date)) %>% #%>% setDT()
       pivot_wider(names_from=type, values_from=c(n_miss, avg_delay), names_sep=".")
