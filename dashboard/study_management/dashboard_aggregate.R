@@ -163,9 +163,85 @@ calcu_accuracy<- function(trials_1,stimuli) {
 
 }
 
-# version 2 of schedule file processing using Amy and Alon's scripts
-proc_schedule_single2 <- function() {
-  
+#function to get start_time for game once split into individual session
+get_start_game <- function(games){
+  # get the first stim time from the tibble
+  start_time <- games %>% pull(stim_time) %>% '[['(1)
+  # return the start time
+  return(as.POSIXct(start_time/1000, origin="1970-01-01", tz="America/New_York"))
+}
+
+#function to get start_time for game once split into individual session
+get_scheduled_game <- function(games){
+  # get the first schedule time from the tibble
+  scheduled_time <- games %>% pull(scheduled_time) %>% '[['(1)
+  # return the schedule time
+  return(as.POSIXct(scheduled_time/1000, origin="1970-01-01", tz="America/New_York"))
+}
+
+#function to get start_time for game once split into individual session
+get_completed_game <- function(games){
+  # get the last choice time from the tibble
+  completed_time <- games %>% pull(choice_time) %>% tail(n=1)
+  # return the completed time
+  return(as.POSIXct(completed_time/1000, origin="1970-01-01", tz="America/New_York"))
+}
+
+#function to get start_time for game once split into individual session
+get_block_game <- function(games){
+  # arbitrarily grab the block from the first row of the block column
+  block <- games %>% pull(block) %>% '[['(1)
+  # return the block
+  return(block)
+}
+
+# function to check if zero
+is.zero <- function(x) {
+  if(x == 0){
+    return(TRUE)
+  } else {
+    return(FALSE)
+  }
+}
+
+# function to convert the times from the questionnaire
+get_end_q_time <- function(questionnaire) {
+  # get the last choice time from the tibble
+  end_time <- questionnaire %>% 
+    filter(description == 'End questionnaire') %>% 
+    '$'(scheduled_time) %>% 
+    lubridate::as_datetime()
+  # return the completed time
+  return(end_time)
+}
+
+# function to convert booleans to 'AM' or 'PM'
+get_meridiem <- function(bool_item) {
+  if(bool_item == TRUE) {
+    return("AM")
+  } else {
+    return("PM")
+  }
+}
+
+# function to get the game session
+get_game_session <- function(session_tibble) {
+  session <- tibble(
+    start_time = min(session_tibble$start_time), # take the start time of the first block
+    scheduled_time = min(session_tibble$scheduled_time), # take the scheduled time of the first block
+    completed_time = max(session_tibble$completed_time), # take the completed time of the second block
+    ID = session_tibble$ID, # get the ID, arbitrarily chosen as the first one
+    days = session_tibble[[1, 'days']], # get the days, arbitrarily chosen as the first one
+    weekday = session_tibble[[1, 'weekday']], # get the weekday, arbitrarily chosen as the first one
+    meridiem = session_tibble[[1, 'meridiem']], # get the meridiem, arbitrarily chosen as the first one
+    type = session_tibble[[1, 'type']], # get the type, arbitrarily chosen as the first one
+    duration = sum(session_tibble$duration), # get the sums of the durations as the total duration
+    delay = session_tibble[[1, 'delay']], # get the delay as the first delay
+    missing = !(FALSE %in% session_tibble$missing), # if there is a FALSE in missing, this is TRUE, otherwise FALSE -> at least one game was found (so not missing)
+    completed = !(TRUE %in% session_tibble$missing) # if there is a TRUE in missing, this is TRUE, otherwise, FALSE -> at least one game was not completed (so not completed)
+  )
+  # return the tibble
+  return(unique(session))
 }
 
 proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz="EST") {
@@ -183,8 +259,12 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
     }
     message("Processing schedule file for: ",raw_single$ID)
   
+    raw_games <- raw_single$trials
+    raw_questionnaires <- raw_single$questionnaires
+    
     ###Part I: Trial
     time_vars <- c("scheduled_time","stim_time","choice_time","feedback_time")
+    #browser()
     for (tx in time_vars) {
       raw_single$trials[[tx]] <- ms_to_date(raw_single$trials[[tx]],timezone = tz)
     }
@@ -288,49 +368,144 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
     session_info_df$delay<-difftime(session_info_df$start_time,session_info_df$scheduled_time,units = "mins")
     session_info_df$spec <- unlist(apply(session_info_df[c("type","number","description")],1,list),recursive = F)
     session_info_df<-session_info_df[c("scheduled_time","start_time","completed_time","duration","delay","spec")]
+    #session_info_df['spec'] <- unlist(session_info_df['spec'])
     session_info_df$type <- "questionnaires"
   
     #######Info session##########
-    info_df <- rbind(session_info_df,trial_info_df)
-    info_df <- info_df[order(info_df$scheduled_time),]
-    info_df$ID <- raw_single$ID
-    rownames(info_df) <- NULL
-    rownames(pr_info_by_block) <- NULL
-  
-    ###Filter out entries after data pulled:
-    info_df <- info_df[which(difftime(info_df$scheduled_time,raw_single$data_mtime) <= 0),]
-  
-    ##Get start date:
-    startdate <- as.Date(info_df$scheduled_time[1],tz = tz)
-    info_df$days <- difftime(as.Date(info_df$scheduled_time,tz = tz),startdate,units = "day")
-  
-    #clean up:
-    info_df <- info_df[!duplicated(round(info_df$scheduled_time)),]
-    info_df$type[info_df$type=="questionnaires"] <- as.character(sapply(info_df$spec[info_df$type=="questionnaires"],`[[`,3))
-    info_df$spec <- NULL
-  
-    ##For each day
-    info_sp<-split(info_df,info_df$days)
-  
-    #hard code this for now, an expected events and corresponding number for each day:
-    expected_df <- data.frame(type = c("Sleep Diary","Mood Questionnaire","Daily recording","trials","5m Resting State"),
-                              num = c(1,3,1,2,2),stringsAsFactors = F)
-  
-  
-    info_df<-rbind(info_sp[[1]],do.call(rbind,lapply(info_sp[2:length(info_sp)],function(ifp){
-      for(i in 1:nrow(expected_df)) {
-        if(length(which(ifp$type == expected_df$type[i])) != expected_df$num[i]) {
-          toadd <- expected_df$num[i] - length(which(ifp$type == expected_df$type[i]))
-          arg <- as.list(rep(NA,toadd+1))
-          arg[[1]] <- ifp
-          ifp <- do.call(rbind,arg)
-          ifp[(nrow(ifp)-toadd+1):nrow(ifp),c("type","ID","days")] <- data.frame(type=expected_df$type[i],ID=ifp$ID[1],days=ifp$days[1])
-        }
-      }
-      return(ifp)
-    })))
-  
-  
+    #######DEPRECATED############
+    # # replace w/A's code starting here #
+    # info_df <- rbind(session_info_df,trial_info_df)
+    # info_df <- info_df[order(info_df$scheduled_time),]
+    # info_df$ID <- raw_single$ID
+    # rownames(info_df) <- NULL
+    # rownames(pr_info_by_block) <- NULL
+    # 
+    # ###Filter out entries after data pulled:
+    # info_df <- info_df[which(difftime(info_df$scheduled_time,raw_single$data_mtime) <= 0),]
+    # 
+    # ##Get start date:
+    # startdate <- as.Date(info_df$scheduled_time[1],tz = tz)
+    # info_df$days <- difftime(as.Date(info_df$scheduled_time,tz = tz),startdate,units = "day")
+    # 
+    # #clean up:
+    # info_df <- info_df[!duplicated(round(info_df$scheduled_time)),]
+    # info_df$type[info_df$type=="questionnaires"] <- as.character(sapply(info_df$spec[info_df$type=="questionnaires"],`[[`,3))
+    # info_df$spec <- NULL
+    # 
+    # ##For each day
+    # info_sp<-split(info_df,info_df$days)
+    # 
+    # #hard code this for now, an expected events and corresponding number for each day:
+    # expected_df <- data.frame(type = c("Sleep Diary","Mood Questionnaire","Daily recording","trials","5m Resting State"),
+    #                           num = c(1,4,1,2,2),stringsAsFactors = F)
+    # 
+    # # expected_df <- data.frame(type = c("Sleep Diary","Mood Questionnaire","Daily recording","trials","5m Resting State", "Mood Post Task"),
+    # #                           num = c(5,0,21,2,2,),stringsAsFactors = F)
+    # # 
+    # 
+    # info_df<-rbind(info_sp[[1]],do.call(rbind,lapply(info_sp[2:length(info_sp)],function(ifp){
+    #   for(i in 1:nrow(expected_df)) {
+    #     if(length(which(ifp$type == expected_df$type[i])) != expected_df$num[i]) {
+    #       toadd <- expected_df$num[i] - length(which(ifp$type == expected_df$type[i]))
+    #       arg <- as.list(rep(NA,toadd+1))
+    #       arg[[1]] <- ifp
+    #       ifp <- do.call(rbind,arg)
+    #       ifp[(nrow(ifp)-toadd+1):nrow(ifp),c("type","ID","days")] <- data.frame(type=expected_df$type[i],ID=ifp$ID[1],days=ifp$days[1])
+    #     }
+    #   }
+    #   return(ifp)
+    # })))
+    #######DEPRECATED############
+    
+    #######Get info_df###########
+    # get the game data
+    games <- raw_games %>% 
+      #filter(block > 5) %>% # drop setup blocks
+      filter(block < 1000) # drop fMRI blocks
+    # get the games separated into blocks
+    games_by_block <- games %>% group_split(block)
+    # get the start time
+    start_time = sapply(games_by_block, get_start_game)
+    # get the scheduled time
+    scheduled_time = sapply(games_by_block, get_scheduled_game)
+    # get the completed time
+    completed_time = sapply(games_by_block, get_completed_game)
+    # get the blocks
+    each_block <- sapply(games_by_block, get_block_game)
+    # create a tibble of the pulled start, scheduled, and completed times
+    games_by_block <- tibble(
+      start_time = start_time,
+      scheduled_time = scheduled_time,
+      completed_time = completed_time,
+      block = each_block) %>% 
+      mutate(ID = raw_single$ID) %>% # append the subject id column
+      mutate(type = "Games") %>% # add the description
+      mutate(start_time = as.POSIXct(start_time/1, origin="1970-01-01", tz="America/New_York")) %>% 
+      mutate(scheduled_time = as.POSIXct(scheduled_time/1, origin="1970-01-01", tz="America/New_York")) %>%
+      mutate(completed_time = as.POSIXct(completed_time/1, origin="1970-01-01", tz="America/New_York")) %>%
+      mutate(delay = round((start_time - scheduled_time), 2)) %>% # get the delay
+      mutate(duration = round(completed_time - start_time, 2)) %>% # get the duration
+      mutate(missing = is.na(completed_time)) %>% # get missingness
+      mutate(weekday = weekdays(scheduled_time)) %>% # get the weekday
+      mutate(meridiem = lubridate::am(scheduled_time) %>% sapply(get_meridiem)) %>% # get the meridiem
+      mutate(type = paste0(type, ' ', meridiem)) # rename the games to include time
+    
+    # get the start date, NOTE: this is actually the day before to ensure accessing all element, decremented by 1 later
+    start_date <- games_by_block %>% filter(block == 0) %>% '$'(scheduled_time) %>% '-'(lubridate::days())
+    
+    # get the questionnaire data
+    questionnaires_by_session <- raw_questionnaires %>% 
+      as_tibble() %>%
+      mutate(ID = raw_single$ID) %>% # append the subject id column
+      mutate(start_time = as.POSIXct(start_time/1000, origin="1970-01-01", tz="America/New_York")) %>% 
+      mutate(scheduled_time = as.POSIXct(scheduled_time/1000, origin="1970-01-01", tz="America/New_York")) %>%
+      mutate(completed_time = as.POSIXct(completed_time/1000, origin="1970-01-01", tz="America/New_York")) %>%
+      mutate(delay = round((start_time - scheduled_time), 2)) %>% # get the delay
+      mutate(duration = round(completed_time - start_time, 2)) %>% # get the duration
+      mutate(missing = is.na(completed_time)) %>% # get missingness
+      mutate(completed = !(is.na(completed_time))) %>% # get the completeness
+      mutate(weekday = weekdays(scheduled_time)) %>% # get the weekday
+      mutate(meridiem = lubridate::am(scheduled_time) %>% sapply(get_meridiem)) %>% # get the meridiem
+      mutate(type = description) %>% # rename description
+      mutate(start_date = start_date) %>%
+      mutate(days = lubridate::day(scheduled_time) - lubridate::day(start_date) - 1)
+    
+    # End get the datetime of the most recent game session
+    # If completed, then end of experiment questionnaire time
+    # It's the earlier date of the two cases to work for all participants.
+    if ('End questionnaire' %in% questionnaires_by_session$description) {
+      drop_after <<- get_end_q_time(questionnaires_by_session)
+    } else { # If currently active, then dashboard time, which will already be set at start of run.
+      drop_after <<- dashboard_start_time
+    }
+    
+    # filter out any contents after the drop date from the games and questionnaires
+    questionnaires_by_session <- questionnaires_by_session %>% filter(scheduled_time < drop_after)
+    games_by_block <- games_by_block %>% filter(scheduled_time < drop_after)
+    
+    # get the EMA day each task is on
+    questionnaires_by_session <- questionnaires_by_session %>% mutate(days = round(difftime(scheduled_time, start_date, units='days') - 1,0))
+    games_by_block <- games_by_block %>% mutate(days = round(difftime(scheduled_time, start_date, units='days') - 1,0))
+    
+    # add a block column to the questionnaire (just set all to -1...blocks are useful to keep for eeg data)
+    #questionnaires_by_session <- questionnaires_by_session%>% mutate(block = -1)
+    
+    # squish the games to have AM and PM be a single item
+    games_by_session <- games_by_block %>% group_split(type,days)
+    #browser()
+    games_by_session <- do.call(rbind, lapply(games_by_session, get_game_session))
+    
+    # get the info df (merge of games_by_session and questionnaires_by_session), concert this back to a base dataframe to match J's
+    merge_items <- c('start_time', 'scheduled_time', 'completed_time', 'ID', 'days', 'weekday', 'meridiem', 'duration', 'delay', 'missing', 'completed', 'type') # , 'block'
+    games_merge_object <- games_by_session %>% select(merge_items)
+    questionnaires_merge_object <- questionnaires_by_session %>% select(merge_items)
+    info_df <- rbind(questionnaires_merge_object, games_merge_object)
+    # drop any items without a completed_time to cleanup instances where participants are dropped
+    info_df <- info_df %>% filter(!is.na(completed_time))
+    # convertv back to base dataframe from tibble
+    info_df <- as.data.frame(info_df)
+    #######Get info_df###########
+    
     #update answer DF as well"
     raw_single$answers$session_number<-session_info_df$session_number[match(round(as.numeric(raw_single$answers$answer_time,0)),round(as.numeric(session_info_df$completed_time),0))]
     ##Part II: proc answer df:
@@ -435,19 +610,22 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
                    info_df = info_df,
                    performance_info=pr_info_by_block,performance_overall=px_overall,
                    form_dfs=form_proc,form_summary=q_sum,
-                   ID=raw_single$ID)
+                   ID=raw_single$ID,
+                   games_by_block=games_by_block)
     save(output, file = output_path)
   
     return(list(raw_data=raw_single, new_data=TRUE,
                 info_df = info_df,
                 performance_info=pr_info_by_block,performance_overall=px_overall,
                 form_dfs=form_proc,form_summary=q_sum,
-                ID=raw_single$ID))
+                ID=raw_single$ID,
+                games_by_block=games_by_block))
   }, error = function(err){
     # log the traceback
     #traceback(err)
     # log the step that failed for this subject
     print(paste0(raw_single$ID, " did not successfully have their schedule file processed."))
+    print(err)
     # add the subject to the failed subject list
     active <<- active[active != raw_single$ID]
     # return NA
