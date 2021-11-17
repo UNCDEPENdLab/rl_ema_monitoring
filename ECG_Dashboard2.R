@@ -85,6 +85,25 @@ correctTimings <- function(times, intervals) {
   return(timings)
 }
 
+timings2samples <- function(timings,HRstep){
+  i <- 0
+  start <- ceiling(timings[1]/HRstep) * HRstep
+  times <- NULL
+  intervals <- NULL
+  rate <- NULL
+  for (t in seq(from=start, to=timings[length(timings)], by=HRstep)){
+    i <- i+1
+    times[i] <- t
+    ind <- which(timings > t)[1]
+    if (length(ind)>0){
+      intervals[i] <- timings[ind]-timings[ind-1]
+      rate[i] <- 60000/intervals[i]
+    }
+  }
+  output <- cbind(times,intervals,rate)
+  return(output)
+}
+
 
 load_ECG <- function(ECGd = NULL, HRstep = 10, sample_rate = 100) {
   #Notes on expected data format for rr_intervals
@@ -92,7 +111,7 @@ load_ECG <- function(ECGd = NULL, HRstep = 10, sample_rate = 100) {
   # [] indicates a blank RR -> converted to NA
   # [number, number] indicates multiple events within a time interval -> expanded to elements of intervals
   # [number] is a single interval -> expanded to one element of intervals
-
+  
   rr_parse <- gsub("^$", "0", ECGd$rr_intervals) #empty rows become 0
   rr_parse <- gsub("[]", "NA", rr_parse, fixed=TRUE) #blank RRs become NA
   rr_parse <- gsub("[\\[\\]]", "", rr_parse, perl=TRUE) #delete [ and ] from all strings to split
@@ -149,7 +168,6 @@ load_ECG <- function(ECGd = NULL, HRstep = 10, sample_rate = 100) {
     isplit <- isplit - isplit[1] +1
     isplit <- isplit[-c(1)]
   }
-
   todelete <- NULL
   iC <- 1
 
@@ -181,7 +199,7 @@ load_ECG <- function(ECGd = NULL, HRstep = 10, sample_rate = 100) {
       todelete <- todelete-1
     }
   }
-
+  
   if (length(isplit)>0){
     I0 <- NULL
     HRsplit <- matrix(list(),length(isplit)+1,2)
@@ -217,6 +235,7 @@ if (!nosplit){
       timings <- correctTimings(HRsplit[[i,1]],HRsplit[[i,2]])
       beattimes[[i,1]] <- timings
       output <- timings2samples_block_cpp(timings,HRstep=10)
+      #output <- timings2samples(timings,HRstep=10)
       times1[[i,1]] <- output[,1]
       intervals1[[i,1]] <- output[,2]
       rate1[[i,1]] <- output[,3]
@@ -229,11 +248,12 @@ if (!nosplit){
     timings <- correctTimings(t0,I0)
     beattimes <- timings
     output <- timings2samples_block_cpp(timings,HRstep=10)
+    #output <- timings2samples(timings,HRstep=10)
     times1 <- output[,1]
     intervals1 <- output[,2]
     rate1 <- output[,3]
   }
-
+  
   # check
   stopifnot(length(beattimes)==length(times1) | length(times1)==length(intervals1) | length(intervals1)==length(rate1))
 
@@ -382,7 +402,7 @@ get_good_ECG <- function(blocks,ch1_a2f){
       data0 <- as.matrix(tempdata[j,])
       sd0[j] <- sd(data0,na.rm=TRUE)
     }
-    Ngood1[i] <- sum(!is.na(tempdata) | sd0 < 5*median(sd0,na.rm=TRUE))
+    Ngood1[i] <- sum(!is.na(tempdata) & sd0 < 5*median(sd0,na.rm=TRUE))
     Ntotal[i] <- ncol(tempdata)*nrow(tempdata)
     perGood[i] <- Ngood1[i]/Ntotal[i]
   }
