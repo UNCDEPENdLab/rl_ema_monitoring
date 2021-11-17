@@ -9,16 +9,18 @@
 #compliance_filtered <- compliance %>% filter(!is.na(s_type))
 # quick fix by just setting compliance_filtered to info
 compliance_filtered <- info
-compliance_filtered$is_missing <- is.na(compliance_filtered$duration)|compliance_filtered$delay>=1440
-compliance_filtered$delayednotmissing <- ifelse(compliance_filtered$is_missing, NA, compliance_filtered$delay)
-compliance_addon <- compliance_filtered[compliance_filtered$is_missing, ]
-compliance_addon$days_delayed <- floor(compliance_addon$delay/1440)
-compliance_addon$scheduled_time <- compliance_addon$scheduled_time + (compliance_addon$days_delayed)
-compliance_addon$delayednotmissing <- compliance_addon$delay - (compliance_addon$days_delayed * 1440)
-compliance_addon$days_delayed <- NULL
-compliance_addon$is_missing <- FALSE
-compliance_filtered_2 <- rbind(compliance_filtered, compliance_addon)
-compliance_filtered_2 <- unnest(compliance_filtered_2)
+compliance_filtered <- compliance_filtered %>% mutate(delay = as.numeric(round(difftime(start_time, scheduled_time, units="mins"),2)))
+compliance_filtered <- compliance_filtered %>% mutate(duration = as.numeric(round(difftime(completed_time, start_time, units="mins"),2)))
+#compliance_filtered$is_missing <- is.na(compliance_filtered$duration)|compliance_filtered$delay>=1440
+#compliance_filtered$delayednotmissing <- compliance_filtered$delay #ifelse(compliance_filtered$is_missing, NA, compliance_filtered$delay)
+#compliance_addon <- compliance_filtered[compliance_filtered$is_missing, ]
+#compliance_addon$days_delayed <- floor(compliance_addon$delay/1440)
+#compliance_addon$scheduled_time <- compliance_addon$scheduled_time + (compliance_addon$days_delayed)
+#compliance_addon$delayednotmissing <- compliance_addon$delay - (compliance_addon$days_delayed * 1440)
+#compliance_addon$days_delayed <- NULL
+#compliance_addon$is_missing <- FALSE
+#compliance_filtered_2 <- rbind(compliance_filtered, compliance_addon)
+#compliance_filtered_2 <- unnest(compliance_filtered_2)
 
 # create the unchecked mood csv if there is data to do so
 if(exists("checklist")) {
@@ -34,5 +36,5 @@ if(exists("checklist")) {
 
 # output the sleep table to a csv
 #write_csv(compliance_filtered_2, paste0(dataPath, "/Subjects/", subj, "/reports/compliance.csv"))
-saveRDS(compliance_filtered_2, paste0(dataPath, "/Subjects/", subj, "/reports/compliance.rds"))
+saveRDS(compliance_filtered, paste0(dataPath, "/Subjects/", subj, "/reports/compliance.rds"))
 

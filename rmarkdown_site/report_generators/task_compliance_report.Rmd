@@ -15,3 +15,8 @@ render_task_compliance_table(task_compliance_data, "all")
 #task compliance table
 render_task_compliance_table(task_compliance_data, "unchecked")
 ```
+
+## Games Delay
+```{r games-delay-graph, echo=FALSE, warning=FALSE, results="asis"}
+include_subject_figure("game_delay_plot.png", "Games Delay")
+```
