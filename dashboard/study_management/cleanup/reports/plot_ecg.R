@@ -57,7 +57,7 @@ for (i in loopseq) {
       #dir.create(path=paste0(site, "/static/static/subjects/", subj), showWarnings = FALSE, recursive = TRUE)
       # save the graph as an image file
       fig_name = paste0("ecg_plot_overall.png")
-      if (!file.exists(paste0(plots_path, "/", fig_name))) {
+      #if (!file.exists(paste0(plots_path, "/", fig_name))) {
         ecg_plot <- ggplot(df1, aes(x=t0,y=mean2)) + geom_line() + geom_point() + 
           geom_ribbon(aes(ymin = mean2-st_err, ymax = mean2+st_err), linetype=2, alpha=0.1) + 
           scale_x_continuous(breaks=c(0,a2f,max(df$t0)),labels=c(-1000,0,10000),name='time [ms]') + 
@@ -66,7 +66,7 @@ for (i in loopseq) {
         png(paste0(plots_path, "/", fig_name), res=300, width=7, height=7, units="in") 
         print(ecg_plot)
         dev.off()
-      }
+      #}
     }
     if (sliding_window){
       if (length(num_block)>=5){

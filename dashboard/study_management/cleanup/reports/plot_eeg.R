@@ -126,7 +126,7 @@ for (i in loopseq) {
       # save the graph as an image file
       if (i==1){
         fig_name = paste0("eeg_plot_overall.png")
-        if (!file.exists(paste0(plots_path, "/", fig_name))) {
+        #if (!file.exists(paste0(plots_path, "/", fig_name))) {
           try({
             eeg_plot <- ggplot(dg1, aes(t,totaltrial,fill=V)) + 
               geom_raster(interpolate=TRUE) + facet_wrap(~channel,scales="free") + 
@@ -147,9 +147,9 @@ for (i in loopseq) {
             print(eeg_plot)
             dev.off()
           })
-        }
+        #}
         fig_name = paste0("eeg_plot_missingness_overall.png")
-        if (!file.exists(paste0(plots_path, "/", fig_name))) {  
+        #if (!file.exists(paste0(plots_path, "/", fig_name))) {  
           try({
             eeg_plot <- ggplot(dg1, aes(t,totaltrial,fill=G1)) + 
               geom_raster(interpolate=TRUE) + facet_wrap(~channel,scales="free") + 
@@ -170,10 +170,7 @@ for (i in loopseq) {
             print(eeg_plot)
             dev.off()
           })
-          
-          
-          
-        }
+        #}
       }
       fig_name = paste0("eeg_plot_", toString(i-1), ".png")
       # if the file doesn't exist
