@@ -534,78 +534,101 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
   
     form_data$answer_prog <- text_proc(form_data$answer)
     fdata_sp <- split(form_data,form_data$questionnaire_name)
-    #proc all the other first
-    form_proc <- lapply(fdata_sp,function(tkd){
-      #print(unique(tkd$questionnaire_name))
-      if(unique(tkd$questionnaire_name) %in% c("Mood Questionnaire","Sleep Diary","End questionnaire")) {
-        evt_q_index <- ifelse(unique(tkd$questionnaire_name) == "Mood Questionnaire",2,1)
-        if(unique(tkd$questionnaire_name) == "Mood Questionnaire") {
-          evt_q_index <- 2
-        } else if (unique(tkd$questionnaire_name) == "Sleep Diary") {
-          evt_q_index <- 1
-        } else {
-          evt_q_index <- 99
-        }
-        tkf<-do.call(rbind,lapply(split(tkd,tkd$questionnaire_number),function(mda){
-          mdb<-do.call(cbind,lapply(mda$answer_prog[mda$question!=evt_q_index],as.data.frame))
-          if(evt_q_index %in% mda$question) {
-            ###Event df proc
-            if(is.null(names(mda$answer_prog[[which(mda$question==evt_q_index)]]))) {
-              md_evt <- do.call(rbind,lapply(mda$answer_prog[[which(mda$question==evt_q_index)]],as.data.frame))
-            } else {
-              md_evt <- as.data.frame(mda$answer_prog[[which(mda$question==evt_q_index)]])
-            }
-  
-            names(md_evt)[names(md_evt)=="V_1"] <- "description"
-            names(md_evt)[names(md_evt)=="V_2"] <- "time_ago"
-            if(is.null(md_evt$category)) {
-              md_evt$category <- "event/activity:unknown"
-            }
-            names(md_evt)<-gsub(".","_",names(md_evt),fixed = T)
-            mdb$event_df <- list(event_df=md_evt)
-            mdb$number_of_events <- nrow(mdb$event_df$event_df)
+    
+    #browser()
+    
+    ## REWRITE form_proc: FROM HERE ##
+    
+    form_proc <- tryCatch({
+      #proc all the other first
+      form_proc <- lapply(fdata_sp,function(tkd){
+        #print(unique(tkd$questionnaire_name))
+        if(unique(tkd$questionnaire_name) %in% c("Mood Questionnaire","Sleep Diary","End questionnaire")) {
+          evt_q_index <- ifelse(unique(tkd$questionnaire_name) == "Mood Questionnaire",2,1)
+          if(unique(tkd$questionnaire_name) == "Mood Questionnaire") {
+            evt_q_index <- 2
+          } else if (unique(tkd$questionnaire_name) == "Sleep Diary") {
+            evt_q_index <- 1
           } else {
-            mdb$event_df <- NA
-            mdb$number_of_events <- 0
+            evt_q_index <- 99
           }
-          mdc <- cbind(mda[1,c("questionnaire_name","questionnaire_type","answer_time")],mdb)
-          return(mdc)
-        }))
-      } else {
-        tke<-do.call(rbind,lapply(tkd$answer_prog,as.data.frame,sep="_"))
-        tkf <- cbind(tkd[c("questionnaire_name","questionnaire_type","answer_time","question")],tke)
+          tkf<-do.call(rbind,lapply(split(tkd,tkd$questionnaire_number),function(mda){
+            mdb<-do.call(cbind,lapply(mda$answer_prog[mda$question!=evt_q_index],as.data.frame))
+            if(evt_q_index %in% mda$question) {
+              ###Event df proc
+              if(is.null(names(mda$answer_prog[[which(mda$question==evt_q_index)]]))) {
+                md_evt <- do.call(rbind,lapply(mda$answer_prog[[which(mda$question==evt_q_index)]],as.data.frame))
+              } else {
+                md_evt <- as.data.frame(mda$answer_prog[[which(mda$question==evt_q_index)]])
+              }
+    
+              names(md_evt)[names(md_evt)=="V_1"] <- "description"
+              names(md_evt)[names(md_evt)=="V_2"] <- "time_ago"
+              if(is.null(md_evt$category)) {
+                md_evt$category <- "event/activity:unknown"
+              }
+              names(md_evt)<-gsub(".","_",names(md_evt),fixed = T)
+              mdb$event_df <- list(event_df=md_evt)
+              mdb$number_of_events <- nrow(mdb$event_df$event_df)
+            } else {
+              mdb$event_df <- NA
+              mdb$number_of_events <- 0
+            }
+            mdc <- cbind(mda[1,c("questionnaire_name","questionnaire_type","answer_time")],mdb)
+            return(mdc)
+          }))
+        } else {
+          tke<-do.call(rbind,lapply(tkd$answer_prog,as.data.frame,sep="_"))
+          tkf <- cbind(tkd[c("questionnaire_name","questionnaire_type","answer_time","question")],tke)
+        }
+        names(tkf)<-gsub(".","_",names(tkf),fixed = T)
+        tkf$ID <- raw_single$ID
+        #tkf[tkf=="NA"] <- NA
+        tkf <- tkf[order(tkf$answer_time),]
+        rownames(tkf)<-NULL
+        return(tkf)
+      })
+      ## REWRITE form_proc: TO HERE ##
+    
+      form_proc$`Mood Questionnaire`$v_a_distance <- sqrt((as.numeric(form_proc$`Mood Questionnaire`$Valence)^2) + (as.numeric(form_proc$`Mood Questionnaire`$Arousal)^2) )
+      form_proc$`Sleep Diary`$did_not_sleep<-is.na(form_proc$`Sleep Diary`$questionnaire_type)
+      if(!is.null(form_proc$`End questionnaire`)) {
+        names(form_proc$`End questionnaire`)[grepl("X[[i]]",names(form_proc$`End questionnaire`),fixed = T)] <- paste0("V",1:length(which(grepl("X[[i]]",names(form_proc$`End questionnaire`),fixed = T))))
+        form_proc$`End questionnaire`$event_df <- NULL
+        form_proc$`End questionnaire`$number_of_events <- NULL
       }
-      names(tkf)<-gsub(".","_",names(tkf),fixed = T)
-      tkf$ID <- raw_single$ID
-      #tkf[tkf=="NA"] <- NA
-      tkf <- tkf[order(tkf$answer_time),]
-      rownames(tkf)<-NULL
-      return(tkf)
+      # return form_proc
+      return(form_proc)
+    }, error = function(e) {
+      # print the error
+      print(e)
+      # return NA
+      return(NA)
     })
-  
-    form_proc$`Mood Questionnaire`$v_a_distance <- sqrt((as.numeric(form_proc$`Mood Questionnaire`$Valence)^2) + (as.numeric(form_proc$`Mood Questionnaire`$Arousal)^2) )
-    form_proc$`Sleep Diary`$did_not_sleep<-is.na(form_proc$`Sleep Diary`$questionnaire_type)
-    if(!is.null(form_proc$`End questionnaire`)) {
-      names(form_proc$`End questionnaire`)[grepl("X[[i]]",names(form_proc$`End questionnaire`),fixed = T)] <- paste0("V",1:length(which(grepl("X[[i]]",names(form_proc$`End questionnaire`),fixed = T))))
-      form_proc$`End questionnaire`$event_df <- NULL
-      form_proc$`End questionnaire`$number_of_events <- NULL
-    }
-    ##summary stats for how much they answered
-    q_sum <- data.frame(ID = raw_single$ID,val_arr_dis_avg = mean(form_proc$`Mood Questionnaire`$v_a_distance,na.rm = T))
-    e_sum <- data.frame(as.list(apply(form_proc$`Mood Questionnaire`[c("Anxious","Elated","Sad","Irritable","Energetic")],2,function(x){mean(as.numeric(x),na.rm = T)})))
-    names(e_sum) <- paste(names(e_sum),"avg",sep = "_")
-    s_sum <- data.frame(as.list(apply(form_proc$`Sleep Diary`[c("sleep_latency","woke_many_times","woke_early","overall")],2,function(x){mean(as.numeric(x),na.rm = T)})))
-    names(s_sum) <- paste(names(s_sum),"avg",sep = "_")
-  
-    q_sum <- cbind(q_sum,e_sum,s_sum)
-    q_sum$emo_rate_avg <- mean(unlist(e_sum),na.rm = T)
-    q_sum$sleep_di_avg <- mean(unlist(s_sum),na.rm = T)
-    q_sum$avg_evt_num <- mean(form_proc$`Mood Questionnaire`$number_of_events)
-    q_sum$avg_sleep_evt_num <- mean(form_proc$`Sleep Diary`$number_of_events)
-    q_sum$num_no_sleep <- length(which(form_proc$`Sleep Diary`$did_not_sleep))
-    q_sum$val_emo_cor <- cor(apply(form_proc$`Mood Questionnaire`[c("Anxious","Elated","Sad","Irritable","Energetic")],1,function(x){mean(as.numeric(x),na.rm = T)}),form_proc$`Mood Questionnaire`$v_a_distance)
-    ###return proc_answer object###########
-  
+    
+    q_sum <- tryCatch({
+      ##summary stats for how much they answered
+      q_sum <- data.frame(ID = raw_single$ID,val_arr_dis_avg = mean(form_proc$`Mood Questionnaire`$v_a_distance,na.rm = T))
+      e_sum <- data.frame(as.list(apply(form_proc$`Mood Questionnaire`[c("Anxious","Elated","Sad","Irritable","Energetic")],2,function(x){mean(as.numeric(x),na.rm = T)})))
+      names(e_sum) <- paste(names(e_sum),"avg",sep = "_")
+      s_sum <- data.frame(as.list(apply(form_proc$`Sleep Diary`[c("sleep_latency","woke_many_times","woke_early","overall")],2,function(x){mean(as.numeric(x),na.rm = T)})))
+      names(s_sum) <- paste(names(s_sum),"avg",sep = "_")
+      
+      q_sum <- cbind(q_sum,e_sum,s_sum)
+      q_sum$emo_rate_avg <- mean(unlist(e_sum),na.rm = T)
+      q_sum$sleep_di_avg <- mean(unlist(s_sum),na.rm = T)
+      q_sum$avg_evt_num <- mean(form_proc$`Mood Questionnaire`$number_of_events)
+      q_sum$avg_sleep_evt_num <- mean(form_proc$`Sleep Diary`$number_of_events)
+      q_sum$num_no_sleep <- length(which(form_proc$`Sleep Diary`$did_not_sleep))
+      q_sum$val_emo_cor <- cor(apply(form_proc$`Mood Questionnaire`[c("Anxious","Elated","Sad","Irritable","Energetic")],1,function(x){mean(as.numeric(x),na.rm = T)}),form_proc$`Mood Questionnaire`$v_a_distance)
+      ###return proc_answer object###########
+      return(q_sum)
+    }, error = function(e) {
+      # print the error
+      print(e)
+      # return NA
+      return(NA)
+    })
   
     pr_info_by_block$ID <- raw_single$ID
     raw_single$trials <- trials_df

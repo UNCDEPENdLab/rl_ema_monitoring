@@ -1,5 +1,7 @@
 ###time series of game delay throughout experiment 
 #split by morning and evening game sessions 
+#library(plotly)
+
 games_delay_am <- as_tibble(info) %>% 
   filter(type == 'Games AM') %>%
   select(delay, days, meridiem) %>% 
@@ -34,7 +36,7 @@ try({
   folder_name = "game_delay_plot_files"
   fig_games_by_session <- plot_ly(x = games_delay_am$days, y = games_delay_am$delay, type = 'bar', name = 'AM Session') %>% 
     add_trace(y = games_delay_pm$delay, name = 'PM Session') %>% 
-    layout(title = "Minutes Late to Scheduled Game Sessions", 
+    plotly::layout(title = "Minutes Late to Scheduled Game Sessions", 
            xaxis = list(title="Game Session Day", tick0=0, dtick=1),          
            yaxis = list(title="Minutes Late"))
   # plotly is annoying with image export -> first convert to html
