@@ -35,6 +35,7 @@ if (length(notplayed)>0){
 
 
 for (i in loopseq) {
+  if (blocks[i] < 1000){
   try({
     if (i==1){
       df <- df %>% mutate(trial=trials, block=blocks)
@@ -117,5 +118,6 @@ for (i in loopseq) {
       })
     }
   })
+  }
 }
 
