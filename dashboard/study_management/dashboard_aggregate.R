@@ -556,26 +556,27 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
             mdb<-do.call(cbind,lapply(mda$answer_prog[mda$question!=evt_q_index],as.data.frame))
             if(evt_q_index %in% mda$question) {
               ###Event df proc
-              if(is.null(names(mda$answer_prog[[which(mda$question==evt_q_index)]]))) {
-                md_evt <- do.call(rbind,lapply(mda$answer_prog[[which(mda$question==evt_q_index)]],as.data.frame))
-              } else {
-                md_evt <- as.data.frame(mda$answer_prog[[which(mda$question==evt_q_index)]])
-              }
-    
-              names(md_evt)[names(md_evt)=="V_1"] <- "description"
-              names(md_evt)[names(md_evt)=="V_2"] <- "time_ago"
-              if(is.null(md_evt$category)) {
-                md_evt$category <- "event/activity:unknown"
-              }
-              names(md_evt)<-gsub(".","_",names(md_evt),fixed = T)
-              mdb$event_df <- list(event_df=md_evt)
-              mdb$number_of_events <- nrow(mdb$event_df$event_df)
-            } else {
-              mdb$event_df <- NA
-              mdb$number_of_events <- 0
+              # if(is.null(names(mda$answer_prog[[which(mda$question==evt_q_index)]]))) {
+              #   md_evt <- do.call(rbind,lapply(mda$answer_prog[[which(mda$question==evt_q_index)]],as.data.frame))
+              # } else {
+              #   md_evt <- as.data.frame(mda$answer_prog[[which(mda$question==evt_q_index)]])
+              # }
+            #   md_evt <- 1
+            #   names(md_evt)[names(md_evt)=="V_1"] <- "description"
+            #   names(md_evt)[names(md_evt)=="V_2"] <- "time_ago"
+            #   if(is.null(md_evt$category)) {
+            #     md_evt$category <- "event/activity:unknown"
+            #   }
+            #   names(md_evt)<-gsub(".","_",names(md_evt),fixed = T)
+            #   mdb$event_df <- list(event_df=md_evt)
+            #   mdb$number_of_events <- nrow(mdb$event_df$event_df)
+            # } else {
+            #   mdb$event_df <- NA
+            #   mdb$number_of_events <- 0
             }
-            mdc <- cbind(mda[1,c("questionnaire_name","questionnaire_type","answer_time")],mdb)
-            return(mdc)
+            # mdc <- cbind(mda[1,c("questionnaire_name","questionnaire_type","answer_time")],mdb)
+            #return(mdc)
+            return(mdb)
           }))
         } else {
           tke<-do.call(rbind,lapply(tkd$answer_prog,as.data.frame,sep="_"))
@@ -726,8 +727,8 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
     path_to_schedule <- paste0(dataPath, '/Subjects/', IDx, '/schedule')
     sched_file <- list.files(path=path_to_schedule,pattern=paste0(IDx,'_schedule.db'))
     if (length(sched_file)==1){
-      sched_data_for_physio = dbConnect(SQLite(), sched_file)
-      trials = dbGetQuery(behavior, "SELECT * FROM trials")
+      sched_data_for_physio = dbConnect(SQLite(), paste0(path_to_schedule, '/', sched_file))
+      trials = dbGetQuery(sched_data_for_physio, "SELECT * FROM trials")
       ## remove blocks that have not been played yet
       if (length(which(is.na(trials$choice)))!=0){
         trials=trials[-c(which(is.na(trials$choice))),]}
