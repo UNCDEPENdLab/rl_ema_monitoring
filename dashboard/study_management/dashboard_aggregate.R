@@ -715,8 +715,26 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
     if(is.null(behav_df$session_number)) {
       behav_df$session_number <- NA
     }
+    fbt <- behav_df$feedback_time
+    fbt <- fbt[behav_df$block < 1000]
     sess_map<-unique(behav_df[c("block","session_number")])
-
+    fbt <- as.numeric(fbt)*1000
+    
+    ##### Quickly grabbing .db schedule file for physio, uncoupling physio from schedule file processing
+    ##### 2021-11-22 AndyP 
+    #####
+    path_to_schedule <- paste0(dataPath, '/Subjects/', IDx, '/schedule')
+    sched_file <- list.files(path=path_to_schedule,pattern=paste0(IDx,'_schedule.db'))
+    if (length(sched_file)==1){
+      sched_data_for_physio = dbConnect(SQLite(), sched_file)
+      trials = dbGetQuery(behavior, "SELECT * FROM trials")
+      ## remove blocks that have not been played yet
+      if (length(which(is.na(trials$choice)))!=0){
+        trials=trials[-c(which(is.na(trials$choice))),]}
+      fbt <- trials$feedback_time
+    } else {
+      warning('Zero or multiple schedule .db files found for subject',IDx, 'reverting to processed schedule file')
+    }
     ###EEG
     message("Processing new EEG data for: ",IDx)
     eeg_list <- load_EEG(EEGd = physio_concat$eeg,sample_rate = eeg_sample_rate,sd_times = sd_times)
@@ -724,7 +742,7 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
     eeg_missing <- eeg_list[[2]]
     eeg_fb <- eeg_epochs_around_feedback(EEG_data = eeg_raw,
                                            pre = eeg_pre,post = eeg_post,sample_rate = eeg_sample_rate,
-                                           fbt = as.numeric(behav_df$feedback_time)*1000)
+                                           fbt = fbt)
     eeg_rawsum <- get_good_EEG(blocks=behav_df$block,a2f=eeg_fb,sd_times=sd_times)
     eeg_summary <- eeg_rawsum[1:4] / eeg_rawsum$ntrial
     names(eeg_summary) <- paste("per_Ch",1:4,sep = "_")
@@ -740,10 +758,8 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
 
     ###ECG
     message("Processing new ECG data for: ",IDx)
-    fbt <- behav_df$feedback_time
-    fbt <- fbt[behav_df$block < 1000]
     ecg_raw <- load_ECG(ECGd = physio_concat$ecg,HRstep = HRstep,sample_rate = ecg_sample_rate)
-    ecg_fb <- ecg_epochs_around_feedback2(ECG_data = ecg_raw,fbt = as.numeric(fbt)*1000,
+    ecg_fb <- ecg_epochs_around_feedback2(ECG_data = ecg_raw,fbt = fbt,
                                          pre = ecg_pre,post = ecg_post,sample_rate = ecg_sample_rate,thread=thread)
     # fbt1 <- as.numeric(behav_df$feedback_time)*1000
     # fbt2 <- NULL 
