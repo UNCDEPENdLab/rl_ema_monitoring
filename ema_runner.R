@@ -384,7 +384,7 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=TRU
 #run_ema(redcap=FALSE, save_lite=TRUE, render=TRUE, pull=TRUE, sched=TRUE, physio=TRUE, cleanup_data=TRUE, nthreads = 8, push=TRUE, force_reload=TRUE, force_proc=TRUE, replot=TRUE)
 
 # run everything, but force proc and reload
-run_ema(redcap=FALSE, save_lite=TRUE, render=TRUE, pull=TRUE, sched=TRUE, physio=TRUE, cleanup_data=TRUE, nthreads = 8, push=TRUE, force_reload=TRUE, force_proc=TRUE, replot=FALSE)
+##run_ema(redcap=FALSE, save_lite=TRUE, render=TRUE, pull=TRUE, sched=TRUE, physio=TRUE, cleanup_data=TRUE, nthreads = 8, push=TRUE, force_reload=TRUE, force_proc=TRUE, replot=FALSE)
 
 # run everything except pull
 #run_ema(redcap=FALSE, save_lite=TRUE, render=TRUE, pull=FALSE, sched=TRUE, physio=TRUE, cleanup_data=TRUE, nthreads = 8, push=TRUE, force_reload=FALSE, force_proc=FALSE, replot=FALSE)
@@ -393,7 +393,7 @@ run_ema(redcap=FALSE, save_lite=TRUE, render=TRUE, pull=TRUE, sched=TRUE, physio
 #run_ema(redcap=FALSE, save_lite=FALSE, render=TRUE, pull=FALSE, sched=TRUE, physio=TRUE, cleanup_data=TRUE, nthreads = 8, push=TRUE, force_reload=TRUE, force_proc=TRUE, replot=FALSE)
 
 # run everything except pull, but force proc and reload, not save_lite, force replot
-#run_ema(redcap=FALSE, save_lite=FALSE, render=TRUE, pull=FALSE, sched=TRUE, physio=TRUE, cleanup_data=TRUE, nthreads = 8, push=TRUE, force_reload=TRUE, force_proc=TRUE, replot=TRUE)
+run_ema(redcap=FALSE, save_lite=FALSE, render=TRUE, pull=FALSE, sched=TRUE, physio=TRUE, cleanup_data=TRUE, nthreads = 8, push=TRUE, force_reload=TRUE, force_proc=TRUE, replot=TRUE)
 
 #subjects=list("221604", "221849"),
 # run schedule only
