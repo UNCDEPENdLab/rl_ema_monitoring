@@ -17,9 +17,9 @@ Sys.setenv("PKG_CXXFLAGS"="-std=c++11")
 
 #print(getwd())
 #Rcpp::sourceCpp(file.path(repo_path, "rl_ema_monitoring/data_utils/timings2samples_block_cpp.cpp"), cacheDir = getwd())
-#Rcpp::sourceCpp("../../data_utils/timings2samples_block_cpp.cpp", cacheDir = getwd())
-Rcpp::sourceCpp("~/Momentum/rl_ema_monitoring/data_utils/timings2samples_block_cpp.cpp")
-warning('AndyP changed this path to work on his computer to debug ECG, please change back on dashboard if he forgets to reset it')
+Rcpp::sourceCpp("../../data_utils/timings2samples_block_cpp.cpp", cacheDir = getwd())
+#Rcpp::sourceCpp("~/Momentum/rl_ema_monitoring/data_utils/timings2samples_block_cpp.cpp")
+#warning('AndyP changed this path to work on his computer to debug ECG, please change back on dashboard if he forgets to reset it')
 
 #test case
 if(FALSE) {
