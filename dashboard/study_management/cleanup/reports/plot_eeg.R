@@ -24,15 +24,40 @@ name <- names(df)
 dq <- rbind(df[[name[1]]],df[[name[[2]]]],df[[name[3]]],df[[name[4]]]) # concatenate channels 1-4
 dg <- rbind(df[[name[5]]],df[[name[[6]]]],df[[name[7]]],df[[name[8]]]) # concatenate channels 1-4
 
-trials <- output$proc_data[[subj]]$raw_data$trials$trial
-blocks <- output$proc_data[[subj]]$raw_data$trials$block
-
-# remove trials that have not been played
-notplayed <- which(is.na(output$proc_data[[subj]]$raw_data$trials$choice))
-if (length(notplayed)>0){
-  trials <- trials[-c(notplayed)]
-  blocks <- blocks[-c(notplayed)]
+path_to_schedule <- paste0(dataPath, '/Subjects/', subj, '/schedule')
+sched_file <- list.files(path=path_to_schedule,pattern=paste0(subj,'_schedule.db'))
+if (length(sched_file)==1){
+  sched_data_for_physio = dbConnect(SQLite(), paste0(path_to_schedule, '/', sched_file))
+  trials = dbGetQuery(sched_data_for_physio, "SELECT * FROM trials")
+  ## remove blocks that have not been played yet
+  fbt <- trials$feedback_time
+  blocks <- trials$block
+  choice <- trials$choice
+  fbt <- fbt[blocks < 1000]
+  blocks <- blocks[blocks < 1000]
+  choice <- choice[blocks < 1000]
+  notplayed <- which(is.na(choice))
+  if (length(notplayed)>0){
+    trials <- trials[-c(notplayed)]
+    blocks <- blocks[-c(notplayed)]
+  }
+} else {
+  warning('Zero or multiple schedule .db files found for subject',IDx, 'reverting to processed schedule file, be warned this has caused errors in the past')
+  trials <- output$proc_data[[subj]]$raw_data$trials$trial
+  #trials <- trials[-c(which(is.na(output$proc_data[[subj]]$raw_data$trials$choice)))]
+  blocks <- output$proc_data[[subj]]$raw_data$trials$block
+  #blocks <- blocks[-c(which(is.na(output$proc_data[[subj]]$raw_data$trials$choice)))]
+  # remove trials that have not been played
+  notplayed <- which(is.na(output$proc_data[[subj]]$raw_data$trials$choice))
+  if (length(notplayed)>0){
+    trials <- trials[-c(notplayed)]
+    blocks <- blocks[-c(notplayed)]
+  }
+  fbt <- fbt[blocks < 1000]
+  trials <- trials[blocks < 1000]
+  blocks <- blocks[blocks < 1000]
 }
+
 blocks <- rep(blocks,4)
 trials <- rep(trials,4)
 

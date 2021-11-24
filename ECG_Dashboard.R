@@ -294,7 +294,6 @@ ecg_epochs_around_feedback <- function(ECG_data,fbt,pre=1000,post=10000,sample_r
     }
     dL <- pre+1+post
     aL <- length(ind)
-
     if (length(ind)>0){
       if (ind[length(ind)] > length(rrt)){
         addpost <- ind[length(ind)] - length(rrt)

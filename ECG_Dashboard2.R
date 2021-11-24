@@ -17,9 +17,9 @@ Sys.setenv("PKG_CXXFLAGS"="-std=c++11")
 
 #print(getwd())
 #Rcpp::sourceCpp(file.path(repo_path, "rl_ema_monitoring/data_utils/timings2samples_block_cpp.cpp"), cacheDir = getwd())
-Rcpp::sourceCpp("../../data_utils/timings2samples_block_cpp.cpp", cacheDir = getwd())
-#Rcpp::sourceCpp("~/Momentum/rl_ema_monitoring/data_utils/timings2samples_block_cpp.cpp")
-#warning('AndyP changed this path to work on his computer to debug ECG, please change back on dashboard if he forgets to reset it')
+#Rcpp::sourceCpp("../../data_utils/timings2samples_block_cpp.cpp", cacheDir = getwd())
+Rcpp::sourceCpp("~/Momentum/rl_ema_monitoring/data_utils/timings2samples_block_cpp.cpp")
+warning('AndyP changed this path to work on his computer to debug ECG, please change back on dashboard if he forgets to reset it')
 
 #test case
 if(FALSE) {
@@ -120,7 +120,7 @@ load_ECG <- function(ECGd = NULL, HRstep = 10, sample_rate = 100) {
 
   #not sure why we need a one-column data.frame as opposed to just a vector, but leaving as-is
   #consider changing intervals, hr1, hrt1 to vectors for simplicity?
-  intervals <- data.frame(intervals=type.convert(unlist(rr_list), na.strings = "NA"))
+  intervals <- data.frame(intervals=type.convert(unlist(rr_list), na.strings = "NA",as.is=TRUE))
   hr1 <- data.frame(heart_rate=rep(ECGd$heartrate, times=n_times))
   hrt1 <- data.frame(time=as.numeric(rep(ECGd$time_ms, times=n_times))) #stored as integer64 internally? Just make it numeric
 
@@ -312,6 +312,10 @@ if (!nosplit){
 
 # get epochs around feedback +/- 500ms
 ecg_epochs_around_feedback <- function(ECG_data,fbt,pre=1000,post=10000,sample_rate=100){
+  
+  #library(parallel)
+  #library(foreach)
+  
   step <- 1000/sample_rate
   pre <- round(pre/step,0)
   post <- round(post/step,0)
@@ -322,7 +326,8 @@ ecg_epochs_around_feedback <- function(ECG_data,fbt,pre=1000,post=10000,sample_r
   rrt <- ECG_data$times
 
   ch1_a2f <- matrix(NA,nrow=length(fbt),ncol=pre+post+1);
-  for (i in 1:length(fbt)){ 
+  for (i in 1:100){ 
+    print(paste0(i,'/',length(fbt)))
     fbt0 <- which(rrt>fbt[i])
     if (length(fbt0)>0){
       if (fbt0[1]>1){
@@ -335,7 +340,7 @@ ecg_epochs_around_feedback <- function(ECG_data,fbt,pre=1000,post=10000,sample_r
     }
     dL <- pre+1+post
     aL <- length(ind)
-
+    
     if (length(ind)>0){
       if (ind[length(ind)] > length(rrt)){
         addpost <- ind[length(ind)] - length(rrt)
@@ -364,9 +369,9 @@ ecg_epochs_around_feedback2 <- function(ECG_data,fbt,pre=1000,post=10000,sample_
   step <- 1000/sample_rate
   pre <- round(pre/step,0)
   post <- round(post/step,0)
-  ECG_data$Date <- as.Date(ms_to_date(ECG_data$times))
+  ECG_data$Date <- as.Date(as.POSIXct(ECG_data$times/1000,origin='1970-01-01',tz='America/New_York'))
   cl<-parallel::makeForkCluster(thread)
-  fbt_sp <- split(fbt,as.Date(ms_to_date(fbt,timezone = "EST")))
+  fbt_sp <- split(fbt,as.Date(as.POSIXct(fbt/1000,origin='1970-01-01',tz='America/New_York')))
   ch1_a2f<-do.call(rbind,parallel::parLapply(cl,1:length(fbt_sp),function(y){
     system(paste0("echo Processing Day ",y," of ECG data"))
     sub_ECG <- ECG_data[which(ECG_data$Date==names(fbt_sp)[[y]]),]
@@ -391,20 +396,26 @@ ecg_epochs_around_feedback2 <- function(ECG_data,fbt,pre=1000,post=10000,sample_
 get_good_ECG <- function(blocks,ch1_a2f){
   nbl <- unique(blocks)
 
-  Ngood1 <- NULL
-  Ntotal <- NULL
+  Nmissing <- NULL
+  Ntrials <- NULL
+  Nnoisy <- NULL
   perGood <- NULL
   for (i in 1:length(nbl)){
     ix <-which(blocks==nbl[i])
     tempdata <- ch1_a2f[ix,]
-    sd0 <- rep(NA,length(ix))
-    for (j in 1:length(ix)){
-      data0 <- as.matrix(tempdata[j,])
-      sd0[j] <- sd(data0,na.rm=TRUE)
+    temp <- NA
+    for (ic in 1:nrow(tempdata)){
+      temp[ic] <- sum(is.na(tempdata[ic,]))
     }
-    Ngood1[i] <- sum(!is.na(tempdata) & sd0 < 5*median(sd0,na.rm=TRUE))
-    Ntotal[i] <- ncol(tempdata)*nrow(tempdata)
-    perGood[i] <- Ngood1[i]/Ntotal[i]
+    Nmissing[i] <- sum(temp > 0)
+    temp1 <- NULL
+    for (ir in 1:nrow(tempdata)){
+      sd0 <- sd(tempdata[ic,],na.rm=TRUE)
+      temp1[ir] <- sum(sd0 > 5*median(sd0,na.rm=TRUE))
+    }
+    Nnoisy[i] <- sum(temp1)
+    Ntrials[i] <- length(ix)
+    perGood[i] <- (Ntrials[i]-Nnoisy[i]-Nmissing[i])/Ntrials[i]
   }
   Ngood_df <- dplyr::tibble(per_Good=perGood,block=nbl)
   return(Ngood_df)

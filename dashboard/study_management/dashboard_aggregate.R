@@ -761,14 +761,14 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
     eeg_ov$worst_allCh_allblocks <- min(eeg_summary[,paste("per_Ch",1:4,sep = "_")])
     eeg_ov$ID <- IDx
 
-    # EEG good 2021-11-24 AndyP
+    # EEG good 2021-11-24 AndyP, tested on 217234
     
     ###ECG
     message("Processing new ECG data for: ",IDx)
     ecg_raw <- load_ECG(ECGd = physio_concat$ecg,HRstep = HRstep,sample_rate = ecg_sample_rate)
-    ecg_fb <- ecg_epochs_around_feedback2(ECG_data = ecg_raw,fbt = fbt,
-                                         pre = ecg_pre,post = ecg_post,sample_rate = ecg_sample_rate,thread=thread)
-    # fbt1 <- as.numeric(behav_df$feedback_time)*1000
+    ecg_fb <- ecg_epochs_around_feedback(ECG_data = ecg_raw,fbt = fbt,
+                                         pre = ecg_pre,post = ecg_post,sample_rate = ecg_sample_rate)
+    # fbt1 <- fbt
     # fbt2 <- NULL 
     # rn <- rownames(ecg_fb)
     # iC <- 1 
@@ -780,12 +780,14 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
     # }
     # ecg_fb1 <- ecg_epochs_around_feedback(ECG_data = ecg_raw,fbt = fbt2,pre = ecg_pre,post = ecg_post,sample_rate = ecg_sample_rate)
     ecg_summary <- get_good_ECG(blocks = block,ch1_a2f = ecg_fb)
-    ecg_summary$session_number<-sess_map$session_number[match(ecg_summary$block,sess_map$block)]
+    #ecg_summary$session_number<-sess_map$session_number[match(ecg_summary$block,sess_map$block)]
     ecg_summary$ID <- IDx
-    ecg_summary <- ecg_summary[order(names(ecg_summary))]
+    #ecg_summary <- ecg_summary[order(names(ecg_summary))]
     ecg_ov <- aggregate(per_Good ~ ID,data = ecg_summary,FUN = mean,na.rm=T)
     ecg_ov$worst_allblocks <- min(ecg_summary$per_Good)
-
+    
+    # ECG good 2021-11-24 AndyP, tested on 217234
+    
     output <- list(new_data=TRUE,ID=IDx,lite=F,
                    eeg_proc = eeg_raw,eeg_fb = eeg_fb, eeg_summary = eeg_summary, eeg_ov = eeg_ov, eeg_missing = eeg_missing, eeg_rawsum = eeg_rawsum,
                    ecg_proc = ecg_raw,ecg_fb = ecg_fb, ecg_summary = ecg_summary, ecg_ov = ecg_ov)
