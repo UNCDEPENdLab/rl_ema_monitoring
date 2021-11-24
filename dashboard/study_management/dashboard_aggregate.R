@@ -690,17 +690,6 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
       }
       return(output)
     }
-
-    #Get the matching behavioral data
-    behav_df <- output$proc_data[[IDx]]$raw_data$trials
-    behav_df <- behav_df[which(!is.na(behav_df$stim_time)),]
-    if(is.null(behav_df$session_number)) {
-      behav_df$session_number <- NA
-    }
-    fbt <- behav_df$feedback_time
-    fbt <- fbt[behav_df$block < 1000]
-    sess_map<-unique(behav_df[c("block","session_number")])
-    fbt <- as.numeric(fbt)*1000
     
     ##### Quickly grabbing .db schedule file for physio, uncoupling physio from schedule file processing
     ##### 2021-11-22 AndyP 
@@ -714,7 +703,22 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
       if (length(which(is.na(trials$choice)))!=0){
         trials=trials[-c(which(is.na(trials$choice))),]}
       fbt <- trials$feedback_time
+      block <- trials$block
+      fbt <- fbt[block < 1000]
+      block <- block[block < 1000]
     } else {
+      #Get the matching behavioral data
+      behav_df <- output$proc_data[[IDx]]$raw_data$trials
+      behav_df <- behav_df[which(!is.na(behav_df$stim_time)),]
+      if(is.null(behav_df$session_number)) {
+        behav_df$session_number <- NA
+      }
+      fbt <- behav_df$feedback_time
+      fbt <- fbt[behav_df$block < 1000]
+      sess_map<-unique(behav_df[c("block","session_number")])
+      fbt <- as.numeric(fbt)*1000
+      block <- behav_df$block
+      block <- block[block < 1000]
       warning('Zero or multiple schedule .db files found for subject',IDx, 'reverting to processed schedule file')
     }
     
@@ -726,27 +730,44 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
     eeg_fb <- eeg_epochs_around_feedback(EEG_data = eeg_raw,
                                            pre = eeg_pre,post = eeg_post,sample_rate = eeg_sample_rate,
                                            fbt = fbt)
-    eeg_rawsum <- get_good_EEG(blocks=behav_df$block,a2f=eeg_fb,sd_times=sd_times)
-    eeg_summary <- eeg_rawsum[1:4] / eeg_rawsum$ntrial
+    eeg_rawsum <- get_good_EEG(blocks=block,a2f=eeg_fb,sd_times=sd_times)
+    eeg_summary <- eeg_rawsum[1:4] / eeg_rawsum$Ntotal
     names(eeg_summary) <- paste("per_Ch",1:4,sep = "_")
     eeg_summary$block <- eeg_rawsum$nbl
     eeg_summary$per_worst <- apply(eeg_summary[1:4],1,min,na.rm=T)
-    eeg_summary$session_number<-sess_map$session_number[match(eeg_summary$block,sess_map$block)]
+    #eeg_summary$session_number<-sess_map$session_number[match(eeg_summary$block,sess_map$block)]
     eeg_summary$ID <- IDx
-    eeg_summary <- eeg_summary[order(names(eeg_summary))]
+    #eeg_summary <- eeg_summary[order(names(eeg_summary))]
     eeg_ov <- data.frame(t(apply(eeg_summary[paste("per_Ch",1:4,sep = "_")],2,mean,na.rm=T)))
     eeg_ov$avg_allCh <- apply(eeg_ov,1,mean,na.rm=T)
     eeg_ov$worst_allCh_allblocks <- min(eeg_summary[,paste("per_Ch",1:4,sep = "_")])
     eeg_ov$ID <- IDx
 
+    # EEG good 2021-11-24 AndyP
+    
     ###ECG
     message("Processing new ECG data for: ",IDx)
     ecg_raw <- load_ECG(ECGd = physio_concat$ecg,HRstep = HRstep,sample_rate = ecg_sample_rate)
     ecg_fb <- ecg_epochs_around_feedback2(ECG_data = ecg_raw,fbt = fbt,
                                          pre = ecg_pre,post = ecg_post,sample_rate = ecg_sample_rate,thread=thread)
+<<<<<<< HEAD
     #ecg_fb <- ecg_epochs_around_feedback(ECG_data = ecg_raw,fbt = as.numeric(behav_df$feedback_time)*1000,
     #                                      pre = ecg_pre,post = ecg_post,sample_rate = ecg_sample_rate)
     ecg_summary <- get_good_ECG(blocks = behav_df$block,ch1_a2f = ecg_fb)
+=======
+    # fbt1 <- as.numeric(behav_df$feedback_time)*1000
+    # fbt2 <- NULL 
+    # rn <- rownames(ecg_fb)
+    # iC <- 1 
+    # for (iF in 1:length(fbt1)){
+    #   if (!any(rn==fbt1[iF])){
+    #     fbt2[iC] <- fbt1[iF]
+    #     iC<-iC+1
+    #   }
+    # }
+    # ecg_fb1 <- ecg_epochs_around_feedback(ECG_data = ecg_raw,fbt = fbt2,pre = ecg_pre,post = ecg_post,sample_rate = ecg_sample_rate)
+    ecg_summary <- get_good_ECG(blocks = block,ch1_a2f = ecg_fb)
+>>>>>>> 3d31c6384f019ba6fc92e2bcb9ed6e3ad246043a
     ecg_summary$session_number<-sess_map$session_number[match(ecg_summary$block,sess_map$block)]
     ecg_summary$ID <- IDx
     ecg_summary <- ecg_summary[order(names(ecg_summary))]
