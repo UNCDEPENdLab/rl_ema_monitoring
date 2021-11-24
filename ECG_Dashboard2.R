@@ -326,7 +326,7 @@ ecg_epochs_around_feedback <- function(ECG_data,fbt,pre=1000,post=10000,sample_r
   rrt <- ECG_data$times
 
   ch1_a2f <- matrix(NA,nrow=length(fbt),ncol=pre+post+1);
-  for (i in 1:100){ 
+  for (i in 1:length(fbt)){ 
     print(paste0(i,'/',length(fbt)))
     fbt0 <- which(rrt>fbt[i])
     if (length(fbt0)>0){
