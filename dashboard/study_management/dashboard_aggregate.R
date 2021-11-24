@@ -750,11 +750,9 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
     ecg_raw <- load_ECG(ECGd = physio_concat$ecg,HRstep = HRstep,sample_rate = ecg_sample_rate)
     ecg_fb <- ecg_epochs_around_feedback2(ECG_data = ecg_raw,fbt = fbt,
                                          pre = ecg_pre,post = ecg_post,sample_rate = ecg_sample_rate,thread=thread)
-<<<<<<< HEAD
     #ecg_fb <- ecg_epochs_around_feedback(ECG_data = ecg_raw,fbt = as.numeric(behav_df$feedback_time)*1000,
     #                                      pre = ecg_pre,post = ecg_post,sample_rate = ecg_sample_rate)
-    ecg_summary <- get_good_ECG(blocks = behav_df$block,ch1_a2f = ecg_fb)
-=======
+
     # fbt1 <- as.numeric(behav_df$feedback_time)*1000
     # fbt2 <- NULL 
     # rn <- rownames(ecg_fb)
@@ -767,7 +765,6 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
     # }
     # ecg_fb1 <- ecg_epochs_around_feedback(ECG_data = ecg_raw,fbt = fbt2,pre = ecg_pre,post = ecg_post,sample_rate = ecg_sample_rate)
     ecg_summary <- get_good_ECG(blocks = block,ch1_a2f = ecg_fb)
->>>>>>> 3d31c6384f019ba6fc92e2bcb9ed6e3ad246043a
     ecg_summary$session_number<-sess_map$session_number[match(ecg_summary$block,sess_map$block)]
     ecg_summary$ID <- IDx
     ecg_summary <- ecg_summary[order(names(ecg_summary))]
