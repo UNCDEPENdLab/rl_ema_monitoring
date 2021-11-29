@@ -355,7 +355,7 @@ ecg_epochs_around_feedback <- function(ECG_data,fbt,pre=1000,post=10000,sample_r
     Ta <- Ta + aL
 
     if (aL > 0 & !is.null(addpost)){
-      ch1_a2f[i,1:length(ind)] <- c(Ch1[ind],1:addpost) # 2021-05-24 AndyP
+      ch1_a2f[i,1:length(ind)] <- c(Ch1[ind],addpost) # 2021-05-24 AndyP, 2021-11-29 AndyP, there is still a bug in this condition, happens when there are NAs in the last few blocks
     } else if (aL > 0 & is.null(addpost)){
       ch1_a2f[i,1:length(ind)] <- c(Ch1[ind])
     }

@@ -27,33 +27,41 @@ path_to_schedule <- paste0(dataPath, '/Subjects/', subj, '/schedule')
 sched_file <- list.files(path=path_to_schedule,pattern=paste0(subj,'_schedule.db'))
 if (length(sched_file)==1){
   sched_data_for_physio = dbConnect(SQLite(), paste0(path_to_schedule, '/', sched_file))
-  trials = dbGetQuery(sched_data_for_physio, "SELECT * FROM trials")
+  data = dbGetQuery(sched_data_for_physio, "SELECT * FROM trials")
   ## remove blocks that have not been played yet
-  fbt <- trials$feedback_time
-  blocks <- trials$block
-  choice <- trials$choice
-  fbt <- fbt[blocks < 1000]
-  blocks <- blocks[blocks < 1000]
-  choice <- choice[blocks < 1000]
-  notplayed <- which(is.na(choice))
-  if (length(notplayed)>0){
-    trials <- trials[-c(notplayed)]
-    blocks <- blocks[-c(notplayed)]
+  if (length(which(is.na(data$choice)))!=0){
+    data=data[-c(which(is.na(data$choice))),]
   }
+  fbt <- data$feedback_time
+  blocks <- data$block
+  trials <- data$trial
+  choice <- data$choice
+  fbt <- fbt[blocks < 1000]
+  trials <- trials[blocks < 1000]
+  choice <- choice[blocks < 1000]
+  blocks <- blocks[blocks < 1000]
+  trials <- trials[!is.na(fbt)]
+  choice <- choice[!is.na(fbt)]
+  blocks <- blocks[!is.na(fbt)]
+  fbt <- fbt[!is.na(fbt)]
+  fbt <- fbt[blocks <= max(num_block)]
+  trials <- trials[blocks <=max(num_block)]
+  choice <- choice[blocks <=max(num_block)]
+  blocks <- blocks[blocks <=max(num_block)]
 } else {
   warning('Zero or multiple schedule .db files found for subject',IDx, 'reverting to processed schedule file, be warned this has caused errors in the past')
-  trials <- output$proc_data[[subj]]$raw_data$trials$trial
+  data <- output$proc_data[[subj]]$raw_data$trials$trial
   #trials <- trials[-c(which(is.na(output$proc_data[[subj]]$raw_data$trials$choice)))]
   blocks <- output$proc_data[[subj]]$raw_data$trials$block
   #blocks <- blocks[-c(which(is.na(output$proc_data[[subj]]$raw_data$trials$choice)))]
   # remove trials that have not been played
   notplayed <- which(is.na(output$proc_data[[subj]]$raw_data$trials$choice))
   if (length(notplayed)>0){
-    trials <- trials[-c(notplayed)]
+    trials <- data[-c(notplayed)]
     blocks <- blocks[-c(notplayed)]
   }
   fbt <- fbt[blocks < 1000]
-  trials <- trials[blocks < 1000]
+  trials <- data[blocks < 1000]
   blocks <- blocks[blocks < 1000]
 }
 
