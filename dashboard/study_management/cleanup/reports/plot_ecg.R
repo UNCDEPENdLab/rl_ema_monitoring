@@ -2,7 +2,24 @@
 # subj -> subj  Shane -> AndyP
 # 2021-09-10 AndyP we are now plotting sliding blocks of step 5
 sliding_window = FALSE
-num_block <- output_physio$ecg$summary[[subj]]$block # get the total number of blocks played
+
+# 2021-11-30 AndyP using individual subject's processed physio
+path_to_physio <- paste0(dataPath,'/Subjects/',subj,'/physio')
+physio_raw <- list.files(path_to_physio,pattern=paste0(subj,'_physio_proc.rdata'))
+if (length(physio_raw)==1){
+  all_output <- output # preserve global variable output (which is the processed schedule file) into a temporary variable
+  load(paste0(path_to_physio,'/',physio_raw)) # loads a variable called output into global environment
+  num_block <- output$eeg_summary$block
+  df <- output$ecg_fb
+  output <- all_output # revert output to processed schedule file
+} else {
+  warning('could not find physio_proc.rdata file for subject',subj,'reverting to output_physio.rdata file')
+  num_block <- output_physio$eeg$summary[[subj]]$block
+  # preliminary calcs
+  df <- output_physio$ecg$fb
+  df <- df[[subj]]
+}
+
 if (sliding_window){
   if (length(num_block)>=5){
     loopseq <- seq(from=5,to=length(num_block),by=1)
@@ -12,10 +29,6 @@ if (sliding_window){
 } else {
   loopseq <- 1:length(num_block)
 }
-
-# plot for individual subject iS out of a cached physio file
-df <- output_physio$ecg$fb
-df <- data.frame(df[[subj]])
 
 a2f <- round(ncol(df)/6) # default times are -1000 to 10000 ms for ECG, just getting feedback time = 0
 #y <- rep(seq(1,nrow(df),length.out=nrow(df)),1)
