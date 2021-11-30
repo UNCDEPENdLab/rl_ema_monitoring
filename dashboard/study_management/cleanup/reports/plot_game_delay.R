@@ -34,8 +34,8 @@ try({
   html_name = "game_delay_plot.html"
   fig_name = "game_delay_plot.png"
   folder_name = "game_delay_plot_files"
-  fig_games_by_session <- plot_ly(x = games_delay_am$days, y = games_delay_am$delay, type = 'bar', name = 'AM Session') %>% 
-    add_trace(y = games_delay_pm$delay, name = 'PM Session') %>% 
+  fig_games_by_session <- plotly::plot_ly(x = games_delay_am$days, y = games_delay_am$delay, type = 'bar', name = 'AM Session') %>% 
+    plotly::add_trace(y = games_delay_pm$delay, name = 'PM Session') %>% 
     plotly::layout(title = "Minutes Late to Scheduled Game Sessions", 
            xaxis = list(title="Game Session Day", tick0=0, dtick=1),          
            yaxis = list(title="Minutes Late"))
