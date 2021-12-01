@@ -105,7 +105,7 @@ timings2samples <- function(timings,HRstep){
 }
 
 
-load_ECG <- function(ECGd = NULL, HRstep = 10, sample_rate = 100) {
+load_ECG <- function(ECGd = NULL, HRstep = 10, sample_rate = 100) { # ,fbt,pre=1000,post=10000
   #Notes on expected data format for rr_intervals
   # "" means that no RR was recorded (often when contact=='false') -> converted to 0
   # [] indicates a blank RR -> converted to NA
@@ -220,9 +220,26 @@ load_ECG <- function(ECGd = NULL, HRstep = 10, sample_rate = 100) {
     }
   }
 
+  # # parse HRsplit into [pre-1 post+1] around feedback times 
+  # for (f in 1:length(fbt)){
+  #   first_split = FALSE
+  #   h0 <- 1
+  #   for (h in h0:nrow(HRsplit)){
+  #     if (!is.null(HRsplit[[h,1]])){
+  #       test_row <- max(as.matrix((HRsplit[[h,1]])),na.rm=TRUE)
+  #       if (test_row>fbt[f] & first_split==FALSE){
+  #         message('found fbt to align to',fbt[f],' row',h)
+  #         first_split = TRUE
+  #         h0 <- h
+  #       }
+  #     }
+  #   }
+  # }
+  
+  
+  
 
-
-  # merge sections
+# merge sections
 if (!nosplit){
   wiggleroom <- NULL
   beattimes <- matrix(list(),nrow(HRsplit),1)
@@ -327,7 +344,7 @@ ecg_epochs_around_feedback <- function(ECG_data,fbt,pre=1000,post=10000,sample_r
 
   ch1_a2f <- matrix(NA,nrow=length(fbt),ncol=pre+post+1);
   for (i in 1:length(fbt)){ 
-    print(paste0(i,'/',length(fbt)))
+    #print(paste0(i,'/',length(fbt)))
     fbt0 <- which(rrt>fbt[i])
     if (length(fbt0)>0){
       if (fbt0[1]>1){
@@ -355,7 +372,12 @@ ecg_epochs_around_feedback <- function(ECG_data,fbt,pre=1000,post=10000,sample_r
     Ta <- Ta + aL
 
     if (aL > 0 & !is.null(addpost)){
-      ch1_a2f[i,1:length(ind)] <- c(Ch1[ind],addpost) # 2021-05-24 AndyP, 2021-11-29 AndyP, there is still a bug in this condition, happens when there are NAs in the last few blocks
+      tryCatch({
+        ch1_a2f[i,1:length(ind)] <- c(Ch1[ind],addpost) # 2021-05-24 AndyP, 2021-11-29 AndyP, there is still a bug in this condition, happens when there are NAs in the last few blocks
+      },
+      error=function(e){
+        message('just returning NAs for this trial, if you see this frequently, contact AndyP')
+      })
     } else if (aL > 0 & is.null(addpost)){
       ch1_a2f[i,1:length(ind)] <- c(Ch1[ind])
     }
