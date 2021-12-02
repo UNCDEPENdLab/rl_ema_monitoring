@@ -688,7 +688,7 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
       if (!skip){
         par_cl <- parallel::makeCluster(spec = thread,type = "FORK")
         message("Loading new physio data for: ",IDx)
-        physio_concat <- load_physio_single(allpaths_sub = physio_files,old_data=physio_concat,cl = par_cl) # overwrite physio_concat, re-save
+        physio_concat <- load_physio_single(allpaths_sub = physio_files_diff,old_data=physio_concat,cl = par_cl) # overwrite physio_concat, re-save
         parallel::stopCluster(par_cl)
       }
     } else {
