@@ -658,17 +658,20 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
     physio_files_new <- physio_df$file_path[physio_df$subject_id==IDx]
     physio_rawcache_file <- file.path(unique(dirname(physio_df$file_path[physio_df$subject_id==IDx])),paste(IDx,"_physio_raw.rdata",sep = ""))
     physio_proc_file <- file.path(unique(dirname(physio_df$file_path[physio_df$subject_id==IDx])),paste(IDx,"_physio_proc.rdata",sep = ""))
-
+    skip <-FALSE
     # 2021-12-02 AndyP updated to only process new data if _force_reload = FALSE
     if(!force_reload && file.exists(physio_rawcache_file)) {
       load(physio_rawcache_file)
       physio_files_diff <- physio_files_new[!physio_files_new %in% physio_files]
+      skip <- length(physio_files_diff)==0
       message("Found ",length(physio_files_diff), " new physio files for: ",IDx)
       #Load the physio data, para for muiltiple files
-      par_cl <- parallel::makeCluster(spec = thread,type = "FORK")
-      message("Loading new physio data for: ",IDx)
-      physio_concat_new <- load_physio_single(allpaths_sub = physio_files_diff,old_data=NULL,cl = par_cl)
-      parallel::stopCluster(par_cl)
+      if (!skip){  
+        par_cl <- parallel::makeCluster(spec = thread,type = "FORK")
+        message("Loading new physio data for: ",IDx)
+        physio_concat_new <- load_physio_single(allpaths_sub = physio_files_diff,old_data=NULL,cl = par_cl)
+        parallel::stopCluster(par_cl)
+      }
     } else {
       physio_concat <- NULL
       physio_files <- NULL
@@ -710,7 +713,7 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
     ##### 2021-11-22 AndyP 
     #####
     
-    if (force_reproc){ # should always be true
+    if (force_reproc && !skip){ # should always be true
       path_to_schedule <- paste0(dataPath, '/Subjects/', IDx, '/schedule')
       sched_file <- list.files(path=path_to_schedule,pattern=paste0(IDx,'_schedule.db'))
       if (length(sched_file)==1){
