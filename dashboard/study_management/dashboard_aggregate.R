@@ -685,10 +685,12 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
     # save all the data no matter what
     #Load the physio data, para for muiltiple files
     if (!force_reload){
-      par_cl <- parallel::makeCluster(spec = thread,type = "FORK")
-      message("Loading new physio data for: ",IDx)
-      physio_concat <- load_physio_single(allpaths_sub = physio_files,old_data=physio_concat,cl = par_cl) # overwrite physio_concat, re-save
-      parallel::stopCluster(par_cl)
+      if (!skip){
+        par_cl <- parallel::makeCluster(spec = thread,type = "FORK")
+        message("Loading new physio data for: ",IDx)
+        physio_concat <- load_physio_single(allpaths_sub = physio_files,old_data=physio_concat,cl = par_cl) # overwrite physio_concat, re-save
+        parallel::stopCluster(par_cl)
+      if (!skip){
     } else {
       physio_concat <- physio_concat_new
     }
