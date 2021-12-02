@@ -659,27 +659,42 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
     physio_rawcache_file <- file.path(unique(dirname(physio_df$file_path[physio_df$subject_id==IDx])),paste(IDx,"_physio_raw.rdata",sep = ""))
     physio_proc_file <- file.path(unique(dirname(physio_df$file_path[physio_df$subject_id==IDx])),paste(IDx,"_physio_proc.rdata",sep = ""))
 
+    # 2021-12-02 AndyP updated to only process new data if _force_reload = FALSE
     if(!force_reload && file.exists(physio_rawcache_file)) {
       load(physio_rawcache_file)
       physio_files_diff <- physio_files_new[!physio_files_new %in% physio_files]
       message("Found ",length(physio_files_diff), " new physio files for: ",IDx)
-    } else {
-      physio_files_diff <- physio_files_new
-      physio_concat <- NULL
-      physio_files <- NULL
-    }
-    if(length(physio_files_diff)>0) {
       #Load the physio data, para for muiltiple files
       par_cl <- parallel::makeCluster(spec = thread,type = "FORK")
       message("Loading new physio data for: ",IDx)
-      physio_concat <- load_physio_single(allpaths_sub = physio_files_diff,old_data=physio_concat,cl = par_cl)
+      physio_concat_new <- load_physio_single(allpaths_sub = physio_files_diff,old_data=NULL,cl = par_cl)
       parallel::stopCluster(par_cl)
-      physio_files<-unique(c(physio_files,physio_files_new))
-      save(physio_files,physio_concat,file = physio_rawcache_file)
+    } else {
+      physio_concat <- NULL
+      physio_files <- NULL
+      message("force_reload activated, Found ",length(physio_files_new), "total physio files for: ",IDx)
+      #Load the physio data, para for muiltiple files
+      par_cl <- parallel::makeCluster(spec = thread,type = "FORK")
+      message("Loading new physio data for: ",IDx)
+      physio_concat_new <- load_physio_single(allpaths_sub = physio_files_diff,old_data=physio_concat,cl = par_cl)
+      parallel::stopCluster(par_cl)
     }
-
+    # save all the data no matter what
+    #Load the physio data, para for muiltiple files
+    if (!force_reload){
+      par_cl <- parallel::makeCluster(spec = thread,type = "FORK")
+      message("Loading new physio data for: ",IDx)
+      physio_concat <- load_physio_single(allpaths_sub = physio_files,old_data=physio_concat,cl = par_cl) # overwrite physio_concat, re-save
+      parallel::stopCluster(par_cl)
+    } else {
+      physio_concat <- physio_concat_new
+    }
+    physio_files<-unique(c(physio_files,physio_files_new))
+    save(physio_files,physio_concat,file = physio_rawcache_file)
+    
     if(!force_reproc && length(physio_files_diff) < 1 && file.exists(physio_proc_file)) {
       message("Loading processed physio data for: ",IDx)
+      warning('This WILL give bugs in the cleanup layer AndyP 2021-12-02')
       load(physio_proc_file)
       output$new_data <- FALSE
       if(save_lite) {
@@ -694,87 +709,103 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
     ##### Quickly grabbing .db schedule file for physio, uncoupling physio from schedule file processing
     ##### 2021-11-22 AndyP 
     #####
-    path_to_schedule <- paste0(dataPath, '/Subjects/', IDx, '/schedule')
-    sched_file <- list.files(path=path_to_schedule,pattern=paste0(IDx,'_schedule.db'))
-    if (length(sched_file)==1){
-      sched_data_for_physio = dbConnect(SQLite(), paste0(path_to_schedule, '/', sched_file))
-      trials = dbGetQuery(sched_data_for_physio, "SELECT * FROM trials")
-      ## remove blocks that have not been played yet
-      if (length(which(is.na(trials$choice)))!=0){
-        trials=trials[-c(which(is.na(trials$choice))),]}
-      fbt <- trials$feedback_time
-      block <- trials$block
-      fbt <- fbt[block < 1000]
-      block <- block[block < 1000]
-    } else {
-      #Get the matching behavioral data
-      behav_df <- output$proc_data[[IDx]]$raw_data$trials
-      behav_df <- behav_df[which(!is.na(behav_df$stim_time)),]
-      if(is.null(behav_df$session_number)) {
-        behav_df$session_number <- NA
-      }
-      fbt <- behav_df$feedback_time
-      fbt <- fbt[behav_df$block < 1000]
-      sess_map<-unique(behav_df[c("block","session_number")])
-      fbt <- as.numeric(fbt)*1000
-      block <- behav_df$block
-      block <- block[block < 1000]
-      warning('Zero or multiple schedule .db files found for subject',IDx, 'reverting to processed schedule file')
-    }
     
-    ###EEG
-    message("Processing new EEG data for: ",IDx)
-    eeg_list <- load_EEG(EEGd = physio_concat$eeg,sample_rate = eeg_sample_rate,sd_times = sd_times)
-    eeg_raw <- eeg_list[[1]]
-    eeg_missing <- eeg_list[[2]]
-    eeg_fb <- eeg_epochs_around_feedback(EEG_data = eeg_raw,
+    if (force_reproc){ # should always be true
+      path_to_schedule <- paste0(dataPath, '/Subjects/', IDx, '/schedule')
+      sched_file <- list.files(path=path_to_schedule,pattern=paste0(IDx,'_schedule.db'))
+      if (length(sched_file)==1){
+        sched_data_for_physio = dbConnect(SQLite(), paste0(path_to_schedule, '/', sched_file))
+        trials = dbGetQuery(sched_data_for_physio, "SELECT * FROM trials")
+        new_block <- trials$block
+        new_block <- new_block[new_block<1000]
+        # get old processed schedule file to reproc only new fbt
+        proc_sched_file <- list.files(path=path_to_schedule,pattern=paste0(IDx,'_schedule_proc.rdata'))
+        if (!length(proc_sched_file)>0){
+        new_sched <- output
+        load(paste0(path_to_schedule,'/',proc_sched_file)) # this will load a new output
+        old_sched <- output
+        output <- new_sched
+        rm(new_sched)
+        old_block <- old_sched$raw_data$trials$block
+        old_block <- old_block[old_block<1000]
+        old_block <- max(old_block)
+        trials=trials[-c(which(new_block<=old_block)),]
+        }
+        ## remove blocks that have not been played yet
+        if (length(which(is.na(trials$choice)))!=0){
+          trials=trials[-c(which(is.na(trials$choice))),]}
+        fbt <- trials$feedback_time
+        block <- trials$block
+        fbt <- fbt[block < 1000]
+        block <- block[block < 1000]
+      } else {
+        #Get the matching behavioral data
+        behav_df <- output$proc_data[[IDx]]$raw_data$trials
+        behav_df <- behav_df[which(!is.na(behav_df$stim_time)),]
+        if(is.null(behav_df$session_number)) {
+          behav_df$session_number <- NA
+        }
+        fbt <- behav_df$feedback_time
+        fbt <- fbt[behav_df$block < 1000]
+        sess_map<-unique(behav_df[c("block","session_number")])
+        fbt <- as.numeric(fbt)*1000
+        block <- behav_df$block
+        block <- block[block < 1000]
+        warning('Zero or multiple schedule .db files found for subject',IDx, 'reverting to processed schedule file')
+      }
+      
+      ###EEG
+      message("Processing new EEG data for: ",IDx)
+      eeg_list <- load_EEG(EEGd = physio_concat_new$eeg,sample_rate = eeg_sample_rate,sd_times = sd_times) # updated AndyP 2021-12-02
+      eeg_raw <- eeg_list[[1]]
+      eeg_missing <- eeg_list[[2]]
+      eeg_fb <- eeg_epochs_around_feedback(EEG_data = eeg_raw,
                                            pre = eeg_pre,post = eeg_post,sample_rate = eeg_sample_rate,
                                            fbt = fbt)
-    eeg_rawsum <- get_good_EEG(blocks=block,a2f=eeg_fb,sd_times=sd_times)
-    eeg_summary <- eeg_rawsum[1:4] / eeg_rawsum$Ntotal
-    names(eeg_summary) <- paste("per_Ch",1:4,sep = "_")
-    eeg_summary$block <- eeg_rawsum$nbl
-    eeg_summary$per_worst <- apply(eeg_summary[1:4],1,min,na.rm=T)
-    #eeg_summary$session_number<-sess_map$session_number[match(eeg_summary$block,sess_map$block)]
-    eeg_summary$ID <- IDx
-    #eeg_summary <- eeg_summary[order(names(eeg_summary))]
-    eeg_ov <- data.frame(t(apply(eeg_summary[paste("per_Ch",1:4,sep = "_")],2,mean,na.rm=T)))
-    eeg_ov$avg_allCh <- apply(eeg_ov,1,mean,na.rm=T)
-    eeg_ov$worst_allCh_allblocks <- min(eeg_summary[,paste("per_Ch",1:4,sep = "_")])
-    eeg_ov$ID <- IDx
-
-    # EEG good 2021-11-24 AndyP, tested on 217234
-    
-    ###ECG
-    message("Processing new ECG data for: ",IDx)
-    ecg_raw <- load_ECG(ECGd = physio_concat$ecg,HRstep = HRstep,sample_rate = ecg_sample_rate)
-    ecg_fb <- ecg_epochs_around_feedback(ECG_data = ecg_raw,fbt = fbt,
-                                         pre = ecg_pre,post = ecg_post,sample_rate = ecg_sample_rate)
-    # fbt1 <- fbt
-    # fbt2 <- NULL 
-    # rn <- rownames(ecg_fb)
-    # iC <- 1 
-    # for (iF in 1:length(fbt1)){
-    #   if (!any(rn==fbt1[iF])){
-    #     fbt2[iC] <- fbt1[iF]
-    #     iC<-iC+1
-    #   }
-    # }
-    # ecg_fb1 <- ecg_epochs_around_feedback(ECG_data = ecg_raw,fbt = fbt2,pre = ecg_pre,post = ecg_post,sample_rate = ecg_sample_rate)
-    ecg_summary <- get_good_ECG(blocks = block,ch1_a2f = ecg_fb)
-    #ecg_summary$session_number<-sess_map$session_number[match(ecg_summary$block,sess_map$block)]
-    ecg_summary$ID <- IDx
-    #ecg_summary <- ecg_summary[order(names(ecg_summary))]
-    ecg_ov <- aggregate(per_Good ~ ID,data = ecg_summary,FUN = mean,na.rm=T)
-    ecg_ov$worst_allblocks <- min(ecg_summary$per_Good)
-    
-    # ECG good 2021-11-24 AndyP, tested on 217234
-    
-    output <- list(new_data=TRUE,ID=IDx,lite=F,
-                   eeg_proc = eeg_raw,eeg_fb = eeg_fb, eeg_summary = eeg_summary, eeg_ov = eeg_ov, eeg_missing = eeg_missing, eeg_rawsum = eeg_rawsum,
-                   ecg_proc = ecg_raw,ecg_fb = ecg_fb, ecg_summary = ecg_summary, ecg_ov = ecg_ov)
-    save(output,file = physio_proc_file)
-
+      eeg_rawsum <- get_good_EEG(blocks=block,a2f=eeg_fb,sd_times=sd_times)
+      eeg_summary <- eeg_rawsum[1:4] / eeg_rawsum$Ntotal
+      names(eeg_summary) <- paste("per_Ch",1:4,sep = "_")
+      eeg_summary$block <- eeg_rawsum$nbl
+      eeg_summary$per_worst <- apply(eeg_summary[1:4],1,min,na.rm=T)
+      #eeg_summary$session_number<-sess_map$session_number[match(eeg_summary$block,sess_map$block)]
+      eeg_summary$ID <- IDx
+      #eeg_summary <- eeg_summary[order(names(eeg_summary))]
+      eeg_ov <- data.frame(t(apply(eeg_summary[paste("per_Ch",1:4,sep = "_")],2,mean,na.rm=T)))
+      eeg_ov$avg_allCh <- apply(eeg_ov,1,mean,na.rm=T)
+      eeg_ov$worst_allCh_allblocks <- min(eeg_summary[,paste("per_Ch",1:4,sep = "_")])
+      eeg_ov$ID <- IDx
+      
+      # EEG good 2021-11-24 AndyP, tested on 217234
+      
+      ###ECG
+      message("Processing new ECG data for: ",IDx)
+      ecg_raw <- load_ECG(ECGd = physio_concat_new$ecg,HRstep = HRstep,sample_rate = ecg_sample_rate)
+      ecg_fb <- ecg_epochs_around_feedback(ECG_data = ecg_raw,fbt = fbt,
+                                           pre = ecg_pre,post = ecg_post,sample_rate = ecg_sample_rate)
+      # fbt1 <- fbt
+      # fbt2 <- NULL 
+      # rn <- rownames(ecg_fb)
+      # iC <- 1 
+      # for (iF in 1:length(fbt1)){
+      #   if (!any(rn==fbt1[iF])){
+      #     fbt2[iC] <- fbt1[iF]
+      #     iC<-iC+1
+      #   }
+      # }
+      # ecg_fb1 <- ecg_epochs_around_feedback(ECG_data = ecg_raw,fbt = fbt2,pre = ecg_pre,post = ecg_post,sample_rate = ecg_sample_rate)
+      ecg_summary <- get_good_ECG(blocks = block,ch1_a2f = ecg_fb)
+      #ecg_summary$session_number<-sess_map$session_number[match(ecg_summary$block,sess_map$block)]
+      ecg_summary$ID <- IDx
+      #ecg_summary <- ecg_summary[order(names(ecg_summary))]
+      ecg_ov <- aggregate(per_Good ~ ID,data = ecg_summary,FUN = mean,na.rm=T)
+      ecg_ov$worst_allblocks <- min(ecg_summary$per_Good)
+      # ECG good 2021-11-24 AndyP, tested on 217234
+      
+      output <- list(new_data=TRUE,ID=IDx,lite=F,
+                     eeg_proc = eeg_raw,eeg_fb = eeg_fb, eeg_summary = eeg_summary, eeg_ov = eeg_ov, eeg_missing = eeg_missing, eeg_rawsum = eeg_rawsum,
+                     ecg_proc = ecg_raw,ecg_fb = ecg_fb, ecg_summary = ecg_summary, ecg_ov = ecg_ov)
+      save(output,file = physio_proc_file)
+    }
     if(save_lite) {
       output <- list(new_data=TRUE,ID=IDx,lite=T,
                      eeg_fb = eeg_fb,eeg_summary = eeg_summary, eeg_ov = eeg_ov,eeg_missing = eeg_missing, eeg_rawsum = eeg_rawsum,
