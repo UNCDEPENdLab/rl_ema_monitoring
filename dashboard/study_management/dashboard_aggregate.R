@@ -844,10 +844,13 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
     output_ls$sample_summary <- do.call(rbind, lapply(exp_out,`[[`,paste(ay,"ov",sep = "_")))
     return(output_ls)
   })
-  #names(output_fin) <- c("eeg","ecg")
-  #browser()
-  #output_fin$newdata_IDs <- IDlist[sapply(exp_out,`[[`,"new_data")]
-  output_fin <- NULL # 2021-12-03 AndyP patch
+  names(output_fin) <- c("eeg","ecg")
+  tryCatch({
+  output_fin$newdata_IDs <- IDlist[sapply(exp_out,`[[`,"new_data")]
+  },
+  error=function(e){
+    message('no new data, not sure if this is important to fix rn AndyP 2021-12-03')
+  })
   return(output_fin)
 }
 
