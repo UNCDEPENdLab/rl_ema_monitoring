@@ -698,9 +698,8 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
     physio_files<-unique(c(physio_files,physio_files_new))
     save(physio_files,physio_concat,file = physio_rawcache_file)
     
-    if(!force_reproc && length(physio_files_diff) < 1 && file.exists(physio_proc_file)) {
+    if(!force_reproc && length(physio_files_diff)==0 && file.exists(physio_proc_file)) {
       message("Loading processed physio data for: ",IDx)
-      warning('This WILL give bugs in the cleanup layer AndyP 2021-12-02')
       load(physio_proc_file)
       output$new_data <- FALSE
       if(save_lite) {
@@ -715,8 +714,7 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
     ##### Quickly grabbing .db schedule file for physio, uncoupling physio from schedule file processing
     ##### 2021-11-22 AndyP 
     #####
-    
-    if (force_reproc && !skip){ # should always be true
+    if (force_reproc && !skip){ # should generally be true
       path_to_schedule <- paste0(dataPath, '/Subjects/', IDx, '/schedule')
       sched_file <- list.files(path=path_to_schedule,pattern=paste0(IDx,'_schedule.db'))
       if (length(sched_file)==1){
@@ -781,8 +779,6 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
       eeg_ov$worst_allCh_allblocks <- min(eeg_summary[,paste("per_Ch",1:4,sep = "_")])
       eeg_ov$ID <- IDx
       
-      # EEG good 2021-11-24 AndyP, tested on 217234
-      
       ###ECG
       message("Processing new ECG data for: ",IDx)
       ecg_raw <- load_ECG(ECGd = physio_concat_new$ecg,HRstep = HRstep,sample_rate = ecg_sample_rate)
@@ -805,13 +801,51 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
       #ecg_summary <- ecg_summary[order(names(ecg_summary))]
       ecg_ov <- aggregate(per_Good ~ ID,data = ecg_summary,FUN = mean,na.rm=T)
       ecg_ov$worst_allblocks <- min(ecg_summary$per_Good)
-      # ECG good 2021-11-24 AndyP, tested on 217234
       
+      path_to_physio <- paste0(dataPath,'/Subjects/',IDx,'/physio')
+      physio_raw <- list.files(path_to_physio,pattern=paste0(IDx,'_physio_proc.rdata'))
+      if (length(physio_raw)==1 !force_reload){
+        load(paste0(path_to_physio,'/',physio_raw)) # loads a variable called output into global environment
+        # append physio to existing physio_proc.rdata
+        output$eeg_ov <- eeg_ov
+        output$eeg$proc$rrt <- rbind(output$eeg_proc$rrt,eeg_raw$rrt)
+        output$eeg$proc$Ch1 <- rbind(output$eeg$proc$Ch1,eeg_raw$Ch1)
+        output$eeg$proc$Ch2 <- rbind(output$eeg$proc$Ch2,eeg_raw$Ch2)
+        output$eeg$proc$Ch3 <- rbind(output$eeg$proc$Ch3,eeg_raw$Ch3)
+        output$eeg$proc$Ch4 <- rbind(output$eeg$proc$Ch4,eeg_raw$Ch4)
+        output$eeg$proc$g1 <- rbind(output$eeg$proc$g1,eeg_raw$g1)
+        output$eeg$proc$g2 <- rbind(output$eeg$proc$g2,eeg_raw$g2)
+        output$eeg$proc$g3 <- rbind(output$eeg$proc$g3,eeg_raw$g3)
+        output$eeg$proc$g4 <- rbind(output$eeg$proc$g4,eeg_raw$g4)
+        output$eeg_summary <- rbind(output$eeg_summary,eeg_summary)
+        output$eeg_fb$ch1 <- rbind(output$eeg_fb$ch1,eeg_fb$ch1)
+        output$eeg_fb$ch2 <- rbind(output$eeg_fb$ch2,eeg_fb$ch2)
+        output$eeg_fb$ch3 <- rbind(output$eeg_fb$ch3,eeg_fb$ch3)
+        output$eeg_fb$ch4 <- rbind(output$eeg_fb$ch4,eeg_fb$ch4)
+        output$eeg_fb$g1 <- rbind(output$eeg_fb$g1,eeg_fb$g1)
+        output$eeg_fb$g2 <- rbind(output$eeg_fb$g2,eeg_fb$g2)
+        output$eeg_fb$g3 <- rbind(output$eeg_fb$g3,eeg_fb$g3)
+        output$eeg_fb$g4 <- rbind(output$eeg_fb$g4,eeg_fb$g4)
+        output$eeg_missing <- output$eeg_missing
+        output$eeg_rawsum <- rbind(output$eeg_rawsum,eeg_rawsum)
+        output$ecg_proc <- NULL # do not save for QC
+        output$ecg_fb <- rbind(output$ecg_fb,ecg_fb)
+        output$ecg_ov <- ecg_ov
+        output$ecg_summary <- rbind(output$ecg_summary,ecg_summary)
+      }
       output <- list(new_data=TRUE,ID=IDx,lite=F,
                      eeg_proc = eeg_raw,eeg_fb = eeg_fb, eeg_summary = eeg_summary, eeg_ov = eeg_ov, eeg_missing = eeg_missing, eeg_rawsum = eeg_rawsum,
                      ecg_proc = ecg_raw,ecg_fb = ecg_fb, ecg_summary = ecg_summary, ecg_ov = ecg_ov)
       save(output,file = physio_proc_file)
+      
+    } else { # load physio_proc.rdata
+      path_to_physio <- paste0(dataPath,'/Subjects/',IDx,'/physio')
+      physio_raw <- list.files(path_to_physio,pattern=paste0(IDx,'_physio_proc.rdata'))
+      if (length(physio_raw)==1){
+        load(paste0(path_to_physio,'/',physio_raw)) # loads a variable called output into global environment
+      }
     }
+    
     if(save_lite) {
       output <- list(new_data=TRUE,ID=IDx,lite=T,
                      eeg_fb = eeg_fb,eeg_summary = eeg_summary, eeg_ov = eeg_ov,eeg_missing = eeg_missing, eeg_rawsum = eeg_rawsum,
@@ -821,10 +855,6 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
     } else {
       return(output)
     }
-
-
-
-
   })
   if(save_lite) {
     nax <- c("fb","summary", "missing", "rawsum")
