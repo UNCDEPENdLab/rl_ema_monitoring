@@ -679,7 +679,7 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
       #Load the physio data, para for muiltiple files
       par_cl <- parallel::makeCluster(spec = thread,type = "FORK")
       message("Loading new physio data for: ",IDx)
-      physio_concat_new <- load_physio_single(allpaths_sub = physio_files_diff,old_data=physio_concat,cl = par_cl)
+      physio_concat_new <- load_physio_single(allpaths_sub = physio_files_new,old_data=NULL,cl = par_cl)
       parallel::stopCluster(par_cl)
     }
     # save all the data no matter what
