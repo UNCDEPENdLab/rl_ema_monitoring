@@ -595,6 +595,7 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
       form_proc$`End questionnaire`$event_df <- NULL
       form_proc$`End questionnaire`$number_of_events <- NULL
     }
+    
     ##summary stats for how much they answered
     q_sum <- data.frame(ID = raw_single$ID,val_arr_dis_avg = mean(form_proc$`Mood Questionnaire`$v_a_distance,na.rm = T))
     e_sum <- data.frame(as.list(apply(form_proc$`Mood Questionnaire`[c("Anxious","Elated","Sad","Irritable","Energetic")],2,function(x){mean(as.numeric(x),na.rm = T)})))
@@ -660,7 +661,7 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
     physio_proc_file <- file.path(unique(dirname(physio_df$file_path[physio_df$subject_id==IDx])),paste(IDx,"_physio_proc.rdata",sep = ""))
     skip <-FALSE
     # 2021-12-02 AndyP updated to only process new data if _force_reload = FALSE
-    if(!force_reload && file.exists(physio_rawcache_file)) {
+    if(!force_reload && file.exists(physio_rawcache_file)) {  # will be false for new subject that has never been processed...AndyP
       load(physio_rawcache_file)
       physio_files_diff <- physio_files_new[!physio_files_new %in% physio_files]
       skip <- length(physio_files_diff)==0
@@ -675,7 +676,7 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
     } else {
       physio_concat <- NULL
       physio_files <- NULL
-      message("force_reload activated, Found ",length(physio_files_new), "total physio files for: ",IDx)
+      message("force_reload activated, Found ",length(physio_files_new), " total physio files for: ",IDx)
       #Load the physio data, para for muiltiple files
       par_cl <- parallel::makeCluster(spec = thread,type = "FORK")
       message("Loading new physio data for: ",IDx)
@@ -684,7 +685,7 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
     }
     # save all the data no matter what
     #Load the physio data, para for muiltiple files
-    if (!force_reload){
+    if (!force_reload && file.exists(physio_rawcache_file)){
       if (!skip){
         par_cl <- parallel::makeCluster(spec = thread,type = "FORK")
         message("Loading new physio data for: ",IDx)
@@ -696,7 +697,7 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
       physio_concat <- physio_concat_new
     }
     physio_files<-unique(c(physio_files,physio_files_new))
-    save(physio_files,physio_concat,file = physio_rawcache_file)
+    save(physio_files,physio_concat,file = paste0(dataPath,'/Subjects/',IDx,'/physio/',IDx,'_physio_raw.rdata'))
     
     if(!force_reproc && length(physio_files_diff)==0 && file.exists(physio_proc_file)) {
       message("Loading processed physio data for: ",IDx)
