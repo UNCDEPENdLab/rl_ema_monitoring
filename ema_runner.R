@@ -230,7 +230,19 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=TRU
     # Load the data
     #redcap_data <<- redcap_pull(uri=creds$uri, token=creds$token, active=active)
   }
-
+  # 2021-12-07 AndyP flipped order of physio and schedule processing
+  run_physio <- function(output=NULL) {
+    print("Running physio calculation/aggregation...")
+    # Run physio
+    output_physio <- proc_physio(physio_df = path_info$physio,sch_pro_output=output, tz="EST",thread=nthreads,force_reload=force_reload,force_reproc=force_proc, save_lite=save_lite,
+                                  eeg_sample_rate=256.03, sd_times=10, eeg_pre=500,eeg_post=1500, #EEG options
+                                  ecg_sample_rate = 100, HRstep = 10, ecg_pre=1000,ecg_post=10000 #ECG options
+    )
+    # Save the physio output
+    print("Saving the physio results...")
+    save(output_physio, file=paste0(dataPath, '/output_physio.Rdata'))
+  }
+  
   run_sched <- function() {
     #print(path_info$schedule)
     print("Running schedule calculation/aggregation...")
@@ -246,19 +258,6 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=TRU
     save(output, file=paste0(dataPath, '/output_schedule.Rdata'))
     return(output)
   }
-
-  run_physio <- function(output=NULL) {
-    print("Running physio calculation/aggregation...")
-    # Run physio
-    output_physio <- proc_physio(physio_df = path_info$physio,sch_pro_output=output, tz="EST",thread=nthreads,force_reload=force_reload,force_reproc=force_proc, save_lite=save_lite,
-                                  eeg_sample_rate=256.03, sd_times=10, eeg_pre=500,eeg_post=1500, #EEG options
-                                  ecg_sample_rate = 100, HRstep = 10, ecg_pre=1000,ecg_post=10000 #ECG options
-    )
-    # Save the physio output
-    print("Saving the physio results...")
-    save(output_physio, file=paste0(dataPath, '/output_physio.Rdata'))
-  }
-
   # GET SCHED DATA
   if(sched == TRUE) {
     output <- run_sched()

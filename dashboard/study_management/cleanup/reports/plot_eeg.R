@@ -6,10 +6,10 @@ sliding_window = FALSE
 
 # 2021-11-30 AndyP using individual subject's processed physio
 path_to_physio <- paste0(dataPath,'/Subjects/',subj,'/physio')
-physio_raw <- list.files(path_to_physio,pattern=paste0(subj,'_physio_proc.rdata'))
+physio_proc <- list.files(path_to_physio,pattern=paste0(subj,'_physio_proc.rdata'))
 if (length(physio_raw)==1){
   all_output <- output # preserve global variable output (which is the processed schedule file) into a temporary variable
-  load(paste0(path_to_physio,'/',physio_raw)) # loads a variable called output into global environment
+  load(paste0(path_to_physio,'/',physio_proc)) # loads a variable called output into global environment
   num_block <- output$eeg_summary$block
   df <- output$eeg_fb
   output <- all_output # revert output to processed schedule file

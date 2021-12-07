@@ -664,7 +664,7 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
     if(!force_reload && file.exists(physio_rawcache_file)) {  # will be false for new subject that has never been processed...AndyP
       load(physio_rawcache_file)
       physio_files_diff <- physio_files_new[!physio_files_new %in% physio_files]
-      skip <- length(physio_files_diff)==0
+      skip <- length(physio_files_diff)==0 # no new physio files to process
       message("Found ",length(physio_files_diff), " new physio files for: ",IDx)
       #Load the physio data, para for muiltiple files
       if (!skip){  
@@ -693,13 +693,13 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
         physio_concat <- load_physio_single(allpaths_sub = physio_files_diff,old_data=physio_concat,cl = par_cl) # overwrite physio_concat, re-save
         parallel::stopCluster(par_cl)
       }
-    } else {
+    } else { # no new physio files to process
       physio_concat <- physio_concat_new
     }
     physio_files<-unique(c(physio_files,physio_files_new))
     save(physio_files,physio_concat,file = paste0(dataPath,'/Subjects/',IDx,'/physio/',IDx,'_physio_raw.rdata'))
     
-    if(!force_reproc && length(physio_files_diff)==0 && file.exists(physio_proc_file)) {
+    if(!force_reproc && skip && file.exists(physio_proc_file)) {
       message("Loading processed physio data for: ",IDx)
       load(physio_proc_file)
       output$new_data <- FALSE
@@ -725,16 +725,16 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
         new_block <- new_block[new_block<1000]
         # get old processed schedule file to reproc only new fbt
         proc_sched_file <- list.files(path=path_to_schedule,pattern=paste0(IDx,'_schedule_proc.rdata'))
-        if (!length(proc_sched_file)>0){
-        new_sched <- output
-        load(paste0(path_to_schedule,'/',proc_sched_file)) # this will load a new output
-        old_sched <- output
-        output <- new_sched
-        rm(new_sched)
-        old_block <- old_sched$raw_data$trials$block
-        old_block <- old_block[old_block<1000]
-        old_block <- max(old_block)
-        trials=trials[-c(which(new_block<=old_block)),]
+        if (length(proc_sched_file)>0){
+          proc_physio <- output # proc physio also called output
+          load(paste0(path_to_schedule,'/',proc_sched_file)) # this will load a new output
+          old_sched <- output
+          output <- proc_physio # rename to output
+          rm(proc_physio)
+          old_block <- old_sched$raw_data$trials$block
+          old_block <- old_block[old_block<1000]
+          old_block <- max(old_block)
+          trials=trials[-c(which(new_block<=old_block)),]
         }
         ## remove blocks that have not been played yet
         if (length(which(is.na(trials$choice)))!=0){
@@ -800,24 +800,30 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
       #ecg_summary$session_number<-sess_map$session_number[match(ecg_summary$block,sess_map$block)]
       ecg_summary$ID <- IDx
       #ecg_summary <- ecg_summary[order(names(ecg_summary))]
-      ecg_ov <- aggregate(per_Good ~ ID,data = ecg_summary,FUN = mean,na.rm=T)
-      ecg_ov$worst_allblocks <- min(ecg_summary$per_Good)
+      ecg_ov <- NULL
+      tryCatch({
+        ecg_ov <- aggregate(per_Good ~ ID,data = ecg_summary,FUN = mean,na.rm=T)
+        ecg_ov$worst_allblocks <- min(ecg_summary$per_Good)
+      },
+      error=function(e){
+        message(paste0('error for overall ecg subject ',IDx, ' this is not used anymore anyway'))
+      })
       
       path_to_physio <- paste0(dataPath,'/Subjects/',IDx,'/physio')
-      physio_raw <- list.files(path_to_physio,pattern=paste0(IDx,'_physio_proc.rdata'))
+      physio_proc <- list.files(path_to_physio,pattern=paste0(IDx,'_physio_proc.rdata'))
       if (length(physio_raw)==1 && !force_reload){
         load(paste0(path_to_physio,'/',physio_proc)) # loads a variable called output into global environment
         # append physio to existing physio_proc.rdata
         output$eeg_ov <- eeg_ov
-        output$eeg$proc$rrt <- rbind(output$eeg_proc$rrt,eeg_raw$rrt)
-        output$eeg$proc$Ch1 <- rbind(output$eeg$proc$Ch1,eeg_raw$Ch1)
-        output$eeg$proc$Ch2 <- rbind(output$eeg$proc$Ch2,eeg_raw$Ch2)
-        output$eeg$proc$Ch3 <- rbind(output$eeg$proc$Ch3,eeg_raw$Ch3)
-        output$eeg$proc$Ch4 <- rbind(output$eeg$proc$Ch4,eeg_raw$Ch4)
-        output$eeg$proc$g1 <- rbind(output$eeg$proc$g1,eeg_raw$g1)
-        output$eeg$proc$g2 <- rbind(output$eeg$proc$g2,eeg_raw$g2)
-        output$eeg$proc$g3 <- rbind(output$eeg$proc$g3,eeg_raw$g3)
-        output$eeg$proc$g4 <- rbind(output$eeg$proc$g4,eeg_raw$g4)
+        output$eeg$proc$rrt <- c(output$eeg_proc$rrt,eeg_raw$rrt)
+        output$eeg$proc$Ch1 <- c(output$eeg$proc$Ch1,eeg_raw$Ch1)
+        output$eeg$proc$Ch2 <- c(output$eeg$proc$Ch2,eeg_raw$Ch2)
+        output$eeg$proc$Ch3 <- c(output$eeg$proc$Ch3,eeg_raw$Ch3)
+        output$eeg$proc$Ch4 <- c(output$eeg$proc$Ch4,eeg_raw$Ch4)
+        output$eeg$proc$g1 <- c(output$eeg$proc$g1,eeg_raw$g1)
+        output$eeg$proc$g2 <- c(output$eeg$proc$g2,eeg_raw$g2)
+        output$eeg$proc$g3 <- c(output$eeg$proc$g3,eeg_raw$g3)
+        output$eeg$proc$g4 <- c(output$eeg$proc$g4,eeg_raw$g4)
         output$eeg_summary <- rbind(output$eeg_summary,eeg_summary)
         output$eeg_fb$ch1 <- rbind(output$eeg_fb$ch1,eeg_fb$ch1)
         output$eeg_fb$ch2 <- rbind(output$eeg_fb$ch2,eeg_fb$ch2)
@@ -827,7 +833,7 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
         output$eeg_fb$g2 <- rbind(output$eeg_fb$g2,eeg_fb$g2)
         output$eeg_fb$g3 <- rbind(output$eeg_fb$g3,eeg_fb$g3)
         output$eeg_fb$g4 <- rbind(output$eeg_fb$g4,eeg_fb$g4)
-        output$eeg_missing <- output$eeg_missing
+        output$eeg_missing <- output$eeg_missing+eeg_missing
         output$eeg_rawsum <- rbind(output$eeg_rawsum,eeg_rawsum)
         output$ecg_proc <- NULL # do not save for QC
         output$ecg_fb <- rbind(output$ecg_fb,ecg_fb)
