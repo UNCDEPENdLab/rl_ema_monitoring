@@ -1,5 +1,5 @@
 ####################################
-# This is the script used to run the back-end 
+# This is the script used to run the back-end
 # functions utilizing the following arguments:
 #
 #   root:
@@ -12,7 +12,7 @@
 #     default: root/data
 #     other: give a path to a different directory from root
 #
-#   config: 
+#   config:
 #     Path to a configuration file.
 #     default: the current directory and config.json
 #     other: give a path to a different config file
@@ -26,7 +26,7 @@
 #
 #   subjects:
 #     The subjects to be run through the pipeline.
-#     default: "all" -> will run the given process for 
+#     default: "all" -> will run the given process for
 #       for all subjects
 #     other: should be given a list of subjects.
 #
@@ -57,27 +57,27 @@
 #     Number of nthreads to spawn when processing physio data.
 #     default: 4
 #
-#   output: 
+#   output:
 #     Path to output the schedule and physio data files to.
 #     default: Path given by the dataPath argument.
 #
 #   cleanup:
 #     Whether or not to run the cleanup of the data and graphs.
 #     default: TRUE -> will run the data cleanup
-#     other: 
+#     other:
 #       FALSE -> will not cleanup the data
 #     Note: will run if render is set to TRUE
 #
 #   replot:
 #     Whether or not to replot all of the graphs.
 #     default: FALSE -> will not replot eeg and ecg graphs
-#     other: 
+#     other:
 #       TRUE -> will replot eeg and ecg graphs
 #
 #   render:
 #     Whether or not to render the landing page or subject pages.
 #     default: TRUE -> will render entire site
-#     other: 
+#     other:
 #       FALSE -> will not render site
 #       A list of subjects pages to render.
 #     Note: "main" can be used to signify rendering of the home page.
@@ -127,6 +127,8 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=TRU
   #}
   # get the start time
   dashboard_start_time <<- lubridate::now()
+  print("Last run started at:")
+  print(dashboard_start_time)
   # SET THE REPO DIR AT THE CURRENT DIRECTORY
   # handle that physio depends on schedule
   if(physio == TRUE) {
@@ -137,7 +139,7 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=TRU
   #  redcap = TRUE
   #}
   # instantiate an empty list to save which active subjects have failed
-  failed <<- list() 
+  failed <<- list()
   # Currently overrides the data directory to known test machine path
   #dataPath <- "/Users/shanebuckley/desktop/rl_ema_monitoring/data"
   dataPath <<- get_cfg_var_p(var="data")
@@ -162,7 +164,7 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=TRU
     print("Remote data storage was already mounted.")
     #exit()
   }
-  
+
   # ensure that the mount point is mounted (as to not accidentally save locally)
   post_mount_str <<- system(paste0("df | awk '{print $9}' | grep -Ex '", videoPath, "'"), intern=TRUE)
   if(post_mount_str != videoPath) {
@@ -170,13 +172,13 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=TRU
     print(paste0("Found: ", post_mount_str))
     stop("The mount point was not established successfully...terminating.")
   }
-  
+
   # Currently overrides root to be rl_ema_monitoring
   #root <- "rl_ema_monitoring"
   root <- basename(get_cfg_var_p(var="root"))
   repoRoot <<- get_cfg_var_p(var="root")
   # Get the list of active subjects (statically set for now)
-  active <<- getActiveList(root_dir = root) 
+  active <<- getActiveList(root_dir = root)
   print(active)
   # get the list of subjects to run
   if(subjects != "all") {
@@ -185,16 +187,16 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=TRU
   }
   ## TODO: Implement to get output subjects as subjects within the input list and flagged as active
   #else {
-  #  
+  #
   #}
-  
+
   # find the root path
   root_path <<- paste0(findRoot(root), '/', root)
   # update path information -> need to run a rebuild for every json config at the root (currently: cfg, data, videos)
   build_config(rootDir=root_path) # rebuilds the project's cfg.json
   build_config(file_name="data") # rebuilds the data.json
   build_config(file_name="videos") # rebuilds the videos.json
-  
+
   # PULL DATA FROM GDRIVES
   ## Need to implement multithreaded subject pull to accomodate updating json ##
   if(pull == TRUE) {
@@ -207,28 +209,28 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=TRU
       })
     }
   }
-  
+
   # update path information -> need to run a rebuild for every json config at the root (currently: cfg, data, videos)
   build_config(rootDir=root_path) # rebuilds the project's cfg.json
   build_config(file_name="data") # rebuilds the data.json
   build_config(file_name="videos") # rebuilds the videos.json
   # just call rebuild_project.py through a system call
   #system(paste0("python ", get_cfg_var_p(var="root"), '/rebuild_project.py'))
-  
+
   # GET DATA SUMMARY
   path_info <- get_ema_subject_metadata(root_dir = root)
   #names(path_info) <- c("schedule","physio","video")
-  
+
   # GET REDCAP DATA
   if(redcap == TRUE) {
     print("Running REDCap data pull...")
     # Get the credentials (standard path for now)
-    
+
     creds <<- get_redcap_creds(cred_path=paste0(dataPath, "/redcap.json"))
     # Load the data
     #redcap_data <<- redcap_pull(uri=creds$uri, token=creds$token, active=active)
   }
-  
+
   run_sched <- function() {
     #print(path_info$schedule)
     print("Running schedule calculation/aggregation...")
@@ -244,7 +246,7 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=TRU
     save(output, file=paste0(dataPath, '/output_schedule.Rdata'))
     return(output)
   }
-  
+
   run_physio <- function(output=NULL) {
     print("Running physio calculation/aggregation...")
     # Run physio
@@ -256,7 +258,7 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=TRU
     print("Saving the physio results...")
     save(output_physio, file=paste0(dataPath, '/output_physio.Rdata'))
   }
-  
+
   # GET SCHED DATA
   if(sched == TRUE) {
     output <- run_sched()
@@ -266,15 +268,15 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=TRU
       run_physio(output=output)
     }
   }
-  
+
   # update path information -> need to run a rebuild for every json config at the root (currently: cfg, data, videos)
   build_config(rootDir=root_path) # rebuilds the project's cfg.json
   build_config(file_name="data") # rebuilds the data.json
   build_config(file_name="videos") # rebuilds the videos.json
-  
+
   reports_path <<- ""
   plots_path <<- ""
-  
+
   # load the schedule and physio if they are not loaded by previous steps
   if(!exists("output_physio")){
     load(paste0(dataPath, "/output_physio.Rdata"))
@@ -283,7 +285,7 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=TRU
     load(paste0(dataPath, "/output_physio.Rdata"))
     output_physio <<- output_physio
   }
-  
+
   #print("here")
   #print(output)
   if(!exists("output")){
@@ -293,7 +295,7 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=TRU
     load(paste0(dataPath, "/output_schedule.Rdata"))
     output <<- output
   }
-  
+
   if(cleanup_data == TRUE){
     # to run the cleanup function, loop through the subject IDs, resourcing cleanup, re-running it with the current sid
     for(s in active) {
@@ -343,7 +345,7 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=TRU
     # run the render
     source("../../rmarkdown_site/render_site.R")
   }
-  
+
   # if pushing the site
   if(push==TRUE) {
     # Michael's push function (rsync wrapper)
@@ -358,7 +360,7 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=TRU
     push_site(sitePath, sitePush)
   }
 }
-  
+
 
 #run_ema(pull=FALSE, sched=TRUE, physio=FALSE, redcap=FALSE, force_proc=TRUE, nthreads = 1, site="/Users/shanebuckley/desktop/rl_ema_monitoring/site", render=FALSE) # , force_reload=TRUE
 #run_ema(redcap=TRUE, save_lite=TRUE, render=FALSE, pull=TRUE, sched=TRUE, physio=TRUE, force_proc=TRUE, force_reload=TRUE, nthreads = 4, site="/Users/shanebuckley/desktop/rl_ema_monitoring/site") # , force_reload=TRUE
@@ -378,7 +380,16 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=TRU
 #run_ema(redcap=FALSE, save_lite=FALSE, render=FALSE, pull=FALSE, sched=FALSE, physio=FALSE, cleanup_data=FALSE, nthreads = 4, push=TRUE)
 
 # run everything but redcap
-#run_ema(redcap=FALSE, save_lite=TRUE, render=TRUE, pull=TRUE, sched=TRUE, physio=TRUE, cleanup_data=TRUE, nthreads = 4, push=TRUE)
+##run_ema(redcap=FALSE, save_lite=TRUE, render=TRUE, pull=TRUE, sched=TRUE, physio=TRUE, cleanup_data=TRUE, nthreads = 8, push=TRUE, force_reload=TRUE, force_proc=TRUE, replot=FALSE)
+
+
+#
+#run_ema(redcap=FALSE, save_lite=FALSE, render=TRUE, pull=FALSE, sched=TRUE, physio=TRUE, cleanup_data=TRUE, nthreads = 8, force_proc=TRUE, force_reload=TRUE)
+
+run_ema(redcap=FALSE, save_lite=FALSE, replot=TRUE, render=TRUE, push=TRUE, pull=FALSE, sched=TRUE, physio=TRUE, cleanup_data=TRUE, nthreads = 8, force_proc=TRUE, force_reload=FALSE)
+
+# run pull only
+#run_ema(redcap=FALSE, save_lite=FALSE, render=FALSE, pull=TRUE, sched=FALSE, physio=FALSE, cleanup_data=FALSE, nthreads = 4, force_proc=TRUE, force_reload=TRUE)
 
 # run everything, but force proc and reload and replot
 #run_ema(redcap=FALSE, save_lite=TRUE, render=TRUE, pull=TRUE, sched=TRUE, physio=TRUE, cleanup_data=TRUE, nthreads = 8, push=TRUE, force_reload=TRUE, force_proc=TRUE, replot=TRUE)
@@ -397,7 +408,7 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=TRU
 
 #subjects=list("221604", "221849"),
 # run schedule only
-#run_ema(redcap=FALSE, save_lite=FALSE, render=FALSE, pull=FALSE, sched=TRUE, physio=FALSE, cleanup_data=FALSE, nthreads = 4, force_proc=TRUE, force_reload=TRUE)
+##run_ema(redcap=FALSE, save_lite=FALSE, render=FALSE, pull=FALSE, sched=TRUE, physio=FALSE, cleanup_data=FALSE, nthreads = 4, force_proc=TRUE, force_reload=TRUE)
 
 # run schedule only without force reload
 #run_ema(redcap=FALSE, save_lite=FALSE, render=FALSE, pull=FALSE, sched=TRUE, physio=FALSE, cleanup_data=FALSE, nthreads = 4, force_proc=FALSE, force_reload=FALSE)
@@ -422,6 +433,6 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=TRU
 # render only
 #run_ema(redcap=FALSE, save_lite=FALSE, render=TRUE, pull=FALSE, sched=FALSE, physio=FALSE, cleanup_data=FALSE, nthreads = 4, push=FALSE)
 # cleanup and render only and push
-run_ema(redcap=FALSE, save_lite=FALSE, render=TRUE, pull=FALSE, sched=FALSE, physio=FALSE, cleanup_data=TRUE, nthreads = 4, push=TRUE, replot=TRUE)
+#run_ema(redcap=FALSE, save_lite=FALSE, render=TRUE, pull=FALSE, sched=FALSE, physio=FALSE, cleanup_data=TRUE, nthreads = 4, push=TRUE, replot=TRUE)
 # render and push only
 #run_ema(redcap=FALSE, save_lite=FALSE, render=TRUE, pull=FALSE, sched=FALSE, physio=FALSE, cleanup_data=FALSE, nthreads = 4, push=TRUE)
