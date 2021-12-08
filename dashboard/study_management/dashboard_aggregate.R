@@ -814,7 +814,7 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
 
       path_to_physio <- paste0(dataPath,'/Subjects/',IDx,'/physio')
       physio_proc <- list.files(path_to_physio,pattern=paste0(IDx,'_physio_proc.rdata'))
-      if (length(physio_raw)==1 && !force_reload){
+      if (length(physio_proc)==1 && !force_reload){
         load(paste0(path_to_physio,'/',physio_proc)) # loads a variable called output into global environment
         # append physio to existing physio_proc.rdata
         output$eeg_ov <- eeg_ov
@@ -850,9 +850,9 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
 
     } else { # load physio_proc.rdata
       path_to_physio <- paste0(dataPath,'/Subjects/',IDx,'/physio')
-      physio_raw <- list.files(path_to_physio,pattern=paste0(IDx,'_physio_proc.rdata'))
-      if (length(physio_raw)==1){
-        load(paste0(path_to_physio,'/',physio_raw)) # loads a variable called output into global environment
+      physio_proc <- list.files(path_to_physio,pattern=paste0(IDx,'_physio_proc.rdata'))
+      if (length(physio_proc)==1){
+        load(paste0(path_to_physio,'/',physio_proc)) # loads a variable called output into global environment
       }
     }
 
