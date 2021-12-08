@@ -767,9 +767,6 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
       eeg_list <- load_EEG(EEGd = physio_concat_new$eeg,sample_rate = eeg_sample_rate,sd_times = sd_times) # updated AndyP 2021-12-02
       eeg_raw <- eeg_list[[1]]
       eeg_missing <- eeg_list[[2]]
-
-      browser()
-
       eeg_fb <- eeg_epochs_around_feedback(EEG_data = eeg_raw,
                                            pre = eeg_pre,post = eeg_post,sample_rate = eeg_sample_rate,
                                            fbt = fbt)
