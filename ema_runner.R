@@ -230,7 +230,7 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=TRU
     # Load the data
     #redcap_data <<- redcap_pull(uri=creds$uri, token=creds$token, active=active)
   }
-  # 2021-12-07 AndyP flipped order of physio and schedule processing
+
   run_physio <- function(output=NULL) {
     print("Running physio calculation/aggregation...")
     # Run physio
@@ -242,7 +242,7 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=TRU
     print("Saving the physio results...")
     save(output_physio, file=paste0(dataPath, '/output_physio.Rdata'))
   }
-  
+
   run_sched <- function() {
     #print(path_info$schedule)
     print("Running schedule calculation/aggregation...")
@@ -385,7 +385,7 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=TRU
 #
 #run_ema(redcap=FALSE, save_lite=FALSE, render=TRUE, pull=FALSE, sched=TRUE, physio=TRUE, cleanup_data=TRUE, nthreads = 8, force_proc=TRUE, force_reload=TRUE)
 
-run_ema(redcap=FALSE, save_lite=FALSE, replot=TRUE, render=TRUE, push=TRUE, pull=FALSE, sched=TRUE, physio=TRUE, cleanup_data=TRUE, nthreads = 8, force_proc=TRUE, force_reload=FALSE)
+run_ema(redcap=FALSE, save_lite=FALSE, replot=TRUE, render=TRUE, push=TRUE, pull=FALSE, sched=TRUE, physio=TRUE, cleanup_data=TRUE, nthreads = 8, force_proc=TRUE, force_reload=TRUE)
 
 # run pull only
 #run_ema(redcap=FALSE, save_lite=FALSE, render=FALSE, pull=TRUE, sched=FALSE, physio=FALSE, cleanup_data=FALSE, nthreads = 4, force_proc=TRUE, force_reload=TRUE)
