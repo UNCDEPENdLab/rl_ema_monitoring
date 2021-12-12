@@ -735,7 +735,10 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
             old_block <- old_sched$raw_data$trials$block
             old_block <- old_block[old_block<1000]
             old_block <- max(old_block)
-            trials=trials[-c(which(new_block<=old_block)),]
+            if (old_block > 7){
+              trials=trials[-c(which(new_block<=old_block-6)),]
+            } else { # just reprocess first 7 blocks, not saving much time
+            }
           }
         }
         ## remove blocks that have not been played yet
@@ -843,17 +846,18 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
         output$ecg_ov <- ecg_ov
         output$ecg_summary <- rbind(output$ecg_summary,ecg_summary)
       }
-      output <- list(new_data=TRUE,ID=IDx,lite=F,
-                     eeg_proc = eeg_raw,eeg_fb = eeg_fb, eeg_summary = eeg_summary, eeg_ov = eeg_ov, eeg_missing = eeg_missing, eeg_rawsum = eeg_rawsum,
-                     ecg_proc = ecg_raw,ecg_fb = ecg_fb, ecg_summary = ecg_summary, ecg_ov = ecg_ov)
-      save(output,file = physio_proc_file)
 
-    } else { # load physio_proc.rdata
+    } else if (length(physio_proc)==1) { # load physio_proc.rdata
       path_to_physio <- paste0(dataPath,'/Subjects/',IDx,'/physio')
       physio_proc <- list.files(path_to_physio,pattern=paste0(IDx,'_physio_proc.rdata'))
       if (length(physio_proc)==1){
         load(paste0(path_to_physio,'/',physio_proc)) # loads a variable called output into global environment
       }
+    } else {
+      output <- list(new_data=TRUE,ID=IDx,lite=F,
+                     eeg_proc = eeg_raw,eeg_fb = eeg_fb, eeg_summary = eeg_summary, eeg_ov = eeg_ov, eeg_missing = eeg_missing, eeg_rawsum = eeg_rawsum,
+                     ecg_proc = ecg_raw,ecg_fb = ecg_fb, ecg_summary = ecg_summary, ecg_ov = ecg_ov)
+      save(output,file = physio_proc_file)
     }
 
     if(save_lite) {
