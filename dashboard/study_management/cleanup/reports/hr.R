@@ -1,13 +1,14 @@
 #HR table wrangling
+
 hr_dates <- left_join(hr,blk_dt,by="block") #add date column
 hr_ordered <- arrange(hr_dates, -row_number()) #most recent blocks first
 
 #convert all to percentages, rounded
 hr_ordered$per_Good <- hr_ordered$per_Good*100
 hr_ordered$per_Good <- round(hr_ordered$per_Good)
-hr_ordered <- hr_ordered %>% 
+hr_ordered <- hr_ordered %>%
   dplyr::select(date, block, per_Good)
-  
+
 # create the unchecked mood csv if there is data to do so
 if(exists("checklist")) {
   hr_unchecked <- filter(hr_ordered, checklist=="No")

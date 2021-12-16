@@ -20,8 +20,17 @@ Avg_Experienced_Percent_Correct_Feedback <- round(Avg_Experienced_Percent_Correc
 EEG_Average <- mean(eeg_rawsum$goodTrials)
 EEG_Average <- round(EEG_Average, digits = 3)
 #Add HR Avg Here (named HR_Average)
-hr_gen <- output_physio$ecg$summary[[subj]]$per_Good
-HR_Average <- mean(hr_gen)*100 #[match(subj, hr_gen[[subj]])]*100
+# 2021-12-14 AndyP using individual subject's processed physio
+path_to_physio <- paste0(dataPath,'/Subjects/',subj,'/physio')
+physio_proc <- list.files(path_to_physio,pattern=paste0(subj,'_physio_proc.rdata'))
+if (length(physio_proc)==1){
+  all_output <- output # preserve global variable output (which is the processed schedule file) into a temporary variable
+  load(paste0(path_to_physio,'/',physio_proc)) # loads a variable called output into global environment
+  hr_gen <- output$ecg_ov$per_Good
+  output <- all_output # revert output to processed schedule file
+}
+#hr_gen <- output_physio$ecg$summary[[subj]]$per_Good
+HR_Average <- hr_gen*100 #[match(subj, hr_gen[[subj]])]*100
 HR_Average <- round(HR_Average, digits = 3)
 qxn <- output$proc_data[[subj]]$form_summary
 #print(qxn)
@@ -46,9 +55,9 @@ ID_Overview = data.frame(
   round(qxn$emo_rate_avg, digits = 3),
   round(qxn$val_emo_cor, digits = 3)
 )
-col_names <- c("ID", 
-               #"Site", "Group", "RA", "RL-EMA Start Date", "Current Day in Protocol", "fMRI date", "fMRI completed", 
-               "Overall Compliance", 
+col_names <- c("ID",
+               #"Site", "Group", "RA", "RL-EMA Start Date", "Current Day in Protocol", "fMRI date", "fMRI completed",
+               "Overall Compliance",
                "Avg Obj Correct (no feedback)", "Avg Obj Correct (w/ feedback)", "Avg Rel Correct (no feedback)", "Avg Rel Correct (w/ feedback)",
                "EEG Average", "HR Average", "Left %", "Valence/Arousal Distance from Origin", "Emotion Distance from 0", "Emotion/Valence Correlation")
 colnames(ID_Overview) <- col_names

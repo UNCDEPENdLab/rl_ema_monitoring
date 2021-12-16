@@ -168,8 +168,14 @@ source_cleanup_scripts <- function(subdir='') {
     arousal_energetic<<-data.frame(arousal,energetic)
     valence_elated_sad<<-data.frame(valence, elated_sad)
 
-    print(paste0("Running: ", getwd(), curr_subdir, '/', script))
-    source(paste0(getwd(), curr_subdir, '/', script))
+    tryCatch(
+      {
+        print(paste0("Running: ", getwd(), curr_subdir, '/', script))
+        source(paste0(getwd(), curr_subdir, '/', script))
+      },
+      error=function(e){
+        message(paste0('could not run cleanup script',script))
+      })
   }
 }
 

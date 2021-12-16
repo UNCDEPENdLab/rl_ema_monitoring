@@ -74,7 +74,7 @@ load_EEG <- function(subject_name,physio_file,abs_path=NULL,EEGd=NULL,sample_rat
   Ch2 <- as.numeric(EEGd$EEG2)
   Ch3 <- as.numeric(EEGd$EEG3)
   Ch4 <- as.numeric(EEGd$EEG4)
-  
+
   md_ch1 <- sum(is.na(Ch1))
   md_ch2 <- sum(is.na(Ch2))
   md_ch3 <- sum(is.na(Ch3))
@@ -88,7 +88,7 @@ load_EEG <- function(subject_name,physio_file,abs_path=NULL,EEGd=NULL,sample_rat
   EEG_data <- dplyr::tibble(rrt,Ch1,Ch2,Ch3,Ch4,g1,g2,g3,g4) # 2021-10-01 AndyP added g1-g4 as outputs
   Missing_data <- dplyr::tibble(md_ch1,md_ch2,md_ch3,md_ch4) # 2021-10-05 AndyP added md_ch1 i.e. missing data as outputs
   EEG_list <- list(EEG_data,Missing_data)
-  
+
   return(EEG_list) # 2021-10-05 AndyP now returns a list of EEG_data, Missing_data
 
 }
@@ -121,7 +121,7 @@ eeg_epochs_around_feedback <- function(EEG_data,pre=500,post=1500,sample_rate=NU
   g2_a2f <- matrix(NA,nrow=length(fbt),ncol=pre+post+1);
   g3_a2f <- matrix(NA,nrow=length(fbt),ncol=pre+post+1);
   g4_a2f <- matrix(NA,nrow=length(fbt),ncol=pre+post+1);
-  
+
   for (i in 1:length(fbt)){
     fbt0 <- which(rrt>fbt[i])
     if (length(fbt0)>0){
@@ -177,7 +177,7 @@ eeg_epochs_around_feedback <- function(EEG_data,pre=500,post=1500,sample_rate=NU
   g2_a2f <- as.data.frame(g2_a2f)
   g3_a2f <- as.data.frame(g3_a2f)
   g4_a2f <- as.data.frame(g4_a2f)
-  
+
   a2f <- list(ch1=ch1_a2f,ch2=ch2_a2f,ch3=ch3_a2f,ch4=ch4_a2f,g1=g1_a2f,g2=g2_a2f,g3=g3_a2f,g4=g4_a2f)
 
   return(a2f) # rows = number of trials, columns = number of timestamps
@@ -197,7 +197,7 @@ get_good_EEG <- function(blocks,a2f,sd_times=10){
   g2 <- as.matrix(a2f$g2)
   g3 <- as.matrix(a2f$g3)
   g4 <- as.matrix(a2f$g4)
-  
+
   # 2021-10-01 AndyP corrected bug, all g1 -> g1-g4
   ch1_a2f[g1==0 | g1==4] = NA
   ch2_a2f[g2==0 | g2==4] = NA
@@ -218,8 +218,8 @@ get_good_EEG <- function(blocks,a2f,sd_times=10){
   sd0 <- sd(ch4_a2f,na.rm=TRUE)
   ch4_a2f[ch4_a2f > mn+sd_times*sd0 | ch4_a2f < mn-sd_times*sd0 | ch4_a2f < 1650/20 | ch4_a2f > 19*1650/20] = NA
 
-  
-  
+
+
   # output of function
   # avgNgood is the average number of good sample percentage across all channels for each block
   # NgoodX is the number of good samples for channel X.  To get the percentage divide by Ntotal

@@ -11,18 +11,18 @@ if (any(colnames(eeg_rawsum)=='block')){
 }
 eeg_rawsum <- left_join(eeg_rawsum,blk_dt,by="block") #add date and checklist column
 eeg_rawsum <- eeg_rawsum %>% mutate(per_Ch_1 = Ngood1/Ntotal, per_Ch_2 = Ngood2/Ntotal, per_Ch_3 = Ngood3/Ntotal, per_Ch_4 = Ngood4/Ntotal)
-eeg_rawsum <- mutate(eeg_rawsum,"avg"=(per_Ch_1 + per_Ch_2 + per_Ch_3 +per_Ch_4)/4) #create column for avg eeg_rawsum signal 
+eeg_rawsum <- mutate(eeg_rawsum,"avg"=(per_Ch_1 + per_Ch_2 + per_Ch_3 +per_Ch_4)/4) #create column for avg eeg_rawsum signal
 eeg_rawsum <- arrange(eeg_rawsum, -row_number()) #flip df so most recent blocks are first
 #convert all to percentages, rounded
 eeg_rawsum$per_Ch_1 <- round(eeg_rawsum$per_Ch_1*100)
-eeg_rawsum$per_Ch_2 <- round(eeg_rawsum$per_Ch_2*100) 
-eeg_rawsum$per_Ch_3 <- round(eeg_rawsum$per_Ch_3*100) 
+eeg_rawsum$per_Ch_2 <- round(eeg_rawsum$per_Ch_2*100)
+eeg_rawsum$per_Ch_3 <- round(eeg_rawsum$per_Ch_3*100)
 eeg_rawsum$per_Ch_4 <- round(eeg_rawsum$per_Ch_4*100)
 eeg_rawsum$avg <- round(eeg_rawsum$avg*100)
 eeg_rawsum$goodTrials <- round(eeg_rawsum$Ngood_by_Block*100)
 eeg_rawsum$miss_Ch_1 <- round(100 - eeg_rawsum$per_Ch_1)
-eeg_rawsum$miss_Ch_2 <- round(100 - eeg_rawsum$per_Ch_2) 
-eeg_rawsum$miss_Ch_3 <- round(100 - eeg_rawsum$per_Ch_3) 
+eeg_rawsum$miss_Ch_2 <- round(100 - eeg_rawsum$per_Ch_2)
+eeg_rawsum$miss_Ch_3 <- round(100 - eeg_rawsum$per_Ch_3)
 eeg_rawsum$miss_Ch_4 <- round(100 - eeg_rawsum$per_Ch_4)
 #eeg_col_named <- transmute(eeg_rawsum, "Date"=Date, "Block"=Block, "Overall % good"=avg, "Ch. 1 % good"=per_Ch_1, "Ch. 2 % good"=per_Ch_2, "Ch. 3 % good"=per_Ch_3, "Ch. 4 % good"=per_Ch_4)
 

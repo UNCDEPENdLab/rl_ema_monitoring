@@ -111,7 +111,7 @@ load_ECG <- function(ECGd = NULL, HRstep = 10, sample_rate = 100) { # ,fbt,pre=1
   # [] indicates a blank RR -> converted to NA
   # [number, number] indicates multiple events within a time interval -> expanded to elements of intervals
   # [number] is a single interval -> expanded to one element of intervals
-  
+
   rr_parse <- gsub("^$", "0", ECGd$rr_intervals) #empty rows become 0
   rr_parse <- gsub("[]", "NA", rr_parse, fixed=TRUE) #blank RRs become NA
   rr_parse <- gsub("[\\[\\]]", "", rr_parse, perl=TRUE) #delete [ and ] from all strings to split
@@ -199,7 +199,7 @@ load_ECG <- function(ECGd = NULL, HRstep = 10, sample_rate = 100) { # ,fbt,pre=1
       todelete <- todelete-1
     }
   }
-  
+
   if (length(isplit)>0){
     I0 <- NULL
     HRsplit <- matrix(list(),length(isplit)+1,2)
@@ -220,7 +220,7 @@ load_ECG <- function(ECGd = NULL, HRstep = 10, sample_rate = 100) { # ,fbt,pre=1
     }
   }
 
-  # # parse HRsplit into [pre-1 post+1] around feedback times 
+  # # parse HRsplit into [pre-1 post+1] around feedback times
   # for (f in 1:length(fbt)){
   #   first_split = FALSE
   #   h0 <- 1
@@ -235,9 +235,9 @@ load_ECG <- function(ECGd = NULL, HRstep = 10, sample_rate = 100) { # ,fbt,pre=1
   #     }
   #   }
   # }
-  
-  
-  
+
+
+
 
 # merge sections
 if (!nosplit){
@@ -270,7 +270,7 @@ if (!nosplit){
     intervals1 <- output[,2]
     rate1 <- output[,3]
   }
-  
+
   # check
   stopifnot(length(beattimes)==length(times1) | length(times1)==length(intervals1) | length(intervals1)==length(rate1))
 
@@ -329,10 +329,10 @@ if (!nosplit){
 
 # get epochs around feedback +/- 500ms
 ecg_epochs_around_feedback <- function(ECG_data,fbt,pre=1000,post=10000,sample_rate=100){
-  
+
   #library(parallel)
   #library(foreach)
-  
+
   step <- 1000/sample_rate
   pre <- round(pre/step,0)
   post <- round(post/step,0)
@@ -343,9 +343,11 @@ ecg_epochs_around_feedback <- function(ECG_data,fbt,pre=1000,post=10000,sample_r
   rrt <- ECG_data$times
 
   ch1_a2f <- matrix(NA,nrow=length(fbt),ncol=pre+post+1);
-  for (i in 1:length(fbt)){ 
-    #print(paste0(i,'/',length(fbt)))
-    fbt0 <- which(rrt>fbt[i])
+  for (i in 1:length(fbt)){
+    if ((i %% 10)==0){
+      print(paste0(i,'/',length(fbt)))
+    }
+      fbt0 <- which(rrt>fbt[i])
     if (length(fbt0)>0){
       if (fbt0[1]>1){
         ind <- seq(fbt0[1]-pre,fbt0[1]+post,by=1)
@@ -357,7 +359,7 @@ ecg_epochs_around_feedback <- function(ECG_data,fbt,pre=1000,post=10000,sample_r
     }
     dL <- pre+1+post
     aL <- length(ind)
-    
+
     if (length(ind)>0){
       if (ind[length(ind)] > length(rrt)){
         addpost <- ind[length(ind)] - length(rrt)

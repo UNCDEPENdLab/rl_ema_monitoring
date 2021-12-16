@@ -46,7 +46,7 @@ if (FALSE) {
 
   #example for proc_physio:
   ##!!!!Must first proc the schedule data as physio uses the trial level data to generate percentage;
-  output_physio <- proc_physio(physio_df = path_info$physio,sch_pro_output=output, tz="EST",thread=4,
+  output_physio <- proc_physio(physio_df = path_info$physio, tz="EST",thread=4,
                                force_reload=FALSE,force_reproc=FALSE,save_lite=F,
                                eeg_sample_rate=256.03, sd_times=10, eeg_pre=500,eeg_post=1500, #EEG options
                                ecg_sample_rate = 100, HRstep = 10, ecg_pre=1000,ecg_post=10000 #ECG options
@@ -647,7 +647,7 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
                         force_reload=FALSE,force_reproc=FALSE,save_lite=F,
                         eeg_sample_rate=256.03, sd_times=10, eeg_pre=500,eeg_post=1500, #EEG options
                         ecg_sample_rate = 100, HRstep = 10, ecg_pre=1000,ecg_post=10000 #ECG options
-                        ) {
+) {
   if (.Platform$OS.type == "windows") {
     message("Forking is not available on windows. Parallelization will be turned off.")
     thread=1
@@ -659,47 +659,17 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
     physio_files_new <- physio_df$file_path[physio_df$subject_id==IDx]
     physio_rawcache_file <- file.path(unique(dirname(physio_df$file_path[physio_df$subject_id==IDx])),paste(IDx,"_physio_raw.rdata",sep = ""))
     physio_proc_file <- file.path(unique(dirname(physio_df$file_path[physio_df$subject_id==IDx])),paste(IDx,"_physio_proc.rdata",sep = ""))
-    skip <-FALSE
-    # 2021-12-02 AndyP updated to only process new data if _force_reload = FALSE
-    if(!force_reload && file.exists(physio_rawcache_file)) {  # will be false for new subject that has never been processed...AndyP
-      load(physio_rawcache_file)
-      physio_files_diff <- physio_files_new[!physio_files_new %in% physio_files]
-      skip <- length(physio_files_diff)==0 # no new physio files to process
-      message("Found ",length(physio_files_diff), " new physio files for: ",IDx)
-      #Load the physio data, para for muiltiple files
-      if (!skip){
-        par_cl <- parallel::makeCluster(spec = thread,type = "FORK")
-        message("Loading new physio data for: ",IDx)
-        physio_concat_new <- load_physio_single(allpaths_sub = physio_files_diff,old_data=NULL,cl = par_cl)
-        parallel::stopCluster(par_cl)
-      }
-    } else {
-      physio_concat <- NULL
-      physio_files <- NULL
-      message("force_reload activated, Found ",length(physio_files_new), " total physio files for: ",IDx)
-      #Load the physio data, para for muiltiple files
-      par_cl <- parallel::makeCluster(spec = thread,type = "FORK")
-      message("Loading new physio data for: ",IDx)
-      physio_concat_new <- load_physio_single(allpaths_sub = physio_files_new,old_data=NULL,cl = par_cl)
-      parallel::stopCluster(par_cl)
-    }
-    # save all the data no matter what
-    #Load the physio data, para for muiltiple files
-    if (!force_reload && file.exists(physio_rawcache_file)){
-      if (!skip){
-        par_cl <- parallel::makeCluster(spec = thread,type = "FORK")
-        message("Loading new physio data for: ",IDx)
-        #browser()
-        physio_concat <- load_physio_single(allpaths_sub = physio_files_diff,old_data=physio_concat,cl = par_cl) # overwrite physio_concat, re-save
-        parallel::stopCluster(par_cl)
-      }
-    } else { # no new physio files to process
-      physio_concat <- physio_concat_new
-    }
+    physio_concat <- NULL
+    physio_files <- NULL
+    message("Found ",length(physio_files_new), " total physio files for: ",IDx)
+    par_cl <- parallel::makeCluster(spec = thread,type = "FORK")
+    message("Loading new physio data for: ",IDx)
+    physio_concat_new <- load_physio_single(allpaths_sub = physio_files_new,old_data=NULL,cl = par_cl)
+    parallel::stopCluster(par_cl)
     physio_files<-unique(c(physio_files,physio_files_new))
     save(physio_files,physio_concat,file = paste0(dataPath,'/Subjects/',IDx,'/physio/',IDx,'_physio_raw.rdata'))
-
-    if(!force_reproc && skip && file.exists(physio_proc_file)) {
+    output <- NULL
+    if(!force_reproc && file.exists(physio_proc_file)) {
       message("Loading processed physio data for: ",IDx)
       load(physio_proc_file)
       output$new_data <- FALSE
@@ -710,12 +680,14 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
         output$lite <- FALSE
       }
       return(output)
+    } else {
     }
 
     ##### Quickly grabbing .db schedule file for physio, uncoupling physio from schedule file processing
     ##### 2021-11-22 AndyP
     #####
-    if (force_reproc && !skip){ # should generally be true
+
+    if (force_reproc){ # should generally be true
       path_to_schedule <- paste0(dataPath, '/Subjects/', IDx, '/schedule')
       sched_file <- list.files(path=path_to_schedule,pattern=paste0(IDx,'_schedule.db'))
       if (length(sched_file)==1){
@@ -735,19 +707,20 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
             old_block <- old_sched$raw_data$trials$block
             old_block <- old_block[old_block<1000]
             old_block <- max(old_block)
-            if (old_block > 7){
-              trials=trials[-c(which(new_block<=old_block-6)),]
-            } else { # just reprocess first 7 blocks, not saving much time
+            if (old_block > 8){
+              trials=trials[-c(which(new_block<=old_block-5)),]
             }
           }
         }
         ## remove blocks that have not been played yet
         if (length(which(is.na(trials$choice)))!=0){
           trials=trials[-c(which(is.na(trials$choice))),]
-          }
+        }
         fbt <- trials$feedback_time
         block <- trials$block
+        trial <- trials$trial
         fbt <- fbt[block < 1000]
+        trial <- trial[block < 1000]
         block <- block[block < 1000]
       } else {
         #Get the matching behavioral data
@@ -764,7 +737,7 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
         block <- block[block < 1000]
         warning('Zero or multiple schedule .db files found for subject',IDx, 'reverting to processed schedule file')
       }
-
+      trial_df <- tibble(block=block,trial=trial, fbt=fbt)
       ###EEG
       message("Processing new EEG data for: ",IDx)
       eeg_list <- load_EEG(EEGd = physio_concat_new$eeg,sample_rate = eeg_sample_rate,sd_times = sd_times) # updated AndyP 2021-12-02
@@ -818,52 +791,51 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
       path_to_physio <- paste0(dataPath,'/Subjects/',IDx,'/physio')
       physio_proc <- list.files(path_to_physio,pattern=paste0(IDx,'_physio_proc.rdata'))
       if (length(physio_proc)==1 && !force_reload){
-        load(paste0(path_to_physio,'/',physio_proc)) # loads a variable called output into global environment
-        # append physio to existing physio_proc.rdata
-        output$eeg_ov <- eeg_ov
-        output$eeg$proc$rrt <- c(output$eeg_proc$rrt,eeg_raw$rrt)
-        output$eeg$proc$Ch1 <- c(output$eeg$proc$Ch1,eeg_raw$Ch1)
-        output$eeg$proc$Ch2 <- c(output$eeg$proc$Ch2,eeg_raw$Ch2)
-        output$eeg$proc$Ch3 <- c(output$eeg$proc$Ch3,eeg_raw$Ch3)
-        output$eeg$proc$Ch4 <- c(output$eeg$proc$Ch4,eeg_raw$Ch4)
-        output$eeg$proc$g1 <- c(output$eeg$proc$g1,eeg_raw$g1)
-        output$eeg$proc$g2 <- c(output$eeg$proc$g2,eeg_raw$g2)
-        output$eeg$proc$g3 <- c(output$eeg$proc$g3,eeg_raw$g3)
-        output$eeg$proc$g4 <- c(output$eeg$proc$g4,eeg_raw$g4)
-        output$eeg_summary <- rbind(output$eeg_summary,eeg_summary)
-        output$eeg_fb$ch1 <- rbind(output$eeg_fb$ch1,eeg_fb$ch1)
-        output$eeg_fb$ch2 <- rbind(output$eeg_fb$ch2,eeg_fb$ch2)
-        output$eeg_fb$ch3 <- rbind(output$eeg_fb$ch3,eeg_fb$ch3)
-        output$eeg_fb$ch4 <- rbind(output$eeg_fb$ch4,eeg_fb$ch4)
-        output$eeg_fb$g1 <- rbind(output$eeg_fb$g1,eeg_fb$g1)
-        output$eeg_fb$g2 <- rbind(output$eeg_fb$g2,eeg_fb$g2)
-        output$eeg_fb$g3 <- rbind(output$eeg_fb$g3,eeg_fb$g3)
-        output$eeg_fb$g4 <- rbind(output$eeg_fb$g4,eeg_fb$g4)
-        output$eeg_missing <- output$eeg_missing+eeg_missing
-        output$eeg_rawsum <- rbind(output$eeg_rawsum,eeg_rawsum)
-        output$ecg_proc <- NULL # do not save for QC
-        output$ecg_fb <- rbind(output$ecg_fb,ecg_fb)
-        output$ecg_ov <- ecg_ov
-        output$ecg_summary <- rbind(output$ecg_summary,ecg_summary)
+        # load(paste0(path_to_physio,'/',physio_proc)) # loads a variable called output into global environment
+        # # append physio to existing physio_proc.rdata
+        # output$eeg_ov <- eeg_ov
+        # output$eeg$proc$rrt <- c(output$eeg_proc$rrt,eeg_raw$rrt)
+        # output$eeg$proc$Ch1 <- c(output$eeg$proc$Ch1,eeg_raw$Ch1)
+        # output$eeg$proc$Ch2 <- c(output$eeg$proc$Ch2,eeg_raw$Ch2)
+        # output$eeg$proc$Ch3 <- c(output$eeg$proc$Ch3,eeg_raw$Ch3)
+        # output$eeg$proc$Ch4 <- c(output$eeg$proc$Ch4,eeg_raw$Ch4)
+        # output$eeg$proc$g1 <- c(output$eeg$proc$g1,eeg_raw$g1)
+        # output$eeg$proc$g2 <- c(output$eeg$proc$g2,eeg_raw$g2)
+        # output$eeg$proc$g3 <- c(output$eeg$proc$g3,eeg_raw$g3)
+        # output$eeg$proc$g4 <- c(output$eeg$proc$g4,eeg_raw$g4)
+        # output$eeg_summary <- rbind(output$eeg_summary,eeg_summary)
+        # output$eeg_fb$ch1 <- rbind(output$eeg_fb$ch1,eeg_fb$ch1)
+        # output$eeg_fb$ch2 <- rbind(output$eeg_fb$ch2,eeg_fb$ch2)
+        # output$eeg_fb$ch3 <- rbind(output$eeg_fb$ch3,eeg_fb$ch3)
+        # output$eeg_fb$ch4 <- rbind(output$eeg_fb$ch4,eeg_fb$ch4)
+        # output$eeg_fb$g1 <- rbind(output$eeg_fb$g1,eeg_fb$g1)
+        # output$eeg_fb$g2 <- rbind(output$eeg_fb$g2,eeg_fb$g2)
+        # output$eeg_fb$g3 <- rbind(output$eeg_fb$g3,eeg_fb$g3)
+        # output$eeg_fb$g4 <- rbind(output$eeg_fb$g4,eeg_fb$g4)
+        # output$eeg_missing <- output$eeg_missing+eeg_missing
+        # output$eeg_rawsum <- rbind(output$eeg_rawsum,eeg_rawsum)
+        # output$ecg_proc <- NULL # do not save for QC
+        # output$ecg_fb <- rbind(output$ecg_fb,ecg_fb)
+        # output$ecg_ov <- ecg_ov
+        # output$ecg_summary <- rbind(output$ecg_summary,ecg_summary)
       }
+      output <- list(new_data=TRUE,ID=IDx,lite=F,
+                     eeg_proc = eeg_raw,eeg_fb = eeg_fb, eeg_summary = eeg_summary, eeg_ov = eeg_ov, eeg_missing = eeg_missing, eeg_rawsum = eeg_rawsum,
+                     ecg_proc = ecg_raw,ecg_fb = ecg_fb, ecg_summary = ecg_summary, ecg_ov = ecg_ov, trial_df = trial_df)
+      save(output,file = physio_proc_file)
 
-    } else if (length(physio_proc)==1) { # load physio_proc.rdata
+    } else { # load physio_proc.rdata
       path_to_physio <- paste0(dataPath,'/Subjects/',IDx,'/physio')
       physio_proc <- list.files(path_to_physio,pattern=paste0(IDx,'_physio_proc.rdata'))
       if (length(physio_proc)==1){
         load(paste0(path_to_physio,'/',physio_proc)) # loads a variable called output into global environment
       }
-    } else {
-      output <- list(new_data=TRUE,ID=IDx,lite=F,
-                     eeg_proc = eeg_raw,eeg_fb = eeg_fb, eeg_summary = eeg_summary, eeg_ov = eeg_ov, eeg_missing = eeg_missing, eeg_rawsum = eeg_rawsum,
-                     ecg_proc = ecg_raw,ecg_fb = ecg_fb, ecg_summary = ecg_summary, ecg_ov = ecg_ov)
-      save(output,file = physio_proc_file)
     }
 
     if(save_lite) {
       output <- list(new_data=TRUE,ID=IDx,lite=T,
                      eeg_fb = eeg_fb,eeg_summary = eeg_summary, eeg_ov = eeg_ov,eeg_missing = eeg_missing, eeg_rawsum = eeg_rawsum,
-                     ecg_fb = ecg_fb,ecg_summary = ecg_summary, ecg_ov = ecg_ov, ecg_missing = NA, ecg_rawsum = NA)
+                     ecg_fb = ecg_fb,ecg_summary = ecg_summary, ecg_ov = ecg_ov, ecg_missing = NA, ecg_rawsum = NA, trial_df = trial_df)
 
       return(output)
     } else {
@@ -890,7 +862,7 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
   })
   names(output_fin) <- c("eeg","ecg")
   tryCatch({
-  output_fin$newdata_IDs <- IDlist[sapply(exp_out,`[[`,"new_data")]
+    output_fin$newdata_IDs <- IDlist[sapply(exp_out,`[[`,"new_data")]
   },
   error=function(e){
     message('no new data, not sure if this is important to fix rn AndyP 2021-12-03')
