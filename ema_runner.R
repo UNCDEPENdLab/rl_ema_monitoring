@@ -177,14 +177,7 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=FAL
   #root <- "rl_ema_monitoring"
   root <- basename(get_cfg_var_p(var="root"))
   repoRoot <<- get_cfg_var_p(var="root")
-  # Get the list of active subjects (statically set for now)
-  active <<- getActiveList(root_dir = root)
-  print(active)
-  # get the list of subjects to run
-  if(subjects != "all") {
-    #@subjects <- active
-    active <- subjects
-  }
+
   ## TODO: Implement to get output subjects as subjects within the input list and flagged as active
   #else {
   #
@@ -196,6 +189,15 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=FAL
   build_config(rootDir=root_path) # rebuilds the project's cfg.json
   build_config(file_name="data") # rebuilds the data.json
   build_config(file_name="videos") # rebuilds the videos.json
+
+  # Get the list of active subjects (statically set for now)
+  active <<- getActiveList(root_dir = root)
+  print(active)
+  # get the list of subjects to run
+  if(subjects != "all") {
+    #@subjects <- active
+    active <- subjects
+  }
 
   # PULL DATA FROM GDRIVES
   ## Need to implement multithreaded subject pull to accomodate updating json ##
@@ -385,7 +387,7 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=FAL
 #
 #run_ema(redcap=FALSE, save_lite=FALSE, render=TRUE, pull=FALSE, sched=TRUE, physio=TRUE, cleanup_data=TRUE, nthreads = 8, force_proc=TRUE, force_reload=TRUE)
 sink(file='dashboard_run.txt')
-run_ema(redcap=FALSE, save_lite=FALSE, replot=TRUE, render=TRUE, push=TRUE, pull=TRUE, sched=TRUE, physio=TRUE, cleanup_data=TRUE, nthreads = 8, force_proc=TRUE, force_reload=FALSE)
+run_ema(redcap=FALSE, save_lite=FALSE, replot=TRUE, render=TRUE, push=TRUE, pull=TRUE, sched=TRUE, physio=TRUE, cleanup_data=TRUE, nthreads = 8, force_proc=TRUE, force_reload=TRUE)
 sink(file=NULL)
 # run pull only
 #run_ema(redcap=FALSE, save_lite=FALSE, render=FALSE, pull=TRUE, sched=FALSE, physio=FALSE, cleanup_data=FALSE, nthreads = 4, force_proc=TRUE, force_reload=TRUE)

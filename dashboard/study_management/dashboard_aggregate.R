@@ -740,7 +740,7 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
       trial_df <- tibble(block=block,trial=trial, fbt=fbt)
       ###EEG
       message("Processing new EEG data for: ",IDx)
-      eeg_list <- load_EEG(EEGd = physio_concat_new$eeg,sample_rate = eeg_sample_rate,sd_times = sd_times) # updated AndyP 2021-12-02
+      eeg_list <- load_EEG(EEGd = physio_concat_new$eeg, sample_rate = eeg_sample_rate,sd_times = sd_times) # updated AndyP 2021-12-02
       eeg_raw <- eeg_list[[1]]
       eeg_missing <- eeg_list[[2]]
       eeg_fb <- eeg_epochs_around_feedback(EEG_data = eeg_raw,
@@ -761,7 +761,21 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
 
       ###ECG
       message("Processing new ECG data for: ",IDx)
-      ecg_raw <- load_ECG(ECGd = physio_concat_new$ecg,HRstep = HRstep,sample_rate = ecg_sample_rate)
+      ecg_raw <- load_ECG(ECGd = physio_concat_new$ecg, HRstep = HRstep,sample_rate = ecg_sample_rate)
+      rlex <- rle(is.na(ecg_raw$rate))
+      end_x = cumsum(rlex$lengths)
+      start_x = c(1, lag(end_x)[-1] + 1)
+      for (ir in 1:length(start_x)){
+        if (end_x[ir]-start_x[ir]>1000 && rlex$values==TRUE){
+          ecg_raw$rate[start_x[ir]:end_x[ir]] = -1000
+          ecg_raw$times[start_x[ir]:end_x[ir]] = -1000
+        }
+      }
+      ecg_rate1 <- ecg_raw$rate[ecg_raw$rate!=-1000]
+      ecg_times1 <- ecg_raw$times[ecg_raw$times!=-1000]
+      rm(ecg_raw)
+      ecg_raw <- tibble(rate=ecg_rate1,times=ecg_times1)
+
       ecg_fb <- ecg_epochs_around_feedback(ECG_data = ecg_raw,fbt = fbt,
                                            pre = ecg_pre,post = ecg_post,sample_rate = ecg_sample_rate)
       # fbt1 <- fbt

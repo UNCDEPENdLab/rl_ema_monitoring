@@ -220,25 +220,6 @@ load_ECG <- function(ECGd = NULL, HRstep = 10, sample_rate = 100) { # ,fbt,pre=1
     }
   }
 
-  # # parse HRsplit into [pre-1 post+1] around feedback times
-  # for (f in 1:length(fbt)){
-  #   first_split = FALSE
-  #   h0 <- 1
-  #   for (h in h0:nrow(HRsplit)){
-  #     if (!is.null(HRsplit[[h,1]])){
-  #       test_row <- max(as.matrix((HRsplit[[h,1]])),na.rm=TRUE)
-  #       if (test_row>fbt[f] & first_split==FALSE){
-  #         message('found fbt to align to',fbt[f],' row',h)
-  #         first_split = TRUE
-  #         h0 <- h
-  #       }
-  #     }
-  #   }
-  # }
-
-
-
-
 # merge sections
 if (!nosplit){
   wiggleroom <- NULL

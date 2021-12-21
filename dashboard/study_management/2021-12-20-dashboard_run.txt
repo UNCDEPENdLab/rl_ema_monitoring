@@ -1,0 +1,2884 @@
+
+> run_ema(redcap=FALSE, save_lite=FALSE, replot=TRUE, render=TRUE, push=TRUE, pull=FALSE, sched=FALSE, physio=FALSE, cleanup_data=TRUE, nthreads = 8,  .... [TRUNCATED] 
+[1] "Last run started at:"
+[1] "2021-12-20 10:12:53 EST"
+[1] "Remote data storage was already mounted."
+[[1]]
+[1] "540010"
+
+[[2]]
+[1] "440411"
+
+[[3]]
+[1] "217234"
+
+[[4]]
+[1] "540009"
+
+[[5]]
+[1] "221960"
+
+[[6]]
+[1] "440108"
+
+[1] "540010"
+[1] "running schedule..."
+[1] "running physio..."
+[1] "running video..."
+[1] "440411"
+[1] "running schedule..."
+[1] "running physio..."
+[1] "running video..."
+[1] "217234"
+[1] "running schedule..."
+[1] "running physio..."
+[1] "running video..."
+[1] "540009"
+[1] "running schedule..."
+[1] "running physio..."
+[1] "running video..."
+[1] "221960"
+[1] "running schedule..."
+[1] "running physio..."
+[1] "running video..."
+[1] "440108"
+[1] "running schedule..."
+[1] "running physio..."
+[1] "running video..."
+[1] "binding schedule"
+[1] "binding physio"
+[1] "binding video"
+[1] "Running cleanup for 540010..."
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/compliance.R"
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/eeg.R"
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/hr.R"
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/mood.R"
+[1mwrot
+> # run pull only
+> #run_ema(redcap=FALSE, save_lite=FALSE, render=FALSE, pull=TRUE, sched=FALSE, physio=FALSE, cleanup_data=FALSE, nthreads = 4, forc .... [TRUNCATED] 
+
+> ####################################
+> # This is the script used to run the back-end
+> # functions utilizing the following arguments:
+> #
+> #   root .... [TRUNCATED] 
+
+> library("anytime")
+
+> pacman::p_load(reticulate, RSQLite, dplyr, tidyr, lubridate, rjson, R.utils, REDCapR, zoo, anytime)
+
+> setwd("dashboard/study_management")
+
+> # source relevant R files and their functions
+> ## Currently set to load dependent function from the same directory ##
+> source("data_management_fun ..." ... [TRUNCATED] 
+
+> source("dashboard_aggregate.R")
+
+> source("render_utils.R")
+
+> source("../../ECG_Dashboard2.R")
+
+> #uncomment to test on simple case
+> #timings2samples_block_cpp(c(100, 504, 900), 10)
+
+> source("../../EEG_Dashboard.R")
+
+> source("../../rmarkdown_site/report_functions/report_functions.R")
+
+> # main function to be run
+> run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=FALSE, redcap=TRUE, nthreads=4, output=NULL .... [TRUNCATED] 
+
+> #run_ema(pull=FALSE, sched=TRUE, physio=FALSE, redcap=FALSE, force_proc=TRUE, nthreads = 1, site="/Users/shanebuckley/desktop/rl_ema_monitoring/site ..." ... [TRUNCATED] 
+
+> # run pull only
+> #run_ema(redcap=FALSE, save_lite=FALSE, render=FALSE, pull=TRUE, sched=FALSE, physio=FALSE, cleanup_data=FALSE, nthreads = 4, forc .... [TRUNCATED] 
+
+> ####################################
+> # This is the script used to run the back-end
+> # functions utilizing the following arguments:
+> #
+> #   root .... [TRUNCATED] 
+
+> library("anytime")
+
+> pacman::p_load(reticulate, RSQLite, dplyr, tidyr, lubridate, rjson, R.utils, REDCapR, zoo, anytime)
+
+> setwd("dashboard/study_management")
+
+> # source relevant R files and their functions
+> ## Currently set to load dependent function from the same directory ##
+> source("data_management_fun ..." ... [TRUNCATED] 
+
+> source("dashboard_aggregate.R")
+
+> source("render_utils.R")
+
+> source("../../ECG_Dashboard2.R")
+
+> #uncomment to test on simple case
+> #timings2samples_block_cpp(c(100, 504, 900), 10)
+
+> source("../../EEG_Dashboard.R")
+
+> source("../../rmarkdown_site/report_functions/report_functions.R")
+
+> # main function to be run
+> run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=FALSE, redcap=TRUE, nthreads=4, output=NULL .... [TRUNCATED] 
+
+> #run_ema(pull=FALSE, sched=TRUE, physio=FALSE, redcap=FALSE, force_proc=TRUE, nthreads = 1, site="/Users/shanebuckley/desktop/rl_ema_monitoring/site ..." ... [TRUNCATED] 
+
+> # run pull only
+> #run_ema(redcap=FALSE, save_lite=FALSE, render=FALSE, pull=TRUE, sched=FALSE, physio=FALSE, cleanup_data=FALSE, nthreads = 4, forc .... [TRUNCATED] 
+[1] 10
+[1] 10
+ng: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/overall.R"
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/performance.R"
+[1mwrote[0m [32m1.00TB[0m in [36m 0s[0m, [32m139.81PB/s[0m                                                                                                                                                                  [1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/plot_acc_from_des_prob.R"
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/plot_acc_from_exp_prob.R"
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/plot_arousal_energetic.R"
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/plot_ecg.R"
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/plot_eeg.R"
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/plot_game_delay.R"
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/plot_lr.R"
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/plot_rt.R"
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/plot_sb.R"
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/plot_valence.R"
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/sleep.R"
+[1mwrote[0m [32m1.00TB[0m in [36m 0s[0m, [32m49.93PB/s[0m                                                                                                                                                                  [1] "Running cleanup for 217234..."
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/compliance.R"
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/eeg.R"
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/hr.R"
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/mood.R"
+[1mwrote[0m [32m8.35kB[0m in [36m 0s[0m, [32m1.35GB/s[0m[1mwrote[0m [32m1.00TB[0m in [36m 0s[0m, [32m8.26PB/s[0m                                                                                                                                                                  [1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/overall.R"
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/performance.R"
+[1mwrote[0m [32m4.19kB[0m in [36m 0s[0m, [32m702.63MB/s[0m                                                                                                                                                                  [1mwrote[0m [32m1.00TB[0m in [36m 0s[0m, [32m4.65PB/s[0m                                                                                                                                                                  [1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/plot_acc_from_des_prob.R"
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/plot_acc_from_exp_prob.R"
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/plot_arousal_energetic.R"
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/plot_ecg.R"
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/plot_eeg.R"
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/plot_game_delay.R"
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/plot_lr.R"
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/plot_rt.R"
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/plot_sb.R"
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/plot_valence.R"
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/sleep.R"
+[1mwrote[0m [32m1.00TB[0m in [36m 0s[0m, [32m144.63PB/s[0m                                                                                                                                                                  [1] "Running cleanup for 540009..."
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/compliance.R"
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/eeg.R"
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/hr.R"
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/mood.R"
+[1mwrote[0m [32m8.53kB[0m in [36m 0s[0m, [32m1.38GB/s[0m[1mwrote[0m [32m1.00TB[0m in [36m 0s[0m, [32m672.92TB/s[0m                                                                                                                                                                  [1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/overall.R"
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/performance.R"
+[1mwrote[0m [32m4.33kB[0m in [36m 0s[0m, [32m604.96MB/s[0m                                                                                                                                                                  [1mwrote[0m [32m1.00TB[0m in [36m 0s[0m, [32m4.85PB/s[0m                                                                                                                                                                  [1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/plot_acc_from_des_prob.R"
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/plot_acc_from_exp_prob.R"
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/plot_arousal_energetic.R"
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/plot_ecg.R"
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/plot_eeg.R"
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/plot_game_delay.R"
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/plot_lr.R"
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/plot_rt.R"
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/plot_sb.R"
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/plot_valence.R"
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/sleep.R"
+[1mwrote[0m [32m1.00TB[0m in [36m 0s[0m, [32m127.10PB/s[0m                                                                                                                                                                  [1] "Running cleanup for 221960..."
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/compliance.R"
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/eeg.R"
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/hr.R"
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/mood.R"
+[1mwrote[0m [32m8.14kB[0m in [36m 0s[0m, [32m1.14GB/s[0m[1mwrote[0m [32m1.00TB[0m in [36m 0s[0m, [32m456.20TB/s[0m                                                                                                                                                                  [1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/overall.R"
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/performance.R"
+[1mwrote[0m [32m4.11kB[0m in [36m 0s[0m, [32m689.71MB/s[0m                                                                                                                                                                  [1mwrote[0m [32m1.00TB[0m in [36m 0s[0m, [32m4.61PB/s[0m                                                                                                                                                                  [1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/plot_acc_from_des_prob.R"
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/plot_acc_from_exp_prob.R"
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/plot_arousal_energetic.R"
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/plot_ecg.R"
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/plot_eeg.R"
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/plot_game_delay.R"
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/plot_lr.R"
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/plot_rt.R"
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/plot_sb.R"
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/plot_valence.R"
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/sleep.R"
+[1mwrote[0m [32m1.00TB[0m in [36m 0s[0m, [32m123.36PB/s[0m                                                                                                                                                                  [1] "Running cleanup for 440108..."
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/compliance.R"
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/eeg.R"
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/hr.R"
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/mood.R"
+[1mwrote[0m [32m7.74kB[0m in [36m 0s[0m, [32m1.12GB/s[0m[1mwrote[0m [32m1.00TB[0m in [36m 0s[0m, [32m1.29PB/s[0m                                                                                                                                                                  [1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/overall.R"
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/performance.R"
+[1mwrote[0m [32m4.01kB[0m in [36m 0s[0m, [32m561.34MB/s[0m                                                                                                                                                                  [1mwrote[0m [32m1.00TB[0m in [36m 0s[0m, [32m3.53PB/s[0m                                                                                                                                                                  [1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/plot_acc_from_des_prob.R"
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/plot_acc_from_exp_prob.R"
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/plot_arousal_energetic.R"
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/plot_ecg.R"
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/plot_eeg.R"
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/plot_game_delay.R"
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/plot_lr.R"
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/plot_rt.R"
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/plot_sb.R"
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/plot_valence.R"
+[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/sleep.R"
+[1mwrote[0m [32m1.00TB[0m in [36m 0s[0m, [32m167.77PB/s[0m                                                                                                                                                                  [1] "Error: From the filename given, keywords selected, and exclusion substrings; either no paths or multiple paths were returned."
+-\
+
+processing file: subject_report.Rmd
+|  |                                                                              |                                                                      |   0%  |                                                                            /  |....                                                                  |   5%
+   inline R code fragments
+
+  |                                                                              |.......                                                               |  10%
+label: css-force (with options) 
+-List of 2
+\ $ echo   :| logi FALSE
+ $ results: chr "asis"
+
+/  |                                                                              |..........                                                            |  15%
+   inline R code fragments
+
+-  |                                                                              |..............                                                        |  20%
+\label: setup (with options) 
+List of 4
+ $ echo   : logi FALSE
+ $ warning:| logi FALSE
+ $ message: logi FALSE
+ $ results: chr "asis"
+
+/-\|/-\|/-\|/-\|/-\|/  |                                                                              |..................                                                    |  25%
+  ordinary text without R code
+
+  |                                                                              |.....................                                                 |  30%
+-label: overview-report (with options) 
+List of 3
+ $ echo   :\ logi FALSE
+ $ results: chr "asis"
+ $ eval   : logi TRUE
+
+|/  |                                                                              |........................                                              |  35%
+  ordinary text without R code
+
+-  |                                                                              |............................                                          |  40%
+\label: compliance-report-long (with options) 
+List of 3
+ $ echo   : logi FALSE
+ $ results:| chr "asis"
+ $ eval   : logi TRUE
+
+/-  |                                                                              |................................                                      |  45%
+  ordinary text without R code
+
+\  |                                                                              |...................................                                   |  50%
+label: compliance-report (with options) 
+List of 3
+ $ echo   : logi FALSE
+ $ results: chr "asis"
+ $ eval   : logi TRUE
+
+|  |                                                                              |......................................                                |  55%
+  ordinary text without R code
+
+/  |                                                                              |..........................................                            |  60%
+label: eeg-report (with options) 
+List of 2
+ $ echo   : logi FALSE
+ $ results:- chr "asis"
+
+\  |                                                                              |..............................................                        |  65%
+  ordinary text without R code
+
+|  |                                                                              |.................................................                     |  70%
+label: sleep-report (with options) 
+List of 2
+ $ echo   :/ logi FALSE
+ $ results:- chr "asis"
+
+\  |                                                                              |....................................................                  |  75%
+  ordinary text without R code
+
+|  |                                                                              |........................................................              |  80%
+label: hr-report (with options) 
+List of 2
+ $ echo   : logi FALSE
+ $ results:/ chr "asis"
+
+-  |                                                                              |............................................................          |  85%
+  ordinary text without R code
+
+\  |                                                                              |...............................................................       |  90%
+label: task-performance-report (with options) 
+List of 2
+ $ echo   : logi FALSE
+ $ results: chr "asis"
+
+|/-\|/-\|/-\  |                                                                              |..................................................................    |  95%
+  ordinary text without R code
+
+|  |                                                                              |......................................................................| 100%
+label: mood-report (with options) 
+List of 2
+ $ echo   : logi FALSE
+ $ results: chr "asis"
+
+/-
+output file: subject_report.knit.md
+
+\/usr/local/bin/pandoc +RTS -K512m -RTS subject_report.knit.md --to html4 --from markdown+autolink_bare_uris+tex_math_single_backslash --output /Users/dnplserv/momentum_site/Subjects/540010.html --lua-filter /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --variable bs3=TRUE --standalone --section-divs --table-of-contents --toc-depth 1 --variable toc_float=1 --variable toc_selectors=h1 --variable toc_collapsed=1 --variable toc_smooth_scroll=1 --variable toc_print=1 --template /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmd/h/default.html --no-highlight --variable highlightjs=1 --variable theme=spacelab --include-in-header /var/folders/n5/x5sflnb54nd49f_kvpsz2pxh0000hf/T//Rtmp5YsIsX/rmarkdown-str149577e19cd9a.html --mathjax --variable 'mathjax-url:https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML' --include-before-body navbar_sub.html 
+|
+Output created: /Users/dnplserv/momentum_site/Subjects/540010.html
+/-\ -
+
+processing file: subject_report.Rmd
+\  |                                                                              |                                                                      |   0%  |                                                                              |....                                                                  |   5%
+   inline R code fragments
+
+|  |                                                                              |.......                                                               |  10%
+label: css-force (with options) 
+/List of 2
+- $ echo   :\ logi FALSE
+ $ results: chr "asis"
+
+|  |                                                                              |..........                                                            |  15%
+   inline R code fragments
+
+/  |                                                                              |..............                                                        |  20%
+-label: setup (with options) 
+List of 4
+ $ echo   :\ logi FALSE
+ $ warning: logi FALSE
+ $ message: logi FALSE
+ $ results: chr "asis"
+
+|/-\|/-\|/-\|/-\|/-\|/-\|/-\  |                                                                              |..................                                                    |  25%
+  ordinary text without R code
+
+|  |                                                                              |.....................                                                 |  30%
+label: overview-report (with options) 
+List of 3
+ $ echo   : logi FALSE
+ $ results:/ chr "asis"
+ $ eval   : logi TRUE
+
+-\  |                                                                              |........................                                              |  35%
+  ordinary text without R code
+
+|  |                                                                              |............................                                          |  40%
+label: compliance-report-long (with options) 
+/List of 3
+ $ echo   : logi FALSE
+ $ results:- chr "asis"
+ $ eval   :\ logi TRUE
+
+|/  |                                                                              |................................                                      |  45%
+  ordinary text without R code
+
+  |                                                                              |...................................                                   |  50%
+-label: compliance-report (with options) 
+List of 3
+ $ echo   :\ logi FALSE
+ $ results:| chr "asis"
+ $ eval   : logi TRUE
+
+/  |                                                                              |......................................                                |  55%
+  ordinary text without R code
+
+-  |                                                                              |..........................................                            |  60%
+label: eeg-report (with options) 
+List of 2
+ $ echo   :\ logi FALSE
+ $ results:| chr "asis"
+
+/  |                                                                              |..............................................                        |  65%
+  ordinary text without R code
+
+  |                                                                            -  |.................................................                     |  70%
+label: sleep-report (with options) 
+List of 2
+ $ echo   :\ logi FALSE
+ $ results: chr "asis"
+
+|  |                                                                              |....................................................                  |  75%
+  ordinary text without R code
+
+/  |                                                                              |........................................................              |  80%
+label: hr-report (with options) 
+List of 2
+ $ echo   :- logi FALSE
+ $ results: chr "asis"
+
+\  |                                                                              |............................................................          |  85%
+  ordinary text without R code
+
+|  |                                                                              |...............................................................       |  90%
+label: task-performance-report (with options) 
+List of 2
+ $ echo   : logi FALSE
+ $ /results: chr "asis"
+
+-\|/-\|/-\  |                                                                              |..................................................................    |  95%
+  ordinary text without R code
+
+|  |                                                                              |......................................................................| 100%
+label: mood-report (with options) 
+List of 2
+ $ echo   : logi FALSE
+ $ results: chr "asis"
+
+/-\
+|output file: subject_report.knit.md
+
+//usr/local/bin/pandoc +RTS -K512m -RTS subject_report.knit.md --to html4 --from markdown+autolink_bare_uris+tex_math_single_backslash --output /Users/dnplserv/momentum_site/Subjects/440411.html --lua-filter /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --variable bs3=TRUE --standalone --section-divs --table-of-contents --toc-depth 1 --variable toc_float=1 --variable toc_selectors=h1 --variable toc_collapsed=1 --variable toc_smooth_scroll=1 --variable toc_print=1 --template /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmd/h/default.html --no-highlight --variable highlightjs=1 --variable theme=spacelab --include-in-header /var/folders/n5/x5sflnb54nd49f_kvpsz2pxh0000hf/T//RtmpIxRKyc/rmarkdown-str149bf7596cca8.html --mathjax --variable 'mathjax-url:https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML' --include-before-body navbar_sub.html 
+-
+Output created: /Users/dnplserv/momentum_site/Subjects/440411.html
+\|/ -
+
+processing file: subject_report.Rmd
+\  |                                                                              |                                                                      |   0%  |                                                                            |  |....                                                                  |   5%
+   inline R code fragments
+
+  |                                                                              |.......                                                               |  10%
+label: css-force (with options) 
+/List of 2
+- $ echo   :\ logi FALSE
+ $ results:| chr "asis"
+
+/  |                                                                              |..........                                                            |  15%
+   inline R code fragments
+
+-  |                                                                              |..............                                                        |  20%
+\label: setup (with options) 
+List of 4
+ $ echo   : logi FALSE
+ $ warning: logi FALSE
+ $ message: logi FALSE
+ $ results: chr "asis"
+
+|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/  |                                                                              |..................                                                    |  25%
+  ordinary text without R code
+
+-  |                                                                              |.....................                                                 |  30%
+label: overview-report (with options) 
+List of 3
+ $ echo   : logi FALSE
+ $ results: chr "asis"
+ $ eval   :\ logi TRUE
+
+|  |                                                                              |........................                                              |  35%
+  ordinary text without R code
+
+/  |                                                                              |............................                                          |  40%
+label: compliance-report-long (with options) 
+List of 3
+ $ echo   :- logi FALSE
+ $ results: chr "asis"
+ $ eval   : logi TRUE
+
+\|/  |                                                                              |................................                                      |  45%
+  ordinary text without R code
+
+-  |                                                                              |...................................                                   |  50%
+label: compliance-report (with options) 
+List of 3
+ $ echo   : logi FALSE
+ $ results: chr "asis"
+ $ eval   : logi TRUE
+
+\  |                                                                              |......................................                                |  55%
+  ordinary text without R code
+
+|  |                                                                              |..........................................                            |  60%
+label: eeg-report (with options) 
+List of 2
+ $ echo   : logi FALSE
+ $ results: chr "asis"
+
+/-  |                                                                              |..............................................                        |  65%
+  ordinary text without R code
+
+  |                                                                              |.................................................                     |  70%
+label: sleep-report (with options) 
+\List of 2
+ $ echo   : logi FALSE
+ $ results: chr "asis"
+
+|  |                                                                              |....................................................                  |  75%
+  ordinary text without R code
+
+  |                                                                            /  |........................................................              |  80%
+label: hr-report (with options) 
+List of 2
+ $ echo   :- logi FALSE
+ $ results:\ chr "asis"
+
+|  |                                                                              |............................................................          |  85%
+  ordinary text without R code
+
+/  |                                                                              |...............................................................       |  90%
+label: task-performance-report (with options) 
+List of 2
+- $ echo   : logi FALSE
+\ $ results: chr "asis"
+
+|/-\|/-\|/-  |                                                                              |..................................................................    |  95%
+  ordinary text without R code
+
+\  |                                                                              |......................................................................| 100%
+label: mood-report (with options) 
+List of 2
+| $ echo   : logi FALSE
+ $ results: chr "asis"
+
+/-\|
+/output file: subject_report.knit.md
+
+-/usr/local/bin/pandoc +RTS -K512m -RTS subject_report.knit.md --to html4 --from markdown+autolink_bare_uris+tex_math_single_backslash --output /Users/dnplserv/momentum_site/Subjects/217234.html --lua-filter /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --variable bs3=TRUE --standalone --section-divs --table-of-contents --toc-depth 1 --variable toc_float=1 --variable toc_selectors=h1 --variable toc_collapsed=1 --variable toc_smooth_scroll=1 --variable toc_print=1 --template /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmd/h/default.html --no-highlight --variable highlightjs=1 --variable theme=spacelab --include-in-header /var/folders/n5/x5sflnb54nd49f_kvpsz2pxh0000hf/T//RtmpH16fIP/rmarkdown-str14a306b54084b.html --mathjax --variable 'mathjax-url:https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML' --include-before-body navbar_sub.html 
+\
+Output created: /Users/dnplserv/momentum_site/Subjects/217234.html
+|/-\ -
+
+processing file: subject_report.Rmd
+\  |                                                                              |                                                                      |   0%|  |                                                                              |....                                                                  |   5%
+   inline R code fragments
+
+  |                                                                              |.......                                                               |  10%
+label: css-force (with options) 
+/List of 2
+ $ echo   :- logi FALSE
+ $ results: chr "asis"
+
+\  |                                                                              |..........                                                            |  15%
+   inline R code fragments
+
+|  |                                                                              |..............                                                        |  20%
+/label: setup (with options) 
+List of 4
+ $ echo   :- logi FALSE
+ $ warning: logi FALSE
+ $ message: logi FALSE
+ $ results: chr "asis"
+
+\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-  |                                                                              |..................                                                    |  25%
+  ordinary text without R code
+
+\  |                                                                              |.....................                                                 |  30%
+label: overview-report (with options) 
+List of 3
+ $ echo   : logi FALSE
+ $ results: chr "asis"
+ $ eval   : logi TRUE
+
+|  |                                                                              |........................                                              |  35%
+  ordinary text without R code
+
+/  |                                                                              |............................                                          |  40%
+label: compliance-report-long (with options) 
+-List of 3
+ $ echo   :\ logi FALSE
+ $ results: chr "asis"
+ $ eval   :| logi TRUE
+
+/-\  |                                                                              |................................                                      |  45%
+  ordinary text without R code
+
+  |                                                                            |  |...................................                                   |  50%
+label: compliance-report (with options) 
+List of 3
+ $ echo   : logi FALSE
+ $ results:/ chr "asis"
+ $ eval   : logi TRUE
+
+-\  |                                                                              |......................................                                |  55%
+  ordinary text without R code
+
+|  |                                                                              |..........................................                            |  60%
+label: eeg-report (with options) 
+List of 2
+ $ echo   :/ logi FALSE
+ $ results: chr "asis"
+
+-\  |                                                                              |..............................................                        |  65%
+  ordinary text without R code
+
+  |                                                                              |.................................................                     |  70%
+|label: sleep-report (with options) 
+List of 2
+ $ echo   : logi FALSE
+ $ results: chr "asis"
+
+/-  |                                                                              |....................................................                  |  75%
+  ordinary text without R code
+
+\  |                                                                              |........................................................              |  80%
+label: hr-report (with options) 
+List of 2
+ $ echo   : logi FALSE
+ $ results: chr "asis"
+
+|  |                                                                              |............................................................          |  85%
+  ordinary text without R code
+
+  |                                                                            /  |...............................................................       |  90%
+label: task-performance-report (with options) 
+List of 2
+ $ echo   :- logi FALSE
+ $ results: chr "asis"
+
+\|/-\|/-\|/  |                                                                              |..................................................................    |  95%
+  ordinary text without R code
+
+-  |                                                                              |......................................................................| 100%
+label: mood-report (with options) 
+List of 2
+\ $ echo   :| logi FALSE
+ $ results: chr "asis"
+
+/-\|/
+-output file: subject_report.knit.md
+
+\/usr/local/bin/pandoc +RTS -K512m -RTS subject_report.knit.md --to html4 --from markdown+autolink_bare_uris+tex_math_single_backslash --output /Users/dnplserv/momentum_site/Subjects/540009.html --lua-filter /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --variable bs3=TRUE --standalone --section-divs --table-of-contents --toc-depth 1 --variable toc_float=1 --variable toc_selectors=h1 --variable toc_collapsed=1 --variable toc_smooth_scroll=1 --variable toc_print=1 --template /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmd/h/default.html --no-highlight --variable highlightjs=1 --variable theme=spacelab --include-in-header /var/folders/n5/x5sflnb54nd49f_kvpsz2pxh0000hf/T//RtmpKkikJF/rmarkdown-str14aeb24a8ad86.html --mathjax --variable 'mathjax-url:https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML' --include-before-body navbar_sub.html 
+|
+Output created: /Users/dnplserv/momentum_site/Subjects/540009.html
+/-\ -
+
+processing file: subject_report.Rmd
+\  |                                                                              |                                                                      |   0%  |                                                                            |  |....                                                                  |   5%
+   inline R code fragments
+
+  |                                                                              |.......                                                               |  10%
+label: css-force (with options) 
+/List of 2
+- $ echo   :\ logi FALSE
+ $ results:| chr "asis"
+
+/  |                                                                              |..........                                                            |  15%
+   inline R code fragments
+
+-  |                                                                              |..............                                                        |  20%
+\label: setup (with options) 
+List of 4
+| $ echo   : logi FALSE
+ $ warning:/ logi FALSE
+ $ message: logi FALSE
+ $ results: chr "asis"
+
+-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-  |                                                                              |..................                                                    |  25%
+  ordinary text without R code
+
+\  |                                                                              |.....................                                                 |  30%
+label: overview-report (with options) 
+List of 3
+ $ echo   : logi FALSE
+ $ results: chr "asis"
+ $ eval   : logi TRUE
+
+|  |                                                                              |........................                                              |  35%
+  ordinary text without R code
+
+/  |                                                                              |............................                                          |  40%
+label: compliance-report-long (with options) 
+List of 3
+ $ echo   : logi FALSE
+ $ results: chr "asis"
+ $ eval   : logi TRUE
+
+-\|  |                                                                              |................................                                      |  45%
+  ordinary text without R code
+
+/  |                                                                              |...................................                                   |  50%
+label: compliance-report (with options) 
+List of 3
+ $ echo   : logi FALSE
+ $ results:- chr "asis"
+ $ eval   : logi TRUE
+
+\  |                                                                              |......................................                                |  55%
+  ordinary text without R code
+
+|  |                                                                              |..........................................                            |  60%
+label: eeg-report (with options) 
+List of 2
+ $ echo   :/ logi FALSE
+ $ results:- chr "asis"
+
+\|  |                                                                              |..............................................                        |  65%
+  ordinary text without R code
+
+  |                                                                              |.................................................                     |  70%
+label: sleep-report (with options) 
+/List of 2
+ $ echo   : logi FALSE
+ $ results:- chr "asis"
+
+\|  |                                                                              |....................................................                  |  75%
+  ordinary text without R code
+
+/  |                                                                              |........................................................              |  80%
+label: hr-report (with options) 
+-List of 2
+ $ echo   :\ logi FALSE
+ $ results:| chr "asis"
+
+/  |                                                                              |............................................................          |  85%
+  ordinary text without R code
+
+-  |                                                                              |...............................................................       |  90%
+label: task-performance-report (with options) 
+List of 2
+\ $ echo   : logi FALSE
+ $ results:| chr "asis"
+
+/-\|/-\|/-  |                                                                              |..................................................................    |  95%
+  ordinary text without R code
+
+\  |                                                                              |......................................................................| 100%
+label: mood-report (with options) 
+List of 2
+ $ echo   : logi FALSE
+ $ results:| chr "asis"
+
+/-\|
+/output file: subject_report.knit.md
+
+-/usr/local/bin/pandoc +RTS -K512m -RTS subject_report.knit.md --to html4 --from markdown+autolink_bare_uris+tex_math_single_backslash --output /Users/dnplserv/momentum_site/Subjects/221960.html --lua-filter /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --variable bs3=TRUE --standalone --section-divs --table-of-contents --toc-depth 1 --variable toc_float=1 --variable toc_selectors=h1 --variable toc_collapsed=1 --variable toc_smooth_scroll=1 --variable toc_print=1 --template /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmd/h/default.html --no-highlight --variable highlightjs=1 --variable theme=spacelab --include-in-header /var/folders/n5/x5sflnb54nd49f_kvpsz2pxh0000hf/T//RtmpMbvKV5/rmarkdown-str14b776c581768.html --mathjax --variable 'mathjax-url:https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML' --include-before-body navbar_sub.html 
+\
+Output created: /Users/dnplserv/momentum_site/Subjects/221960.html
+|/ -
+
+processing file: subject_report.Rmd
+\  |                                                                              |                                                                      |   0%  |                                                                            |  |....                                                                  |   5%
+   inline R code fragments
+
+  |                                                                              |.......                                                               |  10%
+/label: css-force (with options) 
+-List of 2
+\ $ echo   : logi FALSE
+ $ results: chr "asis"
+
+|  |                                                                              |..........                                                            |  15%
+   inline R code fragments
+
+/  |                                                                              |..............                                                        |  20%
+-label: setup (with options) 
+List of 4
+ $ echo   : logi FALSE
+ $ warning: logi FALSE
+ $ message: logi FALSE
+ $ results: chr "asis"
+
+\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-  |                                                                              |..................                                                    |  25%
+  ordinary text without R code
+
+\  |                                                                              |.....................                                                 |  30%
+label: overview-report (with options) 
+List of 3
+ $ echo   : logi FALSE
+ $ results:| chr "asis"
+ $ eval   :/ logi TRUE
+
+-  |                                                                              |........................                                              |  35%
+  ordinary text without R code
+
+\  |                                                                              |............................                                          |  40%
+label: compliance-report-long (with options) 
+|List of 3
+ $ echo   :/ logi FALSE
+ $ results:- chr "asis"
+ $ eval   : logi TRUE
+
+\|/  |                                                                              |................................                                      |  45%
+  ordinary text without R code
+
+-  |                                                                              |...................................                                   |  50%
+label: compliance-report (with options) 
+List of 3
+ $ echo   :\ logi FALSE
+ $ results: chr "asis"
+ $ eval   : logi TRUE
+
+|  |                                                                              |......................................                                |  55%
+  ordinary text without R code
+
+/  |                                                                              |..........................................                            |  60%
+label: eeg-report (with options) 
+List of 2
+ $ echo   : logi FALSE
+ $ results:- chr "asis"
+
+\|  |                                                                              |..............................................                        |  65%
+  ordinary text without R code
+
+/  |                                                                              |.................................................                     |  70%
+label: sleep-report (with options) 
+List of 2
+- $ echo   :\ logi FALSE
+ $ results: chr "asis"
+
+|  |                                                                              |....................................................                  |  75%
+  ordinary text without R code
+
+/  |                                                                              |........................................................              |  80%
+label: hr-report (with options) 
+List of 2
+- $ echo   :\ logi FALSE
+ $ results: chr "asis"
+
+|  |                                                                              |............................................................          |  85%
+  ordinary text without R code
+
+/  |                                                                              |...............................................................       |  90%
+label: task-performance-report (with options) 
+List of 2
+- $ echo   : logi FALSE
+ $ results:\ chr "asis"
+
+|/-\|/-\|/  |                                                                              |..................................................................    |  95%
+  ordinary text without R code
+
+-  |                                                                              |......................................................................| 100%
+label: mood-report (with options) 
+List of 2
+ $ echo   : logi FALSE
+ $ results: chr "asis"
+
+\|/-
+\output file: subject_report.knit.md
+
+|/usr/local/bin/pandoc +RTS -K512m -RTS subject_report.knit.md --to html4 --from markdown+autolink_bare_uris+tex_math_single_backslash --output /Users/dnplserv/momentum_site/Subjects/440108.html --lua-filter /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --variable bs3=TRUE --standalone --section-divs --table-of-contents --toc-depth 1 --variable toc_float=1 --variable toc_selectors=h1 --variable toc_collapsed=1 --variable toc_smooth_scroll=1 --variable toc_print=1 --template /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmd/h/default.html --no-highlight --variable highlightjs=1 --variable theme=spacelab --include-in-header /var/folders/n5/x5sflnb54nd49f_kvpsz2pxh0000hf/T//Rtmp71C9EK/rmarkdown-str14c3c518968ca.html --mathjax --variable 'mathjax-url:https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML' --include-before-body navbar_sub.html 
+/
+Output created: /Users/dnplserv/momentum_site/Subjects/440108.html
+-\|/ -
+
+processing file: subject_report.Rmd
+\  |                                                                              |                                                                      |   0%|  |                                                                              |....                                                                  |   5%
+   inline R code fragments
+
+  |                                                                              |.......                                                               |  10%
+label: css-force (with options) 
+List of 2
+ $ echo   :/ logi FALSE
+ $ results: chr "asis"
+
+-  |                                                                              |..........                                                            |  15%
+   inline R code fragments
+
+\  |                                                                              |..............                                                        |  20%
+|label: setup (with options) 
+List of 4
+ $ echo   : logi FALSE
+ $ warning:/ logi FALSE
+ $ message: logi FALSE
+ $ results: chr "asis"
+
+-\|/  |                                                                              |..................                                                    |  25%
+  ordinary text without R code
+
+-  |                                                                              |.....................                                                 |  30%
+label: overview-report (with options) 
+List of 3
+ $ echo   : logi FALSE
+ $ results: chr "asis"
+ $ eval   :\ logi TRUE
+
+|/  |                                                                              |........................                                              |  35%
+  ordinary text without R code
+
+  |                                                                              |............................                                          |  40%
+-label: compliance-report-long (with options) 
+List of 3
+ $ echo   : logi FALSE
+ $ results: chr "asis"
+ $ eval   : logi TRUE
+
+\|  |                                                                              |................................                                      |  45%
+  ordinary text without R code
+
+/  |                                                                              |...................................                                   |  50%
+label: compliance-report (with options) 
+List of 3
+ $ echo   :- logi FALSE
+ $ results: chr "asis"
+ $ eval   : logi TRUE
+
+\  |                                                                              |......................................                                |  55%
+  ordinary text without R code
+
+|  |                                                                              |..........................................                            |  60%
+label: eeg-report (with options) 
+List of 2
+ $ echo   :/ logi FALSE
+ $ results:- chr "asis"
+
+\|  |                                                                              |..............................................                        |  65%
+  ordinary text without R code
+
+/  |                                                                              |.................................................                     |  70%
+label: sleep-report (with options) 
+List of 2
+ $ echo   : logi FALSE
+ $ results: chr "asis"
+
+-  |                                                                              |....................................................                  |  75%
+  ordinary text without R code
+
+\  |                                                                              |........................................................              |  80%
+label: hr-report (with options) 
+|List of 2
+ $ echo   :/ logi FALSE
+ $ results: chr "asis"
+
+-  |                                                                              |............................................................          |  85%
+  ordinary text without R code
+
+\  |                                                                              |...............................................................       |  90%
+label: task-performance-report (with options) 
+List of 2
+| $ echo   : logi FALSE
+ $ results: chr "asis"
+
+/-\|/-\|/-  |                                                                              |..................................................................    |  95%
+  ordinary text without R code
+
+\  |                                                                              |......................................................................| 100%
+label: mood-report (with options) 
+List of 2
+ $ echo   : logi FALSE
+ $ results:| chr "asis"
+
+/-
+\output file: subject_report.knit.md
+
+|/usr/local/bin/pandoc +RTS -K512m -RTS subject_report.knit.md --to html4 --from markdown+autolink_bare_uris+tex_math_single_backslash --output /Users/dnplserv/momentum_site/Subjects/440088.html --lua-filter /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --variable bs3=TRUE --standalone --section-divs --table-of-contents --toc-depth 1 --variable toc_float=1 --variable toc_selectors=h1 --variable toc_collapsed=1 --variable toc_smooth_scroll=1 --variable toc_print=1 --template /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmd/h/default.html --no-highlight --variable highlightjs=1 --variable theme=spacelab --include-in-header /var/folders/n5/x5sflnb54nd49f_kvpsz2pxh0000hf/T//RtmpkR7tf4/rmarkdown-str14cbe1023b346.html --mathjax --variable 'mathjax-url:https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML' --include-before-body navbar_sub.html 
+/
+Output created: /Users/dnplserv/momentum_site/Subjects/440088.html
+-\| -
+
+processing file: subject_report.Rmd
+\  |                                                                              |                                                                      |   0%|  |                                                                              |....                                                                  |   5%
+   inline R code fragments
+
+  |                                                                              |.......                                                               |  10%
+label: css-force (with options) 
+/List of 2
+- $ echo   :\ logi FALSE
+ $ results:| chr "asis"
+
+/  |                                                                              |..........                                                            |  15%
+   inline R code fragments
+
+-  |                                                                              |..............                                                        |  20%
+\label: setup (with options) 
+List of 4
+ $ echo   : logi FALSE
+ $ warning:| logi FALSE
+ $ message: logi FALSE
+ $ results: chr "asis"
+
+/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-  |                                                                              |..................                                                    |  25%
+  ordinary text without R code
+
+\  |                                                                              |.....................                                                 |  30%
+label: overview-report (with options) 
+List of 3
+ $ echo   :| logi FALSE
+ $ results: chr "asis"
+ $ eval   : logi TRUE
+
+/  |                                                                              |........................                                              |  35%
+  ordinary text without R code
+
+-  |                                                                              |............................                                          |  40%
+label: compliance-report-long (with options) 
+List of 3
+ $ echo   : logi FALSE
+ $ results:\ chr "asis"
+ $ eval   :| logi TRUE
+
+/-\  |                                                                              |................................                                      |  45%
+  ordinary text without R code
+
+|  |                                                                              |...................................                                   |  50%
+label: compliance-report (with options) 
+List of 3
+ $ echo   : logi FALSE
+ $ results: chr "asis"
+ $ eval   :/ logi TRUE
+
+-  |                                                                              |......................................                                |  55%
+  ordinary text without R code
+
+\  |                                                                              |..........................................                            |  60%
+label: eeg-report (with options) 
+List of 2
+| $ echo   :/ logi FALSE
+ $ results: chr "asis"
+
+-\  |                                                                              |..............................................                        |  65%
+  ordinary text without R code
+
+|  |                                                                              |.................................................                     |  70%
+label: sleep-report (with options) 
+List of 2
+ $ echo   :/ logi FALSE
+ $ results: chr "asis"
+
+-\  |                                                                              |....................................................                  |  75%
+  ordinary text without R code
+
+|  |                                                                              |........................................................              |  80%
+label: hr-report (with options) 
+List of 2
+ $ echo   : logi FALSE
+ $ results: chr "asis"
+
+/  |                                                                              |............................................................          |  85%
+  ordinary text without R code
+
+-  |                                                                              |...............................................................       |  90%
+label: task-performance-report (with options) 
+List of 2
+ $ echo   :\ logi FALSE
+ $ results: chr "asis"
+
+|/-\|/-\|/  |                                                                              |..................................................................    |  95%
+  ordinary text without R code
+
+-  |                                                                              |......................................................................| 100%
+label: mood-report (with options) 
+List of 2
+ $ echo   :\ logi FALSE
+ $ results:| chr "asis"
+
+/-\|
+/output file: subject_report.knit.md
+
+-/usr/local/bin/pandoc +RTS -K512m -RTS subject_report.knit.md --to html4 --from markdown+autolink_bare_uris+tex_math_single_backslash --output /Users/dnplserv/momentum_site/Subjects/440195.html --lua-filter /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --variable bs3=TRUE --standalone --section-divs --table-of-contents --toc-depth 1 --variable toc_float=1 --variable toc_selectors=h1 --variable toc_collapsed=1 --variable toc_smooth_scroll=1 --variable toc_print=1 --template /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmd/h/default.html --no-highlight --variable highlightjs=1 --variable theme=spacelab --include-in-header /var/folders/n5/x5sflnb54nd49f_kvpsz2pxh0000hf/T//RtmplHOvMR/rmarkdown-str14d006ff2cb57.html --mathjax --variable 'mathjax-url:https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML' --include-before-body navbar_sub.html 
+\
+Output created: /Users/dnplserv/momentum_site/Subjects/440195.html
+|/-\ -
+
+processing file: subject_report.Rmd
+\  |                                                                              |                                                                      |   0%  |                                                                            |  |....                                                                  |   5%
+   inline R code fragments
+
+  |                                                                              |.......                                                               |  10%
+label: css-force (with options) 
+/List of 2
+- $ echo   :\ logi FALSE
+ $ results: chr "asis"
+|
+/  |                                                                              |..........                                                            |  15%
+   inline R code fragments
+
+-  |                                                                              |..............                                                        |  20%
+\label: setup (with options) 
+List of 4
+ $ echo   :| logi FALSE
+ $ warning: logi FALSE
+ $ message: logi FALSE
+ $ results: chr "asis"
+
+/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-  |                                                                              |..................                                                    |  25%
+  ordinary text without R code
+
+\  |                                                                              |.....................                                                 |  30%
+label: overview-report (with options) 
+List of 3
+ $ echo   : logi FALSE
+ $ results: chr "asis"
+ $ eval   : logi TRUE
+
+|  |                                                                              |........................                                              |  35%
+  ordinary text without R code
+
+/  |                                                                              |............................                                          |  40%
+label: compliance-report-long (with options) 
+List of 3
+ $ echo   : logi FALSE
+ $ results: chr "asis"
+ $ eval   :- logi TRUE
+
+\|/  |                                                                              |................................                                      |  45%
+  ordinary text without R code
+
+-  |                                                                              |...................................                                   |  50%
+label: compliance-report (with options) 
+List of 3
+ $ echo   : logi FALSE
+ $ results: chr "asis"
+ $ eval   : logi TRUE
+
+\  |                                                                              |......................................                                |  55%
+  ordinary text without R code
+
+|  |                                                                              |..........................................                            |  60%
+label: eeg-report (with options) 
+List of 2
+ $ echo   :/ logi FALSE
+ $ results: chr "asis"
+
+-\  |                                                                              |..............................................                        |  65%
+  ordinary text without R code
+
+|  |                                                                              |.................................................                     |  70%
+label: sleep-report (with options) 
+List of 2
+ $ echo   :/ logi FALSE
+ $ results: chr "asis"
+
+-\  |                                                                              |....................................................                  |  75%
+  ordinary text without R code
+
+|  |                                                                              |........................................................              |  80%
+label: hr-report (with options) 
+/List of 2
+ $ echo   :- logi FALSE
+ $ results:\ chr "asis"
+
+|  |                                                                              |............................................................          |  85%
+  ordinary text without R code
+
+/  |                                                                              |...............................................................       |  90%
+label: task-performance-report (with options) 
+List of 2
+- $ echo   : logi FALSE
+ $ results:\ chr "asis"
+
+|/-\|/-\|/-  |                                                                              |..................................................................    |  95%
+  ordinary text without R code
+
+\  |                                                                              |......................................................................| 100%
+label: mood-report (with options) 
+List of 2
+| $ echo   : logi FALSE
+ $ results:/ chr "asis"
+
+-\|/
+-output file: subject_report.knit.md
+
+\/usr/local/bin/pandoc +RTS -K512m -RTS subject_report.knit.md --to html4 --from markdown+autolink_bare_uris+tex_math_single_backslash --output /Users/dnplserv/momentum_site/Subjects/540001.html --lua-filter /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --variable bs3=TRUE --standalone --section-divs --table-of-contents --toc-depth 1 --variable toc_float=1 --variable toc_selectors=h1 --variable toc_collapsed=1 --variable toc_smooth_scroll=1 --variable toc_print=1 --template /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmd/h/default.html --no-highlight --variable highlightjs=1 --variable theme=spacelab --include-in-header /var/folders/n5/x5sflnb54nd49f_kvpsz2pxh0000hf/T//RtmpRHfasF/rmarkdown-str14de57e302374.html --mathjax --variable 'mathjax-url:https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML' --include-before-body navbar_sub.html 
+|
+Output created: /Users/dnplserv/momentum_site/Subjects/540001.html
+/-\| -
+
+processing file: subject_report.Rmd
+\  |                                                                              |                                                                      |   0%  |                                                                              |....                                                                  |   5%
+|   inline R code fragments
+
+  |                                                                              |.......                                                               |  10%
+/label: css-force (with options) 
+-List of 2
+\ $ echo   :| logi FALSE
+ $ results: chr "asis"
+
+/  |                                                                              |..........                                                            |  15%
+   inline R code fragments
+
+-  |                                                                              |..............                                                        |  20%
+\label: setup (with options) 
+List of 4
+ $ echo   :| logi FALSE
+ $ warning: logi FALSE
+ $ message: logi FALSE
+ $ results:/ chr "asis"
+
+-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\  |                                                                              |..................                                                    |  25%
+  ordinary text without R code
+
+|  |                                                                              |.....................                                                 |  30%
+label: overview-report (with options) 
+List of 3
+ $ echo   : logi FALSE
+ $ results: chr "asis"
+ $ eval   : logi TRUE
+
+/  |                                                                              |........................                                              |  35%
+  ordinary text without R code
+
+-  |                                                                              |............................                                          |  40%
+label: compliance-report-long (with options) 
+List of 3
+\ $ echo   : logi FALSE
+ $ results:| chr "asis"
+ $ eval   :/ logi TRUE
+
+-\|  |                                                                              |................................                                      |  45%
+  ordinary text without R code
+
+/  |                                                                              |...................................                                   |  50%
+label: compliance-report (with options) 
+List of 3
+ $ echo   :- logi FALSE
+ $ results: chr "asis"
+ $ eval   :\ logi TRUE
+
+|  |                                                                              |......................................                                |  55%
+  ordinary text without R code
+
+/  |                                                                              |..........................................                            |  60%
+label: eeg-report (with options) 
+List of 2
+ $ echo   : logi FALSE
+- $ results: chr "asis"
+
+\|  |                                                                              |..............................................                        |  65%
+  ordinary text without R code
+
+/  |                                                                              |.................................................                     |  70%
+label: sleep-report (with options) 
+List of 2
+ $ echo   :- logi FALSE
+ $ results:\ chr "asis"
+
+|/  |                                                                              |....................................................                  |  75%
+  ordinary text without R code
+
+-  |                                                                              |........................................................              |  80%
+label: hr-report (with options) 
+List of 2
+\ $ echo   : logi FALSE
+| $ results: chr "asis"
+
+/  |                                                                              |............................................................          |  85%
+  ordinary text without R code
+
+-  |                                                                              |...............................................................       |  90%
+label: task-performance-report (with options) 
+List of 2
+ $ echo   : logi FALSE
+ $ results: chr "asis"
+
+\|/-\|/-\|/  |                                                                              |..................................................................    |  95%
+  ordinary text without R code
+
+-  |                                                                              |......................................................................| 100%
+label: mood-report (with options) 
+List of 2
+ $ echo   :\ logi FALSE
+ $ results: chr "asis"
+
+|/-\
+|output file: subject_report.knit.md
+
+//usr/local/bin/pandoc +RTS -K512m -RTS subject_report.knit.md --to html4 --from markdown+autolink_bare_uris+tex_math_single_backslash --output /Users/dnplserv/momentum_site/Subjects/440220.html --lua-filter /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --variable bs3=TRUE --standalone --section-divs --table-of-contents --toc-depth 1 --variable toc_float=1 --variable toc_selectors=h1 --variable toc_collapsed=1 --variable toc_smooth_scroll=1 --variable toc_print=1 --template /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmd/h/default.html --no-highlight --variable highlightjs=1 --variable theme=spacelab --include-in-header /var/folders/n5/x5sflnb54nd49f_kvpsz2pxh0000hf/T//Rtmp0SyEZa/rmarkdown-str14ed656bde5d1.html --mathjax --variable 'mathjax-url:https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML' --include-before-body navbar_sub.html 
+-
+Output created: /Users/dnplserv/momentum_site/Subjects/440220.html
+\|/- -
+
+processing file: subject_report.Rmd
+\  |                                                                              |                                                                      |   0%  |                                                                              |....                                                                  |   5%
+|   inline R code fragments
+
+/  |                                                                              |.......                                                               |  10%
+label: css-force (with options) 
+-List of 2
+\ $ echo   :| logi FALSE
+ $ results: chr "asis"
+
+/  |                                                                              |..........                                                            |  15%
+   inline R code fragments
+
+-  |                                                                              |..............                                                        |  20%
+\label: setup (with options) 
+List of 4
+ $ echo   :| logi FALSE
+ $ warning: logi FALSE
+ $ message: logi FALSE
+ $ results: chr "asis"
+
+/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\  |                                                                              |..................                                                    |  25%
+  ordinary text without R code
+
+|  |                                                                              |.....................                                                 |  30%
+label: overview-report (with options) 
+List of 3
+ $ echo   : logi FALSE
+ $ results: chr "asis"
+ $ eval   : logi TRUE
+
+/  |                                                                              |........................                                              |  35%
+  ordinary text without R code
+
+-  |                                                                              |............................                                          |  40%
+label: compliance-report-long (with options) 
+List of 3
+ $ echo   : logi FALSE
+ $ results: chr "asis"
+ $ eval   :\ logi TRUE
+
+|/-  |                                                                              |................................                                      |  45%
+  ordinary text without R code
+
+\  |                                                                              |...................................                                   |  50%
+label: compliance-report (with options) 
+List of 3
+ $ echo   :| logi FALSE
+ $ results: chr "asis"
+ $ eval   :/ logi TRUE
+
+-  |                                                                              |......................................                                |  55%
+  ordinary text without R code
+
+\  |                                                                              |..........................................                            |  60%
+label: eeg-report (with options) 
+List of 2
+ $ echo   :| logi FALSE
+ $ results:/ chr "asis"
+
+-\  |                                                                              |..............................................                        |  65%
+  ordinary text without R code
+
+|  |                                                                              |.................................................                     |  70%
+label: sleep-report (with options) 
+List of 2
+ /$ echo   : logi FALSE
+ $ results: chr "asis"
+
+-\  |                                                                              |....................................................                  |  75%
+  ordinary text without R code
+
+|  |                                                                              |........................................................              |  80%
+label: hr-report (with options) 
+List of 2
+ $ echo   : logi FALSE
+ $ results:/ chr "asis"
+
+-  |                                                                              |............................................................          |  85%
+  ordinary text without R code
+
+\  |                                                                              |...............................................................       |  90%
+label: task-performance-report (with options) 
+List of 2
+| $ echo   : logi FALSE
+ /$ results: chr "asis"
+
+-\|/-\|/-\  |                                                                              |..................................................................    |  95%
+  ordinary text without R code
+
+|  |                                                                              |......................................................................| 100%
+label: mood-report (with options) 
+List of 2
+ $ echo   :/ logi FALSE
+ $ results: chr "asis"
+
+-\|/-
+\output file: subject_report.knit.md
+
+|/usr/local/bin/pandoc +RTS -K512m -RTS subject_report.knit.md --to html4 --from markdown+autolink_bare_uris+tex_math_single_backslash --output /Users/dnplserv/momentum_site/Subjects/440242.html --lua-filter /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --variable bs3=TRUE --standalone --section-divs --table-of-contents --toc-depth 1 --variable toc_float=1 --variable toc_selectors=h1 --variable toc_collapsed=1 --variable toc_smooth_scroll=1 --variable toc_print=1 --template /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmd/h/default.html --no-highlight --variable highlightjs=1 --variable theme=spacelab --include-in-header /var/folders/n5/x5sflnb54nd49f_kvpsz2pxh0000hf/T//RtmpiQf76s/rmarkdown-str14fc950ee5ce0.html --mathjax --variable 'mathjax-url:https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML' --include-before-body navbar_sub.html 
+/
+Output created: /Users/dnplserv/momentum_site/Subjects/440242.html
+-\|/ -
+
+processing file: subject_report.Rmd
+\  |                                                                              |                                                                      |   0%  |                                                                              |....                                                                  |   5%
+|   inline R code fragments
+
+/  |                                                                              |.......                                                               |  10%
+-label: css-force (with options) 
+\List of 2
+| $ echo   :/ logi FALSE
+ $ results: chr "asis"
+
+-  |                                                                              |..........                                                            |  15%
+   inline R code fragments
+
+\  |                                                                              |..............                                                        |  20%
+|label: setup (with options) 
+List of 4
+ $ echo   :/ logi FALSE
+ $ warning: logi FALSE
+ $ message: logi FALSE
+- $ results: chr "asis"
+
+\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-  |                                                                              |..................                                                    |  25%
+  ordinary text without R code
+
+\  |                                                                              |.....................                                                 |  30%
+label: overview-report (with options) 
+List of 3
+ $ echo   : logi FALSE
+ $ results: chr "asis"
+ $ eval   : logi TRUE
+
+|  |                                                                              |........................                                              |  35%
+  ordinary text without R code
+
+/  |                                                                              |............................                                          |  40%
+label: compliance-report-long (with options) 
+List of 3
+ $ echo   : logi FALSE
+ $ results: chr "asis"
+ $ eval   : logi TRUE
+
+-\|  |                                                                              |................................                                      |  45%
+  ordinary text without R code
+
+/  |                                                                              |...................................                                   |  50%
+label: compliance-report (with options) 
+List of 3
+- $ echo   : logi FALSE
+ $ results: chr "asis"
+ $ eval   : logi TRUE
+\
+|  |                                                                              |......................................                                |  55%
+  ordinary text without R code
+
+/  |                                                                              |..........................................                            |  60%
+label: eeg-report (with options) 
+List of 2
+ $ echo   :- logi FALSE
+ $ results:\ chr "asis"
+
+|/  |                                                                              |..............................................                        |  65%
+  ordinary text without R code
+
+-  |                                                                              |.................................................                     |  70%
+label: sleep-report (with options) 
+List of 2
+\ $ echo   : logi FALSE
+| $ results: chr "asis"
+
+/  |                                                                              |....................................................                  |  75%
+  ordinary text without R code
+
+-  |                                                                              |........................................................              |  80%
+label: hr-report (with options) 
+List of 2
+\ $ echo   : logi FALSE
+ $ results: chr "asis"
+
+|  |                                                                              |............................................................          |  85%
+  ordinary text without R code
+
+/  |                                                                              |...............................................................       |  90%
+label: task-performance-report (with options) 
+List of 2
+- $ echo   : logi FALSE
+ $ results:\ chr "asis"
+
+|/-\|/-\|/-  |                                                                              |..................................................................    |  95%
+  ordinary text without R code
+
+  |                                                                              |......................................................................| 100%
+\label: mood-report (with options) 
+List of 2
+ $ echo   : logi FALSE
+ $ results: chr "asis"
+
+|/-\|
+/output file: subject_report.knit.md
+
+-/usr/local/bin/pandoc +RTS -K512m -RTS subject_report.knit.md --to html4 --from markdown+autolink_bare_uris+tex_math_single_backslash --output /Users/dnplserv/momentum_site/Subjects/540005.html --lua-filter /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --variable bs3=TRUE --standalone --section-divs --table-of-contents --toc-depth 1 --variable toc_float=1 --variable toc_selectors=h1 --variable toc_collapsed=1 --variable toc_smooth_scroll=1 --variable toc_print=1 --template /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmd/h/default.html --no-highlight --variable highlightjs=1 --variable theme=spacelab --include-in-header /var/folders/n5/x5sflnb54nd49f_kvpsz2pxh0000hf/T//RtmpLvdDzN/rmarkdown-str150c872b7a528.html --mathjax --variable 'mathjax-url:https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML' --include-before-body navbar_sub.html 
+\
+Output created: /Users/dnplserv/momentum_site/Subjects/540005.html
+|/- -
+
+processing file: subject_report.Rmd
+\  |                                                                              |                                                                      |   0%  |                                                                              |....                                                                  |   5%|
+   inline R code fragments
+
+  |                                                                              |.......                                                               |  10%
+label: css-force (with options) 
+/List of 2
+- $ echo   :\ logi FALSE
+ $ results:| chr "asis"
+
+/  |                                                                              |..........                                                            |  15%
+   inline R code fragments
+
+-  |                                                                              |..............                                                        |  20%
+\label: setup (with options) 
+List of 4
+ $ echo   :| logi FALSE
+ $ warning: logi FALSE
+ $ message:/ logi FALSE
+ $ results: chr "asis"
+
+-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\  |                                                                              |..................                                                    |  25%
+  ordinary text without R code
+
+|  |                                                                              |.....................                                                 |  30%
+label: overview-report (with options) 
+List of 3
+ $ echo   :/ logi FALSE
+ $ results: chr "asis"
+ $ eval   :- logi TRUE
+
+\  |                                                                              |........................                                              |  35%
+  ordinary text without R code
+
+|  |                                                                              |............................                                          |  40%
+label: compliance-report-long (with options) 
+/List of 3
+ $ echo   :- logi FALSE
+ $ results:\ chr "asis"
+ $ eval   :| logi TRUE
+
+/-\  |                                                                              |................................                                      |  45%
+  ordinary text without R code
+
+|  |                                                                              |...................................                                   |  50%
+label: compliance-report (with options) 
+List of 3
+ $ echo   : logi FALSE
+ $ results: chr "asis"
+ $ eval   : logi TRUE
+
+/-  |                                                                              |......................................                                |  55%
+  ordinary text without R code
+
+\  |                                                                              |..........................................                            |  60%
+label: eeg-report (with options) 
+|List of 2
+ $ echo   :/ logi FALSE
+ $ results:- chr "asis"
+
+\|  |                                                                              |..............................................                        |  65%
+  ordinary text without R code
+
+/  |                                                                              |.................................................                     |  70%
+label: sleep-report (with options) 
+List of 2
+ $ echo   : logi FALSE
+- $ results: chr "asis"
+
+\  |                                                                              |....................................................                  |  75%
+  ordinary text without R code
+
+|  |                                                                              |........................................................              |  80%
+label: hr-report (with options) 
+List of 2
+/ $ echo   : logi FALSE
+ $ results:- chr "asis"
+
+\  |                                                                              |............................................................          |  85%
+  ordinary text without R code
+
+|  |                                                                              |...............................................................       |  90%
+label: task-performance-report (with options) 
+List of 2
+ $ echo   :/ logi FALSE
+ $ results:- chr "asis"
+
+\|/-\|/-\|/  |                                                                              |..................................................................    |  95%
+  ordinary text without R code
+
+-  |                                                                              |......................................................................| 100%
+label: mood-report (with options) 
+List of 2
+\ $ echo   : logi FALSE
+ $ results: chr "asis"
+
+|/-\
+|output file: subject_report.knit.md
+
+//usr/local/bin/pandoc +RTS -K512m -RTS subject_report.knit.md --to html4 --from markdown+autolink_bare_uris+tex_math_single_backslash --output /Users/dnplserv/momentum_site/Subjects/221518.html --lua-filter /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --variable bs3=TRUE --standalone --section-divs --table-of-contents --toc-depth 1 --variable toc_float=1 --variable toc_selectors=h1 --variable toc_collapsed=1 --variable toc_smooth_scroll=1 --variable toc_print=1 --template /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmd/h/default.html --no-highlight --variable highlightjs=1 --variable theme=spacelab --include-in-header /var/folders/n5/x5sflnb54nd49f_kvpsz2pxh0000hf/T//RtmptJz1Oo/rmarkdown-str1519e750ca616.html --mathjax --variable 'mathjax-url:https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML' --include-before-body navbar_sub.html 
+-
+Output created: /Users/dnplserv/momentum_site/Subjects/221518.html
+\|/- -
+
+processing file: subject_report.Rmd
+\  |                                                                              |                                                                      |   0%  |                                                                              |....                                                                  |   5%
+|   inline R code fragments
+
+  |                                                                              |.......                                                               |  10%
+label: css-force (with options) 
+List of 2
+ $ echo   : logi FALSE
+ $ results: chr "asis"
+
+/  |                                                                              |..........                                                            |  15%
+   inline R code fragments
+
+-  |                                                                              |..............                                                        |  20%
+\label: setup (with options) 
+List of 4
+ $ echo   : logi FALSE
+ $ warning: logi FALSE
+ $ message:| logi FALSE
+ $ results: chr "asis"
+
+/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\  |                                                                              |..................                                                    |  25%
+  ordinary text without R code
+
+  |                                                                              |.....................                                                 |  30%
+|label: overview-report (with options) 
+List of 3
+ $ echo   : logi FALSE
+ $ results: chr "asis"
+ $ eval   :/ logi TRUE
+
+-\  |                                                                              |........................                                              |  35%
+  ordinary text without R code
+
+|  |                                                                              |............................                                          |  40%
+label: compliance-report-long (with options) 
+List of 3
+ $ echo   : logi FALSE
+ $ results: chr "asis"
+ $ eval   :/ logi TRUE
+
+-\  |                                                                              |................................                                      |  45%
+  ordinary text without R code
+
+|  |                                                                              |...................................                                   |  50%
+label: compliance-report (with options) 
+List of 3
+ $ echo   : logi FALSE
+ $ results: chr "asis"
+ $ eval   : logi TRUE
+
+/  |                                                                              |......................................                                |  55%
+  ordinary text without R code
+
+  |                                                                              |..........................................                            |  60%
+-label: eeg-report (with options) 
+List of 2
+ $ echo   : logi FALSE
+ $ results: chr "asis"
+
+\  |                                                                              |..............................................                        |  65%
+  ordinary text without R code
+
+|  |                                                                              |.................................................                     |  70%
+label: sleep-report (with options) 
+List of 2
+/ $ echo   :- logi FALSE
+ $ results: chr "asis"
+
+\  |                                                                              |....................................................                  |  75%
+  ordinary text without R code
+
+|  |                                                                              |........................................................              |  80%
+label: hr-report (with options) 
+List of 2
+/ $ echo   : logi FALSE
+ $ results:- chr "asis"
+
+\  |                                                                              |............................................................          |  85%
+  ordinary text without R code
+
+|  |                                                                              |...............................................................       |  90%
+label: task-performance-report (with options) 
+List of 2
+ $ echo   : logi FALSE
+ $ results:/ chr "asis"
+
+-\|/-\|/-\  |                                                                              |..................................................................    |  95%
+  ordinary text without R code
+
+|  |                                                                              |......................................................................| 100%
+label: mood-report (with options) 
+List of 2
+ $ echo   : logi FALSE
+ $ results:/ chr "asis"
+
+-\
+|output file: subject_report.knit.md
+
+//usr/local/bin/pandoc +RTS -K512m -RTS subject_report.knit.md --to html4 --from markdown+autolink_bare_uris+tex_math_single_backslash --output /Users/dnplserv/momentum_site/Subjects/540003.html --lua-filter /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --variable bs3=TRUE --standalone --section-divs --table-of-contents --toc-depth 1 --variable toc_float=1 --variable toc_selectors=h1 --variable toc_collapsed=1 --variable toc_smooth_scroll=1 --variable toc_print=1 --template /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmd/h/default.html --no-highlight --variable highlightjs=1 --variable theme=spacelab --include-in-header /var/folders/n5/x5sflnb54nd49f_kvpsz2pxh0000hf/T//Rtmp8Uid36/rmarkdown-str152a62f69eee4.html --mathjax --variable 'mathjax-url:https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML' --include-before-body navbar_sub.html 
+-
+Output created: /Users/dnplserv/momentum_site/Subjects/540003.html
+\|/-\ -
+
+processing file: subject_report.Rmd
+\  |                                                                              |                                                                      |   0%|  |                                                                              |....                                                                  |   5%
+   inline R code fragments
+
+  |                                                                              |.......                                                               |  10%
+label: css-force (with options) 
+/List of 2
+- $ echo   :\ logi FALSE
+ $ results:| chr "asis"
+
+/  |                                                                              |..........                                                            |  15%
+   inline R code fragments
+
+-  |                                                                              |..............                                                        |  20%
+\label: setup (with options) 
+List of 4
+ $ echo   : logi FALSE
+ $ warning:| logi FALSE
+ $ message: logi FALSE
+ $ results: chr "asis"
+
+/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-  |                                                                              |..................                                                    |  25%
+  ordinary text without R code
+
+\  |                                                                              |.....................                                                 |  30%
+label: overview-report (with options) 
+|List of 3
+ $ echo   : logi FALSE
+ $ results:/ chr "asis"
+ $ eval   :- logi TRUE
+
+\|  |                                                                              |........................                                              |  35%
+  ordinary text without R code
+
+/  |                                                                              |............................                                          |  40%
+label: compliance-report-long (with options) 
+List of 3
+ $ echo   : logi FALSE
+ $ results: chr "asis"
+ $ eval   :- logi TRUE
+
+\|  |                                                                              |................................                                      |  45%
+  ordinary text without R code
+
+/  |                                                                              |...................................                                   |  50%
+label: compliance-report (with options) 
+List of 3
+ $ echo   : logi FALSE
+ $ results: chr "asis"
+ $ eval   :- logi TRUE
+
+\  |                                                                              |......................................                                |  55%
+  ordinary text without R code
+
+|  |                                                                              |..........................................                            |  60%
+label: eeg-report (with options) 
+List of 2
+ $ echo   : logi FALSE
+ $ results: chr "asis"
+
+/-  |                                                                              |..............................................                        |  65%
+  ordinary text without R code
+
+  |                                                                            \  |.................................................                     |  70%
+label: sleep-report (with options) 
+List of 2
+ $ echo   : logi FALSE
+ $ results: chr "asis"|
+
+/-  |                                                                              |....................................................                  |  75%
+  ordinary text without R code
+
+\  |                                                                              |........................................................              |  80%
+label: hr-report (with options) 
+List of 2
+| $ echo   : logi FALSE
+ $ results:/ chr "asis"
+
+-  |                                                                              |............................................................          |  85%
+  ordinary text without R code
+
+\  |                                                                              |...............................................................       |  90%
+label: task-performance-report (with options) 
+List of 2
+ $ echo   : logi FALSE|
+ $ results: chr "asis"
+
+/-\|/-\|/-  |                                                                              |..................................................................    |  95%
+  ordinary text without R code
+
+\  |                                                                              |......................................................................| 100%
+label: mood-report (with options) 
+List of 2
+ $ echo   :| logi FALSE
+ $ results: chr "asis"
+
+/-\
+|output file: subject_report.knit.md
+
+//usr/local/bin/pandoc +RTS -K512m -RTS subject_report.knit.md --to html4 --from markdown+autolink_bare_uris+tex_math_single_backslash --output /Users/dnplserv/momentum_site/Subjects/221504.html --lua-filter /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --variable bs3=TRUE --standalone --section-divs --table-of-contents --toc-depth 1 --variable toc_float=1 --variable toc_selectors=h1 --variable toc_collapsed=1 --variable toc_smooth_scroll=1 --variable toc_print=1 --template /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmd/h/default.html --no-highlight --variable highlightjs=1 --variable theme=spacelab --include-in-header /var/folders/n5/x5sflnb54nd49f_kvpsz2pxh0000hf/T//RtmpO3IB91/rmarkdown-str1535d5494e8e2.html --mathjax --variable 'mathjax-url:https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML' --include-before-body navbar_sub.html 
+-
+Output created: /Users/dnplserv/momentum_site/Subjects/221504.html
+\| -
+
+processing file: subject_report.Rmd
+\  |                                                                              |                                                                      |   0%|  |                                                                              |....                                                                  |   5%
+   inline R code fragments
+
+  |                                                                              |.......                                                               |  10%
+label: css-force (with options) 
+List of 2
+ $ echo   :/ logi FALSE
+ $ results: chr "asis"
+
+-  |                                                                              |..........                                                            |  15%
+   inline R code fragments
+
+\  |                                                                              |..............                                                        |  20%
+|label: setup (with options) 
+List of 4
+ $ echo   :/ logi FALSE
+ $ warning: logi FALSE
+ $ message: logi FALSE
+ $ results: chr "asis"
+
+-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/  |                                                                              |..................                                                    |  25%
+  ordinary text without R code
+
+-  |                                                                              |.....................                                                 |  30%
+label: overview-report (with options) 
+List of 3
+ $ echo   : logi FALSE
+ $ results: chr "asis"
+ $ eval   :\ logi TRUE
+
+|  |                                                                              |........................                                              |  35%
+  ordinary text without R code
+
+/  |                                                                              |............................                                          |  40%
+label: compliance-report-long (with options) 
+List of 3
+ $ echo   : logi FALSE
+ $ results: chr "asis"
+ $ eval   :- logi TRUE
+
+\|/  |                                                                              |................................                                      |  45%
+  ordinary text without R code
+
+-  |                                                                              |...................................                                   |  50%
+label: compliance-report (with options) 
+\List of 3
+ $ echo   : logi FALSE
+ $ results: chr "asis"
+ $ eval   :| logi TRUE
+
+/  |                                                                              |......................................                                |  55%
+  ordinary text without R code
+
+-  |                                                                              |..........................................                            |  60%
+label: eeg-report (with options) 
+List of 2
+ $ echo   :\ logi FALSE
+ $ results:| chr "asis"
+
+/-  |                                                                              |..............................................                        |  65%
+  ordinary text without R code
+
+  |                                                                              |.................................................                     |  70%
+\label: sleep-report (with options) 
+List of 2
+ $ echo   : logi FALSE
+ $ results: chr "asis"
+
+|/  |                                                                              |....................................................                  |  75%
+  ordinary text without R code
+
+-  |                                                                              |........................................................              |  80%
+label: hr-report (with options) 
+\List of 2
+ $ echo   : logi FALSE
+ $ results:| chr "asis"
+
+/  |                                                                              |............................................................          |  85%
+  ordinary text without R code
+
+-  |                                                                              |...............................................................       |  90%
+label: task-performance-report (with options) 
+List of 2
+\ $ echo   : logi FALSE
+ $ results:| chr "asis"
+
+/-\|/-\|/-  |                                                                              |..................................................................    |  95%
+  ordinary text without R code
+
+\  |                                                                              |......................................................................| 100%
+label: mood-report (with options) 
+List of 2
+ $ echo   : logi FALSE
+ $ results:| chr "asis"
+
+/-\|/
+-output file: subject_report.knit.md
+
+\/usr/local/bin/pandoc +RTS -K512m -RTS subject_report.knit.md --to html4 --from markdown+autolink_bare_uris+tex_math_single_backslash --output /Users/dnplserv/momentum_site/Subjects/221604.html --lua-filter /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --variable bs3=TRUE --standalone --section-divs --table-of-contents --toc-depth 1 --variable toc_float=1 --variable toc_selectors=h1 --variable toc_collapsed=1 --variable toc_smooth_scroll=1 --variable toc_print=1 --template /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmd/h/default.html --no-highlight --variable highlightjs=1 --variable theme=spacelab --include-in-header /var/folders/n5/x5sflnb54nd49f_kvpsz2pxh0000hf/T//RtmpP00qwC/rmarkdown-str1540a46e25411.html --mathjax --variable 'mathjax-url:https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML' --include-before-body navbar_sub.html 
+|
+Output created: /Users/dnplserv/momentum_site/Subjects/221604.html
+/- -
+
+processing file: subject_report.Rmd
+\  |                                                                              |                                                                      |   0%  |                                                                            |  |....                                                                  |   5%
+   inline R code fragments
+
+  |                                                                              |.......                                                               |  10%
+/label: css-force (with options) 
+-List of 2
+\ $ echo   :| logi FALSE
+ $ results:/ chr "asis"
+
+-  |                                                                              |..........                                                            |  15%
+   inline R code fragments
+
+\  |                                                                              |..............                                                        |  20%
+|label: setup (with options) 
+List of 4
+ $ echo   : logi FALSE
+ $ warning: logi FALSE
+ $ message:/ logi FALSE
+ $ results: chr "asis"
+
+-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\  |                                                                              |..................                                                    |  25%
+  ordinary text without R code
+
+|  |                                                                              |.....................                                                 |  30%
+label: overview-report (with options) 
+List of 3
+ $ echo   : logi FALSE
+ $ results:/ chr "asis"
+ $ eval   : logi TRUE
+
+-  |                                                                              |........................                                              |  35%
+  ordinary text without R code
+
+\  |                                                                              |............................                                          |  40%
+label: compliance-report-long (with options) 
+|List of 3
+ $ echo   :/ logi FALSE
+ $ results:- chr "asis"
+ $ eval   :\ logi TRUE
+
+|/-  |                                                                              |................................                                      |  45%
+  ordinary text without R code
+
+\  |                                                                              |...................................                                   |  50%
+label: compliance-report (with options) 
+List of 3
+| $ echo   :/ logi FALSE
+ $ results: chr "asis"
+ $ eval   :- logi TRUE
+
+\  |                                                                              |......................................                                |  55%
+  ordinary text without R code
+
+|  |                                                                              |..........................................                            |  60%
+label: eeg-report (with options) 
+List of 2
+ $ echo   : logi FALSE
+/ $ results: chr "asis"
+
+-\  |                                                                              |..............................................                        |  65%
+  ordinary text without R code
+
+|  |                                                                              |.................................................                     |  70%
+label: sleep-report (with options) 
+List of 2
+/ $ echo   :- logi FALSE
+ $ results: chr "asis"
+
+\  |                                                                              |....................................................                  |  75%
+  ordinary text without R code
+
+|  |                                                                              |........................................................              |  80%
+label: hr-report (with options) 
+List of 2
+/ $ echo   :- logi FALSE
+ $ results: chr "asis"
+
+\  |                                                                              |............................................................          |  85%
+  ordinary text without R code
+
+|  |                                                                              |...............................................................       |  90%
+label: task-performance-report (with options) 
+List of 2
+ $ echo   : logi FALSE
+ $ results: chr "asis"
+
+/-\|/-\|/-\  |                                                                              |..................................................................    |  95%
+  ordinary text without R code
+
+|  |                                                                              |......................................................................| 100%
+label: mood-report (with options) 
+/List of 2
+ $ echo   : logi FALSE
+ $ results: chr "asis"
+
+-\|/-
+\output file: subject_report.knit.md
+
+|/usr/local/bin/pandoc +RTS -K512m -RTS subject_report.knit.md --to html4 --from markdown+autolink_bare_uris+tex_math_single_backslash --output /Users/dnplserv/momentum_site/Subjects/221849.html --lua-filter /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --variable bs3=TRUE --standalone --section-divs --table-of-contents --toc-depth 1 --variable toc_float=1 --variable toc_selectors=h1 --variable toc_collapsed=1 --variable toc_smooth_scroll=1 --variable toc_print=1 --template /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmd/h/default.html --no-highlight --variable highlightjs=1 --variable theme=spacelab --include-in-header /var/folders/n5/x5sflnb54nd49f_kvpsz2pxh0000hf/T//RtmpADgz6L/rmarkdown-str1551d475e91d2.html --mathjax --variable 'mathjax-url:https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML' --include-before-body navbar_sub.html 
+/
+Output created: /Users/dnplserv/momentum_site/Subjects/221849.html
+-\ -
+
+processing file: subject_report.Rmd
+\  |                                                                              |                                                                      |   0%  |                                                                              |....                                                                  |   5%
+|   inline R code fragments
+
+  |                                                                              |.......                                                               |  10%
+label: css-force (with options) 
+/List of 2
+- $ echo   :\ logi FALSE
+ $ results:| chr "asis"
+
+/  |                                                                              |..........                                                            |  15%
+   inline R code fragments
+
+-  |                                                                              |..............                                                        |  20%
+\label: setup (with options) 
+List of 4
+ $ echo   : logi FALSE
+ $ warning: logi FALSE
+ $ message: logi FALSE
+ $ results: chr "asis"
+
+|/-\  |                                                                              |..................                                                    |  25%
+  ordinary text without R code
+
+|  |                                                                              |.....................                                                 |  30%
+label: overview-report (with options) 
+/List of 3
+ $ echo   :- logi FALSE
+ $ results:\ chr "asis"
+ $ eval   : logi TRUE
+
+|  |                                                                              |........................                                              |  35%
+  ordinary text without R code
+
+/  |                                                                              |............................                                          |  40%
+label: compliance-report-long (with options) 
+List of 3
+ $ echo   :- logi FALSE
+ $ results: chr "asis"
+ $ eval   :\ logi TRUE
+
+|  |                                                                              |................................                                      |  45%
+  ordinary text without R code
+
+/  |                                                                              |...................................                                   |  50%
+label: compliance-report (with options) 
+List of 3
+ $ echo   : logi FALSE
+ $ results: chr "asis"
+ $ eval   : logi TRUE
+
+-  |                                                                              |......................................                                |  55%
+  ordinary text without R code
+
+\  |                                                                              |..........................................                            |  60%
+label: eeg-report (with options) 
+|List of 2
+ $ echo   : logi FALSE
+ $ results:/ chr "asis"
+
+-  |                                                                              |..............................................                        |  65%
+  ordinary text without R code
+
+\  |                                                                              |.................................................                     |  70%
+label: sleep-report (with options) 
+List of 2
+| $ echo   :/ logi FALSE
+ $ results: chr "asis"
+
+-  |                                                                              |....................................................                  |  75%
+  ordinary text without R code
+
+\  |                                                                              |........................................................              |  80%
+label: hr-report (with options) 
+|List of 2
+ $ echo   :/ logi FALSE
+ $ results: chr "asis"
+
+-  |                                                                              |............................................................          |  85%
+  ordinary text without R code
+
+\  |                                                                              |...............................................................       |  90%
+label: task-performance-report (with options) 
+List of 2
+| $ echo   : logi FALSE
+ $ results:/ chr "asis"
+
+-  |                                                                              |..................................................................    |  95%
+  ordinary text without R code
+
+\  |                                                                              |......................................................................| 100%
+label: mood-report (with options) 
+List of 2
+| $ echo   : logi FALSE
+ $ results: chr "asis"
+
+/
+-output file: subject_report.knit.md
+
+\/usr/local/bin/pandoc +RTS -K512m -RTS subject_report.knit.md --to html4 --from markdown+autolink_bare_uris+tex_math_single_backslash --output /Users/dnplserv/momentum_site/Subjects/440033.html --lua-filter /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --variable bs3=TRUE --standalone --section-divs --table-of-contents --toc-depth 1 --variable toc_float=1 --variable toc_selectors=h1 --variable toc_collapsed=1 --variable toc_smooth_scroll=1 --variable toc_print=1 --template /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmd/h/default.html --no-highlight --variable highlightjs=1 --variable theme=spacelab --include-in-header /var/folders/n5/x5sflnb54nd49f_kvpsz2pxh0000hf/T//Rtmp7V5xYX/rmarkdown-str1563250b02e84.html --mathjax --variable 'mathjax-url:https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML' --include-before-body navbar_sub.html 
+|
+Output created: /Users/dnplserv/momentum_site/Subjects/440033.html
+/-\ -
+
+processing file: subject_report.Rmd
+\  |                                                                              |                                                                      |   0%|  |                                                                              |....                                                                  |   5%
+   inline R code fragments
+
+  |                                                                              |.......                                                               |  10%
+/label: css-force (with options) 
+-List of 2
+\ $ echo   :| logi FALSE
+ $ results:/ chr "asis"
+
+-  |                                                                              |..........                                                            |  15%
+   inline R code fragments
+
+\  |                                                                              |..............                                                        |  20%
+|label: setup (with options) 
+List of 4
+/ $ echo   : logi FALSE
+ $ warning: logi FALSE
+- $ message: logi FALSE
+ $ results: chr "asis"
+
+\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/  |                                                                              |..................                                                    |  25%
+  ordinary text without R code
+
+-  |                                                                              |.....................                                                 |  30%
+label: overview-report (with options) 
+List of 3
+ $ echo   :\ logi FALSE
+ $ results:| chr "asis"
+ $ eval   :/ logi TRUE
+
+-  |                                                                              |........................                                              |  35%
+  ordinary text without R code
+
+\  |                                                                              |............................                                          |  40%
+label: compliance-report-long (with options) 
+List of 3
+ $ echo   : logi FALSE
+ $ results: chr "asis"
+ $ eval   :| logi TRUE
+
+/-\  |                                                                              |................................                                      |  45%
+  ordinary text without R code
+
+|  |                                                                              |...................................                                   |  50%
+label: compliance-report (with options) 
+List of 3
+ $ echo   :/ logi FALSE
+ $ results: chr "asis"
+ $ eval   :- logi TRUE
+
+\  |                                                                              |......................................                                |  55%
+  ordinary text without R code
+
+|  |                                                                              |..........................................                            |  60%
+label: eeg-report (with options) 
+List of 2
+/ $ echo   : logi FALSE
+- $ results: chr "asis"
+
+\|  |                                                                              |..............................................                        |  65%
+  ordinary text without R code
+
+/  |                                                                              |.................................................                     |  70%
+label: sleep-report (with options) 
+List of 2
+ $ echo   :- logi FALSE
+ $ results: chr "asis"
+\
+|/  |                                                                              |....................................................                  |  75%
+  ordinary text without R code
+
+  |                                                                              |........................................................              |  80%
+-label: hr-report (with options) 
+List of 2
+ $ echo   : logi FALSE
+ $ results: chr "asis"
+
+\  |                                                                              |............................................................          |  85%
+  ordinary text without R code
+
+|  |                                                                              |...............................................................       |  90%
+label: task-performance-report (with options) 
+List of 2
+ $ echo   : logi FALSE
+/ $ results: chr "asis"
+
+-\|/-\|/-\  |                                                                              |..................................................................    |  95%
+  ordinary text without R code
+
+  |                                                                              |......................................................................| 100%
+label: mood-report (with options) 
+|List of 2
+ $ echo   : logi FALSE
+ $ results:/ chr "asis"
+
+-\|/-
+\output file: subject_report.knit.md
+
+|/usr/local/bin/pandoc +RTS -K512m -RTS subject_report.knit.md --to html4 --from markdown+autolink_bare_uris+tex_math_single_backslash --output /Users/dnplserv/momentum_site/Subjects/221839.html --lua-filter /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --variable bs3=TRUE --standalone --section-divs --table-of-contents --toc-depth 1 --variable toc_float=1 --variable toc_selectors=h1 --variable toc_collapsed=1 --variable toc_smooth_scroll=1 --variable toc_print=1 --template /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmd/h/default.html --no-highlight --variable highlightjs=1 --variable theme=spacelab --include-in-header /var/folders/n5/x5sflnb54nd49f_kvpsz2pxh0000hf/T//RtmpBip3JX/rmarkdown-str1567070f32e82.html --mathjax --variable 'mathjax-url:https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML' --include-before-body navbar_sub.html 
+/
+Output created: /Users/dnplserv/momentum_site/Subjects/221839.html
+-\ -
+
+processing file: subject_report.Rmd
+\  |                                                                              |                                                                      |   0%|  |                                                                              |....                                                                  |   5%
+   inline R code fragments
+
+  |                                                                              |.......                                                               |  10%
+/label: css-force (with options) 
+-List of 2
+\ $ echo   :| logi FALSE
+ $ results:/ chr "asis"
+
+-  |                                                                              |..........                                                            |  15%
+   inline R code fragments
+
+\  |                                                                              |..............                                                        |  20%
+|label: setup (with options) 
+List of 4
+ $ echo   :/ logi FALSE
+ $ warning: logi FALSE-
+ $ message: logi FALSE
+ $ results: chr "asis"
+
+\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-  |                                                                              |..................                                                    |  25%
+  ordinary text without R code
+
+\  |                                                                              |.....................                                                 |  30%
+label: overview-report (with options) 
+List of 3
+| $ echo   :/ logi FALSE
+ $ results: chr "asis"
+ $ eval   :- logi TRUE
+
+\|  |                                                                              |........................                                              |  35%
+  ordinary text without R code
+
+/  |                                                                              |............................                                          |  40%
+label: compliance-report-long (with options) 
+-List of 3
+ $ echo   :\ logi FALSE
+ $ results:| chr "asis"
+ $ eval   :/ logi TRUE
+
+-\  |                                                                              |................................                                      |  45%
+  ordinary text without R code
+
+|  |                                                                              |...................................                                   |  50%
+label: compliance-report (with options) 
+List of 3
+ $ echo   :/ logi FALSE
+ $ results: chr "asis"
+ $ eval   :- logi TRUE
+
+\  |                                                                              |......................................                                |  55%
+  ordinary text without R code
+
+|  |                                                                              |..........................................                            |  60%
+label: eeg-report (with options) 
+List of 2
+ $ echo   : logi FALSE
+ $ results: chr "asis"
+
+/-  |                                                                              |..............................................                        |  65%
+  ordinary text without R code
+
+\  |                                                                              |.................................................                     |  70%
+label: sleep-report (with options) 
+List of 2
+ $ echo   :| logi FALSE
+ $ results: chr "asis"
+
+/-  |                                                                              |....................................................                  |  75%
+  ordinary text without R code
+
+\  |                                                                              |........................................................              |  80%
+label: hr-report (with options) 
+List of 2
+| $ echo   :/ logi FALSE
+ $ results: chr "asis"
+
+-  |                                                                              |............................................................          |  85%
+  ordinary text without R code
+
+\  |                                                                              |...............................................................       |  90%
+label: task-performance-report (with options) 
+List of 2
+| $ echo   : logi FALSE
+/ $ results: chr "asis"
+
+-\|/-\|/-\  |                                                                              |..................................................................    |  95%
+  ordinary text without R code
+
+|  |                                                                              |......................................................................| 100%
+label: mood-report (with options) 
+List of 2
+/ $ echo   : logi FALSE
+ $ results:- chr "asis"
+
+\|/
+-output file: subject_report.knit.md
+
+\/usr/local/bin/pandoc +RTS -K512m -RTS subject_report.knit.md --to html4 --from markdown+autolink_bare_uris+tex_math_single_backslash --output /Users/dnplserv/momentum_site/Subjects/220256.html --lua-filter /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --variable bs3=TRUE --standalone --section-divs --table-of-contents --toc-depth 1 --variable toc_float=1 --variable toc_selectors=h1 --variable toc_collapsed=1 --variable toc_smooth_scroll=1 --variable toc_print=1 --template /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmd/h/default.html --no-highlight --variable highlightjs=1 --variable theme=spacelab --include-in-header /var/folders/n5/x5sflnb54nd49f_kvpsz2pxh0000hf/T//RtmpxX0SmT/rmarkdown-str1577455603c06.html --mathjax --variable 'mathjax-url:https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML' --include-before-body navbar_sub.html 
+|
+Output created: /Users/dnplserv/momentum_site/Subjects/220256.html
+/-\| -
+
+processing file: subject_report.Rmd
+\  |                                                                              |                                                                      |   0%  |                                                                              |....                                                                  |   5%
+|   inline R code fragments
+
+  |                                                                              |.......                                                               |  10%
+/label: css-force (with options) 
+-List of 2
+\ $ echo   :| logi FALSE
+ $ results: chr "asis"
+
+/  |                                                                              |..........                                                            |  15%
+   inline R code fragments
+
+-  |                                                                              |..............                                                        |  20%
+\label: setup (with options) 
+List of 4
+ $ echo   : logi FALSE
+ $ warning:| logi FALSE
+ $ message: logi FALSE
+ $ results: chr "asis"
+
+/-\|/  |                                                                              |..................                                                    |  25%
+  ordinary text without R code
+
+-  |                                                                              |.....................                                                 |  30%
+label: overview-report (with options) 
+List of 3
+ $ echo   : logi FALSE
+ $ results: chr "asis"
+ $ eval   : logi TRUE
+
+\  |                                                                              |........................                                              |  35%
+  ordinary text without R code
+
+|  |                                                                              |............................                                          |  40%
+label: compliance-report-long (with options) 
+List of 3
+ $ echo   : logi FALSE
+ $ results: chr "asis"
+ $ eval   : logi TRUE
+
+/  |                                                                              |................................                                      |  45%
+  ordinary text without R code
+
+-  |                                                                              |...................................                                   |  50%
+label: compliance-report (with options) 
+List of 3
+ $ echo   \: logi FALSE
+ $ results: chr "asis"
+ $ eval   :| logi TRUE
+
+/  |                                                                              |......................................                                |  55%
+  ordinary text without R code
+
+-  |                                                                              |..........................................                            |  60%
+label: eeg-report (with options) 
+List of 2
+\ $ echo   : logi FALSE
+ $ results:| chr "asis"
+
+/  |                                                                              |..............................................                        |  65%
+  ordinary text without R code
+
+-  |                                                                              |.................................................                     |  70%
+label: sleep-report (with options) 
+\List of 2
+ $ echo   :| logi FALSE
+ $ results: chr "asis"
+
+/  |                                                                              |....................................................                  |  75%
+  ordinary text without R code
+
+-  |                                                                              |........................................................              |  80%
+label: hr-report (with options) 
+\List of 2
+ $ echo   :| logi FALSE
+ $ results: chr "asis"
+
+/  |                                                                              |............................................................          |  85%
+  ordinary text without R code
+
+-  |                                                                              |...............................................................       |  90%
+label: task-performance-report (with options) 
+List of 2\
+ $ echo   : logi FALSE
+ $ results:| chr "asis"
+
+/  |                                                                              |..................................................................    |  95%
+  ordinary text without R code
+
+-  |                                                                              |......................................................................| 100%
+label: mood-report (with options) 
+\List of 2
+ $ echo   : logi FALSE
+ $ results: chr "asis"
+
+|
+/output file: subject_report.knit.md
+
+-/usr/local/bin/pandoc +RTS -K512m -RTS subject_report.knit.md --to html4 --from markdown+autolink_bare_uris+tex_math_single_backslash --output /Users/dnplserv/momentum_site/Subjects/440147.html --lua-filter /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --variable bs3=TRUE --standalone --section-divs --table-of-contents --toc-depth 1 --variable toc_float=1 --variable toc_selectors=h1 --variable toc_collapsed=1 --variable toc_smooth_scroll=1 --variable toc_print=1 --template /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmd/h/default.html --no-highlight --variable highlightjs=1 --variable theme=spacelab --include-in-header /var/folders/n5/x5sflnb54nd49f_kvpsz2pxh0000hf/T//RtmpMnQVvq/rmarkdown-str158281b5f2ada.html --mathjax --variable 'mathjax-url:https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML' --include-before-body navbar_sub.html 
+\
+Output created: /Users/dnplserv/momentum_site/Subjects/440147.html
+|/-\| -
+
+processing file: subject_report.Rmd
+\  |                                                                              |                                                                      |   0%  |                                                                              |....                                                                  |   5%
+|   inline R code fragments
+
+  |                                                                              |.......                                                               |  10%
+/label: css-force (with options) 
+-List of 2
+\ $ echo   :| logi FALSE
+ $ results: chr "asis"
+
+/  |                                                                              |..........                                                            |  15%
+   inline R code fragments
+
+-  |                                                                              |..............                                                        |  20%
+\label: setup (with options) 
+List of 4
+ $ echo   : logi FALSE
+ $ warning: logi FALSE
+ $ message: logi FALSE
+ $ results: chr "asis"
+
+|/-\  |                                                                              |..................                                                    |  25%
+  ordinary text without R code
+
+|  |                                                                              |.....................                                                 |  30%
+label: overview-report (with options) 
+List of 3
+ $ echo   : logi FALSE
+ $ results:/ chr "asis"
+ $ eval   : logi TRUE
+-
+\  |                                                                              |........................                                              |  35%
+  ordinary text without R code
+
+|  |                                                                              |............................                                          |  40%
+label: compliance-report-long (with options) 
+List of 3
+ $ echo   :/ logi FALSE
+ $ results: chr "asis"
+ $ eval   :- logi TRUE
+
+\  |                                                                              |................................                                      |  45%
+  ordinary text without R code
+
+|  |                                                                              |...................................                                   |  50%
+label: compliance-report (with options) 
+List of 3
+ $ echo   :/ logi FALSE
+ $ results: chr "asis"
+ $ eval   :- logi TRUE
+
+\  |                                                                              |......................................                                |  55%
+  ordinary text without R code
+
+|  |                                                                              |..........................................                            |  60%
+label: eeg-report (with options) 
+List of 2
+/ $ echo   : logi FALSE
+ $ results: chr "asis"
+
+-  |                                                                              |..............................................                        |  65%
+  ordinary text without R code
+
+\  |                                                                              |.................................................                     |  70%
+label: sleep-report (with options) 
+List of 2
+| $ echo   :/ logi FALSE
+ $ results: chr "asis"
+
+-  |                                                                              |....................................................                  |  75%
+  ordinary text without R code
+
+  |                                                                            \  |........................................................              |  80%
+label: hr-report (with options) 
+List of 2
+ $ echo   :| logi FALSE
+ $ results: chr "asis"
+
+/  |                                                                              |............................................................          |  85%
+  ordinary text without R code
+
+-  |                                                                              |...............................................................       |  90%
+label: task-performance-report (with options) 
+List of 2
+\ $ echo   : logi FALSE
+ $ results:| chr "asis"
+
+/  |                                                                              |..................................................................    |  95%
+  ordinary text without R code
+
+-  |                                                                              |......................................................................| 100%
+label: mood-report (with options) 
+List of 2
+\ $ echo   : logi FALSE
+ $ results: chr "asis"
+
+|
+output file: subject_report.knit.md
+
+//usr/local/bin/pandoc +RTS -K512m -RTS subject_report.knit.md --to html4 --from markdown+autolink_bare_uris+tex_math_single_backslash --output /Users/dnplserv/momentum_site/Subjects/061898.html --lua-filter /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --variable bs3=TRUE --standalone --section-divs --table-of-contents --toc-depth 1 --variable toc_float=1 --variable toc_selectors=h1 --variable toc_collapsed=1 --variable toc_smooth_scroll=1 --variable toc_print=1 --template /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmd/h/default.html --no-highlight --variable highlightjs=1 --variable theme=spacelab --include-in-header /var/folders/n5/x5sflnb54nd49f_kvpsz2pxh0000hf/T//RtmpN2xqEn/rmarkdown-str15882480d4ad.html --mathjax --variable 'mathjax-url:https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML' --include-before-body navbar_sub.html 
+-
+Output created: /Users/dnplserv/momentum_site/Subjects/061898.html
+\|/-\ -
+
+processing file: subject_report.Rmd
+\  |                                                                              |                                                                      |   0%|  |                                                                              |....                                                                  |   5%
+   inline R code fragments
+
+  |                                                                              |.......                                                               |  10%
+/label: css-force (with options) 
+-List of 2
+\ $ echo   :| logi FALSE
+ $ results:/ chr "asis"
+
+-  |                                                                              |..........                                                            |  15%
+   inline R code fragments
+
+\  |                                                                              |..............                                                        |  20%
+|label: setup (with options) 
+List of 4
+/ $ echo   : logi FALSE
+ $ warning: logi FALSE
+ $ message:- logi FALSE
+ $ results: chr "asis"
+
+\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-  |                                                                              |..................                                                    |  25%
+  ordinary text without R code
+
+\  |                                                                              |.....................                                                 |  30%
+label: overview-report (with options) 
+List of 3
+ $ echo   : logi FALSE
+ $ results: chr "asis"
+ $ eval   :| logi TRUE
+
+/  |                                                                              |........................                                              |  35%
+  ordinary text without R code
+
+-  |                                                                              |............................                                          |  40%
+label: compliance-report-long (with options) 
+List of 3
+\ $ echo   :| logi FALSE
+ $ results: chr "asis"
+ $ eval   : logi TRUE
+
+/-\  |                                                                              |................................                                      |  45%
+  ordinary text without R code
+
+|  |                                                                              |...................................                                   |  50%
+label: compliance-report (with options) 
+List of 3
+ $ echo   : logi FALSE
+ $ results: chr "asis"
+ $ eval   : logi TRUE
+
+/  |                                                                              |......................................                                |  55%
+  ordinary text without R code
+
+-  |                                                                              |..........................................                            |  60%
+label: eeg-report (with options) 
+List of 2
+\ $ echo   : logi FALSE
+ $ results:| chr "asis"
+
+/-  |                                                                              |..............................................                        |  65%
+  ordinary text without R code
+
+\  |                                                                              |.................................................                     |  70%
+label: sleep-report (with options) 
+List of 2
+ $ echo   : logi FALSE
+| $ results: chr "asis"
+
+/-  |                                                                              |....................................................                  |  75%
+  ordinary text without R code
+
+\  |                                                                              |........................................................              |  80%
+label: hr-report (with options) 
+|List of 2
+ $ echo   :/ logi FALSE
+ $ results: chr "asis"
+
+-  |                                                                              |............................................................          |  85%
+  ordinary text without R code
+
+  |                                                                              |...............................................................       |  90%
+label: task-performance-report (with options) 
+\List of 2
+ $ echo   : logi FALSE
+ $ results: chr "asis"
+
+|/-\|/-\|/-  |                                                                              |..................................................................    |  95%
+  ordinary text without R code
+
+\  |                                                                              |......................................................................| 100%
+label: mood-report (with options) 
+List of 2
+ $ echo   : logi FALSE
+ $ results: chr "asis"
+
+|/-\|
+/output file: subject_report.knit.md
+
+-/usr/local/bin/pandoc +RTS -K512m -RTS subject_report.knit.md --to html4 --from markdown+autolink_bare_uris+tex_math_single_backslash --output /Users/dnplserv/momentum_site/Subjects/440197.html --lua-filter /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --variable bs3=TRUE --standalone --section-divs --table-of-contents --toc-depth 1 --variable toc_float=1 --variable toc_selectors=h1 --variable toc_collapsed=1 --variable toc_smooth_scroll=1 --variable toc_print=1 --template /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmd/h/default.html --no-highlight --variable highlightjs=1 --variable theme=spacelab --include-in-header /var/folders/n5/x5sflnb54nd49f_kvpsz2pxh0000hf/T//RtmpjzH3Mt/rmarkdown-str158c613bfd189.html --mathjax --variable 'mathjax-url:https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML' --include-before-body navbar_sub.html 
+\
+Output created: /Users/dnplserv/momentum_site/Subjects/440197.html
+|/-\| -
+
+processing file: subject_report.Rmd
+\  |                                                                              |                                                                      |   0%|  |                                                                              |....                                                                  |   5%
+   inline R code fragments
+
+  |                                                                              |.......                                                               |  10%
+label: css-force (with options) 
+/List of 2
+- $ echo   :\ logi FALSE
+ $ results:| chr "asis"
+
+/  |                                                                              |..........                                                            |  15%
+   inline R code fragments
+
+-  |                                                                              |..............                                                        |  20%
+\label: setup (with options) 
+List of 4
+ $ echo   : logi FALSE
+ $ warning: logi FALSE
+ $ message:| logi FALSE
+ $ results: chr "asis"
+
+/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\  |                                                                              |..................                                                    |  25%
+  ordinary text without R code
+
+|  |                                                                              |.....................                                                 |  30%
+label: overview-report (with options) 
+List of 3
+ $ echo   : logi FALSE
+ $ results:/ chr "asis"
+ $ eval   :- logi TRUE
+
+\  |                                                                              |........................                                              |  35%
+  ordinary text without R code
+
+|  |                                                                              |............................                                          |  40%
+label: compliance-report-long (with options) 
+List of 3
+ $ echo   :/ logi FALSE
+ $ results:- chr "asis"
+ $ eval   :\ logi TRUE
+
+|/-  |                                                                              |................................                                      |  45%
+  ordinary text without R code
+
+\  |                                                                              |...................................                                   |  50%
+label: compliance-report (with options) 
+List of 3
+ $ echo   :| logi FALSE
+ $ results: chr "asis"
+ $ eval   : logi TRUE
+
+/  |                                                                              |......................................                                |  55%
+  ordinary text without R code
+
+-  |                                                                              |..........................................                            |  60%
+label: eeg-report (with options) 
+List of 2
+ $ echo   :\ logi FALSE
+ $ results:| chr "asis"
+
+/-  |                                                                              |..............................................                        |  65%
+  ordinary text without R code
+
+\  |                                                                              |.................................................                     |  70%
+label: sleep-report (with options) 
+List of 2
+ $ echo   : logi FALSE
+ $ results: chr "asis"
+
+|  |                                                                              |....................................................                  |  75%
+  ordinary text without R code
+
+/  |                                                                              |........................................................              |  80%
+label: hr-report (with options) 
+List of 2
+ $ echo   : logi FALSE
+ $ results: chr "asis"
+
+-  |                                                                              |............................................................          |  85%
+  ordinary text without R code
+
+\  |                                                                              |...............................................................       |  90%
+label: task-performance-report (with options) 
+List of 2
+| $ echo   : logi FALSE
+ $ results:/ chr "asis"
+
+-\|/-\|/-\  |                                                                              |..................................................................    |  95%
+  ordinary text without R code
+
+|  |                                                                              |......................................................................| 100%
+label: mood-report (with options) 
+List of 2
+ $ echo   : logi FALSE
+ $ results: chr "asis"
+
+/-\|
+/output file: subject_report.knit.md
+
+-/usr/local/bin/pandoc +RTS -K512m -RTS subject_report.knit.md --to html4 --from markdown+autolink_bare_uris+tex_math_single_backslash --output /Users/dnplserv/momentum_site/Subjects/440099.html --lua-filter /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --variable bs3=TRUE --standalone --section-divs --table-of-contents --toc-depth 1 --variable toc_float=1 --variable toc_selectors=h1 --variable toc_collapsed=1 --variable toc_smooth_scroll=1 --variable toc_print=1 --template /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmd/h/default.html --no-highlight --variable highlightjs=1 --variable theme=spacelab --include-in-header /var/folders/n5/x5sflnb54nd49f_kvpsz2pxh0000hf/T//Rtmp8p75ps/rmarkdown-str15992510111aa.html --mathjax --variable 'mathjax-url:https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML' --include-before-body navbar_sub.html 
+\
+Output created: /Users/dnplserv/momentum_site/Subjects/440099.html
+|/-\| -
+
+processing file: subject_report.Rmd
+\  |                                                                              |                                                                      |   0%|  |                                                                              |....                                                                  |   5%
+   inline R code fragments
+
+  |                                                                              |.......                                                               |  10%
+label: css-force (with options) 
+/List of 2
+ $ echo   :- logi FALSE
+ $ results: chr "asis"
+
+\  |                                                                              |..........                                                            |  15%
+   inline R code fragments
+
+|  |                                                                              |..............                                                        |  20%
+/label: setup (with options) 
+List of 4
+ $ echo   : logi FALSE
+ $ warning: logi FALSE
+ $ message: logi FALSE
+ $ results: chr "asis"
+
+-\|/-\|/-\|/-\|/-  |                                                                              |..................                                                    |  25%
+  ordinary text without R code
+
+\  |                                                                              |.....................                                                 |  30%
+label: overview-report (with options) 
+List of 3
+ $ echo   : logi FALSE
+ $ results: chr "asis"
+ $ eval   : logi TRUE
+
+|/  |                                                                              |........................                                              |  35%
+  ordinary text without R code
+
+-  |                                                                              |............................                                          |  40%
+label: compliance-report-long (with options) 
+\List of 3
+ $ echo   :| logi FALSE
+ $ results:/ chr "asis"
+ $ eval   :- logi TRUE
+
+\|  |                                                                              |................................                                      |  45%
+  ordinary text without R code
+
+/  |                                                                              |...................................                                   |  50%
+label: compliance-report (with options) 
+List of 3
+ $ echo   : logi FALSE
+ $ results: chr "asis"
+ $ eval   : logi TRUE
+
+-  |                                                                              |......................................                                |  55%
+  ordinary text without R code
+
+\  |                                                                              |..........................................                            |  60%
+label: eeg-report (with options) 
+List of 2
+| $ echo   : logi FALSE
+/ $ results: chr "asis"
+
+-  |                                                                              |..............................................                        |  65%
+  ordinary text without R code
+
+\  |                                                                              |.................................................                     |  70%
+label: sleep-report (with options) 
+List of 2
+| $ echo   : logi FALSE
+/ $ results: chr "asis"
+
+-  |                                                                              |....................................................                  |  75%
+  ordinary text without R code
+
+\  |                                                                              |........................................................              |  80%
+label: hr-report (with options) 
+List of 2
+| $ echo   :/ logi FALSE
+ $ results: chr "asis"
+
+-  |                                                                              |............................................................          |  85%
+  ordinary text without R code
+
+\  |                                                                              |...............................................................       |  90%
+label: task-performance-report (with options) 
+List of 2|
+ $ echo   : logi FALSE
+ $ results:/ chr "asis"
+
+-\|/-\|/-  |                                                                              |..................................................................    |  95%
+  ordinary text without R code
+
+\  |                                                                              |......................................................................| 100%
+label: mood-report (with options) 
+List of 2
+ $ echo   :| logi FALSE
+ $ results: chr "asis"
+
+/-
+\output file: subject_report.knit.md
+
+|/usr/local/bin/pandoc +RTS -K512m -RTS subject_report.knit.md --to html4 --from markdown+autolink_bare_uris+tex_math_single_backslash --output /Users/dnplserv/momentum_site/Subjects/440168.html --lua-filter /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --variable bs3=TRUE --standalone --section-divs --table-of-contents --toc-depth 1 --variable toc_float=1 --variable toc_selectors=h1 --variable toc_collapsed=1 --variable toc_smooth_scroll=1 --variable toc_print=1 --template /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmd/h/default.html --no-highlight --variable highlightjs=1 --variable theme=spacelab --include-in-header /var/folders/n5/x5sflnb54nd49f_kvpsz2pxh0000hf/T//RtmplYqM0y/rmarkdown-str15aa66e1028cc.html --mathjax --variable 'mathjax-url:https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML' --include-before-body navbar_sub.html 
+/
+Output created: /Users/dnplserv/momentum_site/Subjects/440168.html
+-\|/- -
+
+processing file: index.Rmd
+\  |                                                                              |                                                                      |   0%  |                                                                              |.......                                                               |  10%
+|  ordinary text without R code
+
+  |                                                                              |..............                                                        |  20%
+label: css-force (with options) 
+/List of 2
+- $ echo   :\ logi FALSE
+ $ results:| chr "asis"
+
+/  |                                                                              |.....................                                                 |  30%
+   inline R code fragments
+
+-  |                                                                              |............................                                          |  40%
+\label: setup (with options) 
+List of 4
+ $ echo   : logi FALSE
+ $ warning: logi FALSE
+ $ message: logi FALSE
+ $ results: chr "asis"
+
+|/-  |                                                                              |...................................                                   |  50%
+  ordinary text without R code
+
+\  |                                                                              |..........................................                            |  60%
+label: get-overview (with options) 
+List of 4
+ $ echo   :| logi FALSE
+ $ warning: logi FALSE
+ $ message:/ logi FALSE
+ $ results: chr "asis"
+
+-\|/-  |                                                                              |.................................................                     |  70%
+  ordinary text without R code
+
+\  |                                                                              |........................................................              |  80%
+label: active-subjects (with options) 
+List of 4
+ $ echo   : logi FALSE
+ $ warning:| logi FALSE
+ $ message: logi FALSE
+ $ results:/ chr "asis"
+
+-  |                                                                              |...............................................................       |  90%
+  ordinary text without R code
+
+\  |                                                                              |......................................................................| 100%
+label: inactive-subjects (with options) 
+|List of 4
+ $ echo   :/ logi FALSE
+ $ warning:- logi FALSE
+ $ message: logi FALSE
+ $ results:\ chr "asis"
+
+|
+output file: index.knit.md
+
+//usr/local/bin/pandoc +RTS -K512m -RTS index.knit.md --to html4 --from markdown+autolink_bare_uris+tex_math_single_backslash --output /Users/dnplserv/momentum_site/index.html --lua-filter /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmarkdown/lua/latex-div.lua --variable bs3=TRUE --standalone --section-divs --template /Library/Frameworks/R.framework/Versions/4.1/Resources/library/rmarkdown/rmd/h/default.html --no-highlight --variable highlightjs=1 --variable theme=spacelab --include-in-header /var/folders/n5/x5sflnb54nd49f_kvpsz2pxh0000hf/T//Rtmp8nXbWk/rmarkdown-str15b0b5fda88cd.html --mathjax --variable 'mathjax-url:https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML' --include-before-body navbar_main.html 
+-
+Output created: /Users/dnplserv/momentum_site/index.html
+\|/-\| rsync -avh /Users/dnplserv/momentum_site/ michago3@michaelhallquist.com:public_html/dashboard --delete
+> sink(file=NULL)
