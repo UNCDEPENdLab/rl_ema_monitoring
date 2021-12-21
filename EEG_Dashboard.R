@@ -168,6 +168,16 @@ eeg_epochs_around_feedback <- function(EEG_data,pre=500,post=1500,sample_rate=NU
       g3_a2f[i,] <- c(g3[ind])
       g4_a2f[i,] <- c(g4[ind])
     }
+    
+    Ch1 <- Ch1[rrt > fbt[i]]
+    Ch2 <- Ch2[rrt > fbt[i]]
+    Ch3 <- Ch3[rrt > fbt[i]]
+    Ch4 <- Ch4[rrt > fbt[i]]
+    g1 <- g1[rrt > fbt[i]]
+    g2 <- g2[rrt > fbt[i]]
+    g3 <- g3[rrt > fbt[i]]
+    g4 <- g4[rrt > fbt[i]]
+    rrt <- rrt[rrt > fbt[i]]
   }
   ch1_a2f <- as.data.frame(ch1_a2f)
   ch2_a2f <- as.data.frame(ch2_a2f)

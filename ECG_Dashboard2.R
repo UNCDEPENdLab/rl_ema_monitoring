@@ -17,9 +17,9 @@ Sys.setenv("PKG_CXXFLAGS"="-std=c++11")
 
 #print(getwd())
 #Rcpp::sourceCpp(file.path(repo_path, "rl_ema_monitoring/data_utils/timings2samples_block_cpp.cpp"), cacheDir = getwd())
-Rcpp::sourceCpp("../../data_utils/timings2samples_block_cpp.cpp", cacheDir = getwd())
-#Rcpp::sourceCpp("~/Momentum/rl_ema_monitoring/data_utils/timings2samples_block_cpp.cpp")
-#warning('AndyP changed this path to work on his computer to debug ECG, please change back on dashboard if he forgets to reset it')
+#Rcpp::sourceCpp("../../data_utils/timings2samples_block_cpp.cpp", cacheDir = getwd())
+Rcpp::sourceCpp("~/Momentum/rl_ema_monitoring/data_utils/timings2samples_block_cpp.cpp")
+warning('AndyP changed this path to work on his computer to debug ECG, please change back on dashboard if he forgets to reset it')
 
 #test case
 if(FALSE) {
@@ -364,6 +364,8 @@ ecg_epochs_around_feedback <- function(ECG_data,fbt,pre=1000,post=10000,sample_r
     } else if (aL > 0 & is.null(addpost)){
       ch1_a2f[i,1:length(ind)] <- c(Ch1[ind])
     }
+    Ch1 <- Ch1[rrt > fbt[i]]
+    rrt <- rrt[rrt > fbt[i]]
   }
   ch1_a2f <- as.data.frame(ch1_a2f)
 

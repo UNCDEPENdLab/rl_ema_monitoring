@@ -766,7 +766,7 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
       end_x = cumsum(rlex$lengths)
       start_x = c(1, lag(end_x)[-1] + 1)
       for (ir in 1:length(start_x)){
-        if (end_x[ir]-start_x[ir]>1000 && rlex$values==TRUE){
+        if (end_x[ir]-start_x[ir]>1000 && rlex$values[ir]==TRUE){
           ecg_raw$rate[start_x[ir]:end_x[ir]] = -1000
           ecg_raw$times[start_x[ir]:end_x[ir]] = -1000
         }
