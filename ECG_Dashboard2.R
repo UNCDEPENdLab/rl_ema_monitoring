@@ -17,9 +17,9 @@ Sys.setenv("PKG_CXXFLAGS"="-std=c++11")
 
 #print(getwd())
 #Rcpp::sourceCpp(file.path(repo_path, "rl_ema_monitoring/data_utils/timings2samples_block_cpp.cpp"), cacheDir = getwd())
-#Rcpp::sourceCpp("../../data_utils/timings2samples_block_cpp.cpp", cacheDir = getwd())
-Rcpp::sourceCpp("~/Momentum/rl_ema_monitoring/data_utils/timings2samples_block_cpp.cpp")
-warning('AndyP changed this path to work on his computer to debug ECG, please change back on dashboard if he forgets to reset it')
+Rcpp::sourceCpp("../../data_utils/timings2samples_block_cpp.cpp", cacheDir = getwd())
+#Rcpp::sourceCpp("~/Momentum/rl_ema_monitoring/data_utils/timings2samples_block_cpp.cpp")
+#warning('AndyP changed this path to work on his computer to debug ECG, please change back on dashboard if he forgets to reset it')
 
 #test case
 if(FALSE) {
@@ -313,10 +313,10 @@ ecg_epochs_around_feedback <- function(ECG_data,fbt,pre=1000,post=10000,sample_r
 
   #library(parallel)
   #library(foreach)
-  
+
   Ch1 <- ECG_data$rate
   rrt <- ECG_data$times
-  
+
   ch1_a2f <- matrix(NA,nrow=length(fbt),ncol=round(pre/10)+round(post/10)+1);
   for (i in 1:length(fbt)){
     if ((i %% 10)==0){
@@ -325,9 +325,9 @@ ecg_epochs_around_feedback <- function(ECG_data,fbt,pre=1000,post=10000,sample_r
     fb0 <- which(rrt>fbt[i])[1]
     if (!is_empty(fb0) && !is.na(fb0)){
       indx <- (fb0-round(pre/10)):(fb0+round(post/10))
-      indx[indx<1 | indx > length(rrt)] <- NA 
+      indx[indx<1 | indx > length(rrt)] <- NA
       ch1_a2f[i,] <- Ch1[indx]
-      
+
       if (fbt[i] > min(rrt)-10000+1){
         Ch1 <- Ch1[rrt > fbt[i]-10000]
         rrt <- rrt[rrt > fbt[i]-10000]
