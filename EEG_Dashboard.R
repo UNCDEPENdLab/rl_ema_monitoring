@@ -119,7 +119,7 @@ eeg_epochs_around_feedback <- function(EEG_data,pre=500,post=1500,sample_rate=NU
   g2_a2f <- matrix(NA,nrow=length(fbt),ncol=pre+post+1);
   g3_a2f <- matrix(NA,nrow=length(fbt),ncol=pre+post+1);
   g4_a2f <- matrix(NA,nrow=length(fbt),ncol=pre+post+1);
-
+  
   for (i in 1:length(fbt)){
     if ((i %% 10)==0){
       print(paste0(i,'/',length(fbt)))

@@ -654,18 +654,18 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
   }
   # modify physio_df to have physio_df$file_path include the file name
   #physio_df <- within(physio_df, file_path <- paste0(file_path, '/', file_name))
-
-  exp_out<-lapply(unique(physio_df$subject_id),function(IDx){
+  par_cl <- parallel::makeCluster(spec = thread,type = "FORK") 
+  exp_out<-parallel::parLapply(unique(physio_df$subject_id),function(IDx){
     physio_files_new <- physio_df$file_path[physio_df$subject_id==IDx]
     physio_rawcache_file <- file.path(unique(dirname(physio_df$file_path[physio_df$subject_id==IDx])),paste(IDx,"_physio_raw.rdata",sep = ""))
     physio_proc_file <- file.path(unique(dirname(physio_df$file_path[physio_df$subject_id==IDx])),paste(IDx,"_physio_proc.rdata",sep = ""))
     physio_concat <- NULL
     physio_files <- NULL
     message("Found ",length(physio_files_new), " total physio files for: ",IDx)
-    par_cl <- parallel::makeCluster(spec = thread,type = "FORK") # seems to miss data if parallelized
+    #par_cl <- parallel::makeCluster(spec = thread,type = "FORK") 
     message("Loading new physio data for: ",IDx)
-    physio_concat_new <- load_physio_single(allpaths_sub = physio_files_new,old_data=NULL,cl = par_cl)
-    parallel::stopCluster(par_cl)
+    physio_concat_new <- load_physio_single(allpaths_sub = physio_files_new,old_data=NULL,cl = NULL)
+    #parallel::stopCluster(par_cl)
     physio_files<-unique(c(physio_files,physio_files_new))
     save(physio_files,physio_concat_new,file = paste0(dataPath,'/Subjects/',IDx,'/physio/',IDx,'_physio_raw.rdata'))
     output <- NULL
@@ -745,7 +745,7 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
       eeg_missing <- eeg_list[[2]]
       eeg_fb <- eeg_epochs_around_feedback(EEG_data = eeg_raw,
                                            pre = eeg_pre,post = eeg_post,sample_rate = eeg_sample_rate,
-                                           fbt = fbt1)
+                                           fbt = fbt)
       
       
       eeg_stats <- NULL
@@ -868,6 +868,7 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
       return(output)
     }
   })
+  parallel::stopCluster(par_cl)
   if(save_lite) {
     nax <- c("fb","summary", "missing", "rawsum")
   } else {
