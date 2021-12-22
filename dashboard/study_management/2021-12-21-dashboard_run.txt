@@ -44,3 +44,37 @@
 > source("render_utils.R")
 
 > source("../../ECG_Dashboard2.R")
+
+> ####################################
+> # This is the script used to run the back-end
+> # functions utilizing the following arguments:
+> #
+> #   root .... [TRUNCATED] 
+
+> library("anytime")
+
+> pacman::p_load(reticulate, RSQLite, dplyr, tidyr, lubridate, rjson, R.utils, REDCapR, zoo, anytime)
+
+> setwd("dashboard/study_management")
+
+> # source relevant R files and their functions
+> ## Currently set to load dependent function from the same directory ##
+> source("data_management_fun ..." ... [TRUNCATED] 
+
+> source("dashboard_aggregate.R")
+
+> source("render_utils.R")
+
+> source("../../ECG_Dashboard2.R")
+
+> #uncomment to test on simple case
+> #timings2samples_block_cpp(c(100, 504, 900), 10)
+
+> source("../../EEG_Dashboard.R")
+
+> source("../../rmarkdown_site/report_functions/report_functions.R")
+
+> # main function to be run
+> run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=FALSE, redcap=TRUE, nthreads=4, output=NULL .... [TRUNCATED] 
+
+> #run_ema(pull=FALSE, sched=TRUE, physio=FALSE, redcap=FALSE, force_proc=TRUE, nthreads = 1, site="/Users/shanebuckley/desktop/rl_ema_monitoring/site ..." ... [TRUNCATED] 

@@ -654,15 +654,15 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
   }
   # modify physio_df to have physio_df$file_path include the file name
   #physio_df <- within(physio_df, file_path <- paste0(file_path, '/', file_name))
-  par_cl <- parallel::makeCluster(spec = thread,type = "FORK") 
-  exp_out<-parallel::parLapply(unique(physio_df$subject_id),function(IDx){
+  par_cl <- parallel::makeCluster(spec = thread,type = "FORK")
+  exp_out<-parallel::parLapply(par_cl,unique(physio_df$subject_id),function(IDx){
     physio_files_new <- physio_df$file_path[physio_df$subject_id==IDx]
     physio_rawcache_file <- file.path(unique(dirname(physio_df$file_path[physio_df$subject_id==IDx])),paste(IDx,"_physio_raw.rdata",sep = ""))
     physio_proc_file <- file.path(unique(dirname(physio_df$file_path[physio_df$subject_id==IDx])),paste(IDx,"_physio_proc.rdata",sep = ""))
     physio_concat <- NULL
     physio_files <- NULL
     message("Found ",length(physio_files_new), " total physio files for: ",IDx)
-    #par_cl <- parallel::makeCluster(spec = thread,type = "FORK") 
+    #par_cl <- parallel::makeCluster(spec = thread,type = "FORK")
     message("Loading new physio data for: ",IDx)
     physio_concat_new <- load_physio_single(allpaths_sub = physio_files_new,old_data=NULL,cl = NULL)
     #parallel::stopCluster(par_cl)
@@ -746,8 +746,8 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
       eeg_fb <- eeg_epochs_around_feedback(EEG_data = eeg_raw,
                                            pre = eeg_pre,post = eeg_post,sample_rate = eeg_sample_rate,
                                            fbt = fbt)
-      
-      
+
+
       eeg_stats <- NULL
       eeg_stats$mn1 <- median(eeg_raw$Ch1,na.rm=TRUE)
       eeg_stats$mn2 <- median(eeg_raw$Ch2,na.rm=TRUE)
@@ -757,7 +757,7 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
       eeg_stats$sd02 <- sd(eeg_raw$Ch2,na.rm=TRUE)
       eeg_stats$sd03 <- sd(eeg_raw$Ch3,na.rm=TRUE)
       eeg_stats$sd04 <- sd(eeg_raw$Ch4,na.rm=TRUE)
-      
+
       eeg_rawsum <- get_good_EEG(blocks=block1,a2f=eeg_fb,sd_times=sd_times,eeg_stats=eeg_stats)
       eeg_summary <- eeg_rawsum[1:4] / eeg_rawsum$Ntotal
       names(eeg_summary) <- paste("per_Ch",1:4,sep = "_")
