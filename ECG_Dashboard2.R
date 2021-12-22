@@ -17,9 +17,9 @@ Sys.setenv("PKG_CXXFLAGS"="-std=c++11")
 
 #print(getwd())
 #Rcpp::sourceCpp(file.path(repo_path, "rl_ema_monitoring/data_utils/timings2samples_block_cpp.cpp"), cacheDir = getwd())
-Rcpp::sourceCpp("../../data_utils/timings2samples_block_cpp.cpp", cacheDir = getwd())
-#Rcpp::sourceCpp("~/Momentum/rl_ema_monitoring/data_utils/timings2samples_block_cpp.cpp")
-#warning('AndyP changed this path to work on his computer to debug ECG, please change back on dashboard if he forgets to reset it')
+#Rcpp::sourceCpp("../../data_utils/timings2samples_block_cpp.cpp", cacheDir = getwd())
+Rcpp::sourceCpp("~/Momentum/rl_ema_monitoring/data_utils/timings2samples_block_cpp.cpp")
+warning('AndyP changed this path to work on his computer to debug ECG, please change back on dashboard if he forgets to reset it')
 
 #test case
 if(FALSE) {
@@ -313,59 +313,27 @@ ecg_epochs_around_feedback <- function(ECG_data,fbt,pre=1000,post=10000,sample_r
 
   #library(parallel)
   #library(foreach)
-
-  step <- 1000/sample_rate
-  pre <- round(pre/step,0)
-  post <- round(post/step,0)
-  Td <- 0
-  Ta <- 0
-
+  
   Ch1 <- ECG_data$rate
   rrt <- ECG_data$times
-
-  ch1_a2f <- matrix(NA,nrow=length(fbt),ncol=pre+post+1);
+  
+  ch1_a2f <- matrix(NA,nrow=length(fbt),ncol=round(pre/10)+round(post/10)+1);
   for (i in 1:length(fbt)){
-    # if ((i %% 10)==0){
-    #   print(paste0(i,'/',length(fbt)))
-    # }
-      fbt0 <- which(rrt>fbt[i])
-    if (length(fbt0)>0){
-      if (fbt0[1]>1){
-        ind <- seq(fbt0[1]-pre,fbt0[1]+post,by=1)
-      } else {
-        ind <- NULL
+    if ((i %% 10)==0){
+      print(paste0(i,'/',length(fbt)))
+    }
+    fb0 <- which(rrt>fbt[i])[1]
+    if (!is_empty(fb0) && !is.na(fb0)){
+      indx <- (fb0-round(pre/10)):(fb0+round(post/10))
+      indx[indx<1 | indx > length(rrt)] <- NA 
+      ch1_a2f[i,] <- Ch1[indx]
+      
+      if (fbt[i] > min(rrt)-10000+1){
+        Ch1 <- Ch1[rrt > fbt[i]-10000]
+        rrt <- rrt[rrt > fbt[i]-10000]
       }
-    } else {
-      ind <- NULL # 2021-05-24 AndyP
+    } else{
     }
-    dL <- pre+1+post
-    aL <- length(ind)
-
-    if (length(ind)>0){
-      if (ind[length(ind)] > length(rrt)){
-        addpost <- ind[length(ind)] - length(rrt)
-        ind <- seq(ind[1],length(rrt),by=1)
-      }else{
-        addpost <- NULL
-      }
-    }else{
-      addpost <- NULL
-    }
-    Td <- Td + dL
-    Ta <- Ta + aL
-
-    if (aL > 0 & !is.null(addpost)){
-      tryCatch({
-        ch1_a2f[i,1:length(ind)] <- c(Ch1[ind],addpost) # 2021-05-24 AndyP, 2021-11-29 AndyP, there is still a bug in this condition, happens when there are NAs in the last few blocks
-      },
-      error=function(e){
-        message('just returning NAs for this trial, if you see this frequently, contact AndyP')
-      })
-    } else if (aL > 0 & is.null(addpost)){
-      ch1_a2f[i,1:length(ind)] <- c(Ch1[ind])
-    }
-    Ch1 <- Ch1[rrt > fbt[i]]
-    rrt <- rrt[rrt > fbt[i]]
   }
   ch1_a2f <- as.data.frame(ch1_a2f)
 

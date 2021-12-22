@@ -100,8 +100,6 @@ eeg_epochs_around_feedback <- function(EEG_data,pre=500,post=1500,sample_rate=NU
   step <- 1000/sample_rate
   pre <- round(pre/step,0)
   post <- round(post/step,0)
-  Td <- 0
-  Ta <- 0
 
   rrt <- EEG_data$rrt
   Ch1 <- EEG_data$Ch1
@@ -123,43 +121,15 @@ eeg_epochs_around_feedback <- function(EEG_data,pre=500,post=1500,sample_rate=NU
   g4_a2f <- matrix(NA,nrow=length(fbt),ncol=pre+post+1);
 
   for (i in 1:length(fbt)){
-    fbt0 <- which(rrt>fbt[i])
-    if (length(fbt0)>0){
-      if (fbt0[1]>1){
-        ind <- seq(fbt0[1]-pre,fbt0[1]+post,by=1)
-      } else {
-        ind <- NULL
-      }
-    } else {
-      ind <- NULL # 2021-05-24 AndyP, was recycling ind from last trial if length(fbt0)==0
+    if ((i %% 10)==0){
+      print(paste0(i,'/',length(fbt)))
     }
-    dL <- pre+1+post
-    aL <- length(ind)
-
-    if (length(ind)>0){
-      if (ind[length(ind)] > length(rrt)){
-        addpost <- ind[length(ind)] - length(rrt)
-        ind <- seq(ind[1],length(rrt),by=1)
-      }else{
-        addpost <- NULL
-      }
-    }else{
-      addpost <- NULL
-    }
-    Td <- Td + dL
-    Ta <- Ta + aL
-
-    if (aL > 0 & !is.null(addpost)){
-      ch1_a2f[i,] <- c(Ch1[ind],1:addpost) # 2021-05-24 AndyP corrected addpost bug addpost -> 1:addpost
-      ch2_a2f[i,] <- c(Ch2[ind],1:addpost)
-      ch3_a2f[i,] <- c(Ch3[ind],1:addpost)
-      ch4_a2f[i,] <- c(Ch4[ind],1:addpost)
-      g1_a2f[i,] <- c(g1[ind],1:addpost)
-      g2_a2f[i,] <- c(g2[ind],1:addpost)
-      g3_a2f[i,] <- c(g3[ind],1:addpost)
-      g4_a2f[i,] <- c(g4[ind],1:addpost)
-    } else if (aL >0 & is.null(addpost)){
-      ch1_a2f[i,] <- c(Ch1[ind]) # 2021-05-24 AndyP corrected addpost bug
+    fb0 <- which(rrt>fbt[i])[1]
+    if (!is_empty(fb0) && !is.na(fb0)){
+      ind <- (fb0-pre):(fb0+post)
+      ind[ind<1 | ind > length(rrt)] <- NA 
+      
+      ch1_a2f[i,] <- c(Ch1[ind])
       ch2_a2f[i,] <- c(Ch2[ind])
       ch3_a2f[i,] <- c(Ch3[ind])
       ch4_a2f[i,] <- c(Ch4[ind])
@@ -167,17 +137,20 @@ eeg_epochs_around_feedback <- function(EEG_data,pre=500,post=1500,sample_rate=NU
       g2_a2f[i,] <- c(g2[ind])
       g3_a2f[i,] <- c(g3[ind])
       g4_a2f[i,] <- c(g4[ind])
+      
+      if (fbt[i] > min(rrt)-500+1){
+        Ch1 <- Ch1[rrt > fbt[i]-500]
+        Ch2 <- Ch2[rrt > fbt[i]-500]
+        Ch3 <- Ch3[rrt > fbt[i]-500]
+        Ch4 <- Ch4[rrt > fbt[i]-500]
+        g1 <- g1[rrt > fbt[i]-500]
+        g2 <- g2[rrt > fbt[i]-500]
+        g3 <- g3[rrt > fbt[i]-500]
+        g4 <- g4[rrt > fbt[i]-500]
+        rrt <- rrt[rrt > fbt[i]-500]
+      }
+    } else{
     }
-    
-    Ch1 <- Ch1[rrt > fbt[i]]
-    Ch2 <- Ch2[rrt > fbt[i]]
-    Ch3 <- Ch3[rrt > fbt[i]]
-    Ch4 <- Ch4[rrt > fbt[i]]
-    g1 <- g1[rrt > fbt[i]]
-    g2 <- g2[rrt > fbt[i]]
-    g3 <- g3[rrt > fbt[i]]
-    g4 <- g4[rrt > fbt[i]]
-    rrt <- rrt[rrt > fbt[i]]
   }
   ch1_a2f <- as.data.frame(ch1_a2f)
   ch2_a2f <- as.data.frame(ch2_a2f)
@@ -193,7 +166,7 @@ eeg_epochs_around_feedback <- function(EEG_data,pre=500,post=1500,sample_rate=NU
   return(a2f) # rows = number of trials, columns = number of timestamps
 }
 
-get_good_EEG <- function(blocks,a2f,sd_times=10){
+get_good_EEG <- function(blocks,a2f,sd_times=10,eeg_stats=eeg_stats){
 
   library("dplyr") # 2021-10-01 AndyP  do we need this library call here?
 
@@ -207,6 +180,14 @@ get_good_EEG <- function(blocks,a2f,sd_times=10){
   g2 <- as.matrix(a2f$g2)
   g3 <- as.matrix(a2f$g3)
   g4 <- as.matrix(a2f$g4)
+  mn1 <- eeg_stats$mn1
+  mn2 <- eeg_stats$mn2
+  mn3 <- eeg_stats$mn3
+  mn4 <- eeg_stats$mn4
+  sd01 <- eeg_stats$sd01
+  sd02 <- eeg_stats$sd02
+  sd03 <- eeg_stats$sd03
+  sd04 <- eeg_stats$sd04
 
   # 2021-10-01 AndyP corrected bug, all g1 -> g1-g4
   ch1_a2f[g1==0 | g1==4] = NA
@@ -215,18 +196,10 @@ get_good_EEG <- function(blocks,a2f,sd_times=10){
   ch4_a2f[g4==0 | g4==4] = NA
 
 
-  mn <- median(ch1_a2f,na.rm=TRUE)
-  sd0 <- sd(ch1_a2f,na.rm=TRUE)
-  ch1_a2f[ch1_a2f > mn+sd_times*sd0 | ch1_a2f < mn-sd_times*sd0 | ch1_a2f < 1650/20 | ch1_a2f > 19*1650/20] = NA
-  mn <- median(ch2_a2f,na.rm=TRUE)
-  sd0 <- sd(ch2_a2f,na.rm=TRUE)
-  ch2_a2f[ch2_a2f > mn+sd_times*sd0 | ch2_a2f < mn-sd_times*sd0 | ch2_a2f < 1650/20 | ch2_a2f > 19*1650/20] = NA
-  mn <- median(ch3_a2f,na.rm=TRUE)
-  sd0 <- sd(ch3_a2f,na.rm=TRUE)
-  ch3_a2f[ch3_a2f > mn+sd_times*sd0 | ch3_a2f < mn-sd_times*sd0 | ch3_a2f < 1650/20 | ch3_a2f > 19*1650/20] = NA
-  mn <- median(ch4_a2f,na.rm=TRUE)
-  sd0 <- sd(ch4_a2f,na.rm=TRUE)
-  ch4_a2f[ch4_a2f > mn+sd_times*sd0 | ch4_a2f < mn-sd_times*sd0 | ch4_a2f < 1650/20 | ch4_a2f > 19*1650/20] = NA
+  ch1_a2f[ch1_a2f > mn1+sd_times*sd01 | ch1_a2f < mn1-sd_times*sd01 | ch1_a2f < 1650/20 | ch1_a2f > 19*1650/20] = NA
+  ch2_a2f[ch2_a2f > mn2+sd_times*sd02 | ch2_a2f < mn2-sd_times*sd02 | ch2_a2f < 1650/20 | ch2_a2f > 19*1650/20] = NA
+  ch3_a2f[ch3_a2f > mn3+sd_times*sd03 | ch3_a2f < mn3-sd_times*sd03 | ch3_a2f < 1650/20 | ch3_a2f > 19*1650/20] = NA
+  ch4_a2f[ch4_a2f > mn4+sd_times*sd04 | ch4_a2f < mn4-sd_times*sd04 | ch4_a2f < 1650/20 | ch4_a2f > 19*1650/20] = NA
 
 
 

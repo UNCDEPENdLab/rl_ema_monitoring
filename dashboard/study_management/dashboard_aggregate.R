@@ -662,12 +662,12 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
     physio_concat <- NULL
     physio_files <- NULL
     message("Found ",length(physio_files_new), " total physio files for: ",IDx)
-    par_cl <- parallel::makeCluster(spec = thread,type = "FORK")
+    par_cl <- parallel::makeCluster(spec = thread,type = "FORK") # seems to miss data if parallelized
     message("Loading new physio data for: ",IDx)
     physio_concat_new <- load_physio_single(allpaths_sub = physio_files_new,old_data=NULL,cl = par_cl)
     parallel::stopCluster(par_cl)
     physio_files<-unique(c(physio_files,physio_files_new))
-    save(physio_files,physio_concat,file = paste0(dataPath,'/Subjects/',IDx,'/physio/',IDx,'_physio_raw.rdata'))
+    save(physio_files,physio_concat_new,file = paste0(dataPath,'/Subjects/',IDx,'/physio/',IDx,'_physio_raw.rdata'))
     output <- NULL
     if(!force_reproc && file.exists(physio_proc_file)) {
       message("Loading processed physio data for: ",IDx)
@@ -708,7 +708,7 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
             old_block <- old_block[old_block<1000]
             old_block <- max(old_block)
             if (old_block > 8){
-              trials=trials[-c(which(new_block<=old_block-5)),]
+              trials=trials[-c(which(new_block<=old_block-6)),]
             }
           }
         }
@@ -745,8 +745,20 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
       eeg_missing <- eeg_list[[2]]
       eeg_fb <- eeg_epochs_around_feedback(EEG_data = eeg_raw,
                                            pre = eeg_pre,post = eeg_post,sample_rate = eeg_sample_rate,
-                                           fbt = fbt)
-      eeg_rawsum <- get_good_EEG(blocks=block,a2f=eeg_fb,sd_times=sd_times)
+                                           fbt = fbt1)
+      
+      
+      eeg_stats <- NULL
+      eeg_stats$mn1 <- median(eeg_raw$Ch1,na.rm=TRUE)
+      eeg_stats$mn2 <- median(eeg_raw$Ch2,na.rm=TRUE)
+      eeg_stats$mn3 <- median(eeg_raw$Ch3,na.rm=TRUE)
+      eeg_stats$mn4 <- median(eeg_raw$Ch4,na.rm=TRUE)
+      eeg_stats$sd01 <- sd(eeg_raw$Ch1,na.rm=TRUE)
+      eeg_stats$sd02 <- sd(eeg_raw$Ch2,na.rm=TRUE)
+      eeg_stats$sd03 <- sd(eeg_raw$Ch3,na.rm=TRUE)
+      eeg_stats$sd04 <- sd(eeg_raw$Ch4,na.rm=TRUE)
+      
+      eeg_rawsum <- get_good_EEG(blocks=block1,a2f=eeg_fb,sd_times=sd_times,eeg_stats=eeg_stats)
       eeg_summary <- eeg_rawsum[1:4] / eeg_rawsum$Ntotal
       names(eeg_summary) <- paste("per_Ch",1:4,sep = "_")
       eeg_summary$block <- eeg_rawsum$nbl
@@ -766,7 +778,7 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
       end_x = cumsum(rlex$lengths)
       start_x = c(1, lag(end_x)[-1] + 1)
       for (ir in 1:length(start_x)){
-        if (end_x[ir]-start_x[ir]>1000 && rlex$values[ir]==TRUE){
+        if (end_x[ir]-start_x[ir]>10000 && rlex$values[ir]==TRUE){
           ecg_raw$rate[start_x[ir]:end_x[ir]] = -1000
           ecg_raw$times[start_x[ir]:end_x[ir]] = -1000
         }
