@@ -758,7 +758,7 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
       eeg_stats$sd03 <- sd(eeg_raw$Ch3,na.rm=TRUE)
       eeg_stats$sd04 <- sd(eeg_raw$Ch4,na.rm=TRUE)
 
-      eeg_rawsum <- get_good_EEG(blocks=block1,a2f=eeg_fb,sd_times=sd_times,eeg_stats=eeg_stats)
+      eeg_rawsum <- get_good_EEG(blocks=block,a2f=eeg_fb,sd_times=sd_times,eeg_stats=eeg_stats)
       eeg_summary <- eeg_rawsum[1:4] / eeg_rawsum$Ntotal
       names(eeg_summary) <- paste("per_Ch",1:4,sep = "_")
       eeg_summary$block <- eeg_rawsum$nbl
