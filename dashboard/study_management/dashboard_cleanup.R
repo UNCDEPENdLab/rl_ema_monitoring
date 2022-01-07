@@ -147,11 +147,20 @@ source_cleanup_scripts <- function(subdir='') {
     #test what percentage in the last ten blocks have relative accuracy of less than 70% (with feedback)
     #this will only run after 5 sessions were played (in addition to the 6 practice blocks)
     if (max(trials_1$block)>14){
+      #browser()
       blocks_with_poor_performance<<-data.frame(poor_blocks=relative_accuracy_by_block$block[which(relative_accuracy_by_block$block>5&relative_accuracy_by_block$feedback==1&relative_accuracy_by_block$mean<0.7)])
       percentage_last_ten<<-as.numeric(sum(blocks_with_poor_performance$poor_blocks>(max(relative_accuracy_by_block$block)-10)))*10
-      if (percentage_last_ten>20){
-        mean_RT_low_performance<<-mean(RT_by_block$mean[which(RT_by_block$block %in% relative_accuracy_by_block$block[which(relative_accuracy_by_block$block>5&relative_accuracy_by_block$feedback==1&relative_accuracy_by_block$mean<0.7)]&RT_by_block$feedback==1&RT_by_block$block>max(relative_accuracy_by_block$block)-10)])
-        mean_side_bias_low_performance<<-mean(side_bias_by_block$mean[which(side_bias_by_block$block %in% relative_accuracy_by_block$block[which(relative_accuracy_by_block$block>5&relative_accuracy_by_block$feedback==1&relative_accuracy_by_block$mean<0.7)]&side_bias_by_block$block>max(relative_accuracy_by_block$block)-10)])}}
+      percentage_bad<<-(as.numeric(length(blocks_with_poor_performance$poor_blocks))/(max(relative_accuracy_by_block$block)))*100
+      mean_RT_low_performance<<-mean(RT_by_block$mean[which(RT_by_block$block %in% relative_accuracy_by_block$block[which(relative_accuracy_by_block$block>5&relative_accuracy_by_block$feedback==1&relative_accuracy_by_block$mean<0.7)]&RT_by_block$feedback==1&RT_by_block$block>max(relative_accuracy_by_block$block)-10)])
+      mean_side_bias_low_performance<<-mean(side_bias_by_block$mean[which(side_bias_by_block$block %in% relative_accuracy_by_block$block[which(relative_accuracy_by_block$block>5&relative_accuracy_by_block$feedback==1&relative_accuracy_by_block$mean<0.7)]&side_bias_by_block$block>max(relative_accuracy_by_block$block)-10)])
+    } else {
+      blocks_with_poor_performance<<-NA
+      percentage_last_ten<<-NA
+      percentage_bad<<-NA
+      mean_RT_low_performance<<-NA
+      mean_side_bias_low_performance<<-NA
+    }
+
 
     answers <<- output$proc_data[[subj]]$raw_data$answers
     #test valance-arousal/VAS correlation
@@ -178,6 +187,14 @@ source_cleanup_scripts <- function(subdir='') {
       })
   }
 }
+
+# get the initials
+initials <- momentum_redcap$read(records=unlist(active), events=c("metadata_arm_1"), fields=c('initials'))$data %>% select(record_id, initials)
+# get the scheduled fmri date
+fmri_date <- momentum_redcap$read(records=unlist(active), events=c("mri_session_arm_1"), fields=c('sesrep_date'))$data %>% select(record_id, sesrep_date)
+
+# merge and load into global environment
+redcap_data <<- merge(initials, fmri_date, 'record_id')
 
 # run cleanup
 source_cleanup_scripts(subdir="reports")

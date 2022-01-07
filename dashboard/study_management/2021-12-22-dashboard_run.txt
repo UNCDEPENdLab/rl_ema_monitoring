@@ -31,109 +31,192 @@
 [1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/eeg.R"
 [1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/hr.R"
 [1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/mood.R"
-[1mwrote[0m [32m7.69kB[0m in [36m 0s[0m, [32m546.68MB/s[0m                                                                                                                                                                  [1mwrote[0m [32m1.00TB[0m in [36m 0s[0m, [32m7.87PB/s[0m                                                    
+[1mwrote[0m [32m7.69kB[0m in [36m 0s[0m, [32m546.68MB/s[0m                                                                                                                                                                  [1mwrote[0m [32m1.00TB[0m in [36m 0s[0m, [32m7.87PB/s[0m                                                    [1] "hello"
+l only
+> #run_ema(redcap=FALSE, save_lite=FALSE, render=FALSE, pull=TRUE, sched=FALSE, physio=FALSE, cleanup_data=FALSE, nthreads = 4, forc .... [TRUNCATED] 
+
+> ####################################
+> # This is the script used to run the back-end
+> # functions utilizing the following arguments:
+> #
+> #   root .... [TRUNCATED] 
+
+> library("anytime")
+
+> pacman::p_load(reticulate, RSQLite, dplyr, tidyr, lubridate, rjson, R.utils, REDCapR, zoo, anytime)
+
+> setwd("dashboard/study_management")
+
+> # source relevant R files and their functions
+> ## Currently set to load dependent function from the same directory ##
+> source("data_management_fun ..." ... [TRUNCATED] 
+
+> source("dashboard_aggregate.R")
+
+> source("render_utils.R")
+
+> source("../../ECG_Dashboard2.R")
+
+> #uncomment to test on simple case
+> #timings2samples_block_cpp(c(100, 504, 900), 10)
+
+> source("../../EEG_Dashboard.R")
+
+> source("../../rmarkdown_site/report_functions/report_functions.R")
+
+> # main function to be run
+> run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=FALSE, redcap=TRUE, nthreads=4, output=NULL .... [TRUNCATED] 
+
+> #run_ema(pull=FALSE, sched=TRUE, physio=FALSE, redcap=FALSE, force_proc=TRUE, nthreads = 1, site="/Users/shanebuckley/desktop/rl_ema_monitoring/site ..." ... [TRUNCATED] 
+
 > # run pull only
 > #run_ema(redcap=FALSE, save_lite=FALSE, render=FALSE, pull=TRUE, sched=FALSE, physio=FALSE, cleanup_data=FALSE, nthreads = 4, forc .... [TRUNCATED] 
-tudy_management/cleanup/reports/overall.R"
-[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/performance.R"
-[1mwrote[0m [32m1.00TB[0m in [36m 0s[0m, [32m123.36PB/s[0m                                                                                                                                                                  [1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/plot_acc_from_des_prob.R"
-[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/plot_acc_from_exp_prob.R"
-[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/plot_arousal_energetic.R"
-[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/plot_ecg.R"
-[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/plot_eeg.R"
-[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/plot_game_delay.R"
-[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/plot_lr.R"
-[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/plot_rt.R"
-[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/plot_sb.R"
-[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/plot_valence.R"
-[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/sleep.R"
-[1mwrote[0m [32m1.00TB[0m in [36m 0s[0m, [32m110.38PB/s[0m                                                                                                                                                                  [1] "Running cleanup for 440411..."
-[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/compliance.R"
-[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/eeg.R"
-[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/hr.R"
-[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/mood.R"
-[1mwrote[0m [32m8.62kB[0m in [36m 0s[0m, [32m1.45GB/s[0m[1mwrote[0m [32m1.00TB[0m in [36m 0s[0m, [32m420.52TB/s[0m                                                                                                                                                                  [1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/overall.R"
-[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/performance.R"
-[1mwrote[0m [32m4.15kB[0m in [36m 0s[0m, [32m600.80MB/s[0m                                                                                                                                                                  [1mwrote[0m [32m1.00TB[0m in [36m 0s[0m, [32m7.88PB/s[0m                                                                                                                                                                  [1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/plot_acc_from_des_prob.R"
-[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/plot_acc_from_exp_prob.R"
-[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/plot_arousal_energetic.R"
-[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/plot_ecg.R"
-[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/plot_eeg.R"
-[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/plot_game_delay.R"
-[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/plot_lr.R"
-[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/plot_rt.R"
-[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/plot_sb.R"
-[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/plot_valence.R"
-[1] "Running: /Users/dnplserv/rl_ema_monitoring/dashboard/study_management/cleanup/reports/sleep.R"
-[1mwrote[0m [32m1.00TB[0m in [36m 0s[0m, [32m91.18PB/s[0m                                                                                                                                                                  -
-
-processing file: subject_report.Rmd
-\  |                                                                              |                                                                      |   0%  |                                                                              |....                                                                  |   5%|
-   inline R code fragments
-
-  |                                                                              |.......                                                               |  10%
-label: css-force (with options) 
-/List of 2
-- $ echo   :\ logi FALSE
- $ results:| chr "asis"
-
-/  |                                                                              |..........                                                            |  15%
-   inline R code fragments
-
--  |                                                                              |..............                                                        |  20%
-\label: setup (with options) 
-List of 4
- $ echo   :| logi FALSE
- $ warning:/ logi FALSE
- $ message: logi FALSE
- $ results: chr "asis"
-
--\|/-\|/-\|/-\|/-\|/-\|  |                                                                              |..................                                                    |  25%
-  ordinary text without R code
-
-/  |                                                                              |.....................                                                 |  30%
-label: overview-report (with options) 
-List of 3
- $ echo   : logi FALSE
- $ results: chr "asis"
- $ eval   :- logi TRUE
-
-\|  |                                                                              |........................                                              |  35%
-  ordinary text without R code
-
-/  |                                                                              |............................                                          |  40%
-label: compliance-report-long (with options) 
-List of 3
- $ echo   : logi FALSE
- $ results: chr "asis"
- $ eval   : logi TRUE
-
--\  |                                                                              |................................                                      |  45%
-  ordinary text without R code
-
-|  |                                                                              |...................................                                   |  50%
-label: compliance-report (with options) 
-List of 3
-/ $ echo   :- logi FALSE
- $ results: chr "asis"
- $ eval   :\ logi TRUE
-
-|  |                                                                              |......................................                                |  55%
-  ordinary text without R code
-
-/  |                                                                              |..........................................                            |  60%
-label: eeg-report (with options) 
-List of 2
- $ echo   :- logi FALSE
- $ results: chr "asis"
-\
-|  |                                                                              |..............................................                        |  65%
-  ordinary text without R code
-
-  |                                                                            /  |.................................................                     |  70%
-label: sleep-report (with options) 
-List of 2
- $ echo   :- logi FALSE
+<simpleError in reindex_dream_log(dream_log): 'list' object cannot be coerced to type 'double'>
+[1] "clean_sleep_diary failed to be executed correctly."
+Warning messages:
+1: In matrix(unlist(x), ncol = length(x)/8, nrow = 8) :
+  data length exceeds size of matrix
+2: In matrix(unlist(x), ncol = length(x)/8, nrow = 8) :
+  data length exceeds size of matrix
+3: In matrix(unlist(x), ncol = length(x)/8, nrow = 8) :
+  data length exceeds size of matrix
+4: In matrix(unlist(x), ncol = length(x)/8, nrow = 8) :
+  data length exceeds size of matrix
+5: In matrix(unlist(x), ncol = length(x)/8, nrow = 8) :
+  data length exceeds size of matrix
+6: In matrix(unlist(x), ncol = length(x)/8, nrow = 8) :
+  data length exceeds size of matrix
+7: In matrix(unlist(x), ncol = length(x)/8, nrow = 8) :
+  data length exceeds size of matrix
+8: In matrix(unlist(x), ncol = length(x)/8, nrow = 8) :
+  data length exceeds size of matrix
+9: In matrix(unlist(x), ncol = length(x)/8, nrow = 8) :
+  data length exceeds size of matrix
+10: In matrix(unlist(x), ncol = length(x)/8, nrow = 8) :
+  data length exceeds size of matrix
+11: In matrix(unlist(x), ncol = length(x)/8, nrow = 8) :
+  data length exceeds size of matrix
+12: In matrix(unlist(x), ncol = length(x)/8, nrow = 8) :
+  data length exceeds size of matrix
+13: In matrix(unlist(x), ncol = length(x)/8, nrow = 8) :
+  data length exceeds size of matrix
+14: In matrix(unlist(x), ncol = length(x)/8, nrow = 8) :
+  data length exceeds size of matrix
+15: In matrix(unlist(x), ncol = length(x)/8, nrow = 8) :
+  data length exceeds size of matrix
+16: In matrix(unlist(x), ncol = length(x)/8, nrow = 8) :
+  data length exceeds size of matrix
+17: In matrix(unlist(x), ncol = length(x)/8, nrow = 8) :
+  data length exceeds size of matrix
+18: In matrix(unlist(x), ncol = length(x)/8, nrow = 8) :
+  data length exceeds size of matrix
+19: In matrix(unlist(x), ncol = length(x)/8, nrow = 8) :
+  data length exceeds size of matrix
+20: In matrix(unlist(x), ncol = length(x)/8, nrow = 8) :
+  data length exceeds size of matrix
+21: In matrix(unlist(x), ncol = length(x)/8, nrow = 8) :
+  data length exceeds size of matrix
+22: In matrix(unlist(x), ncol = length(x)/8, nrow = 8) :
+  data length exceeds size of matrix
+23: In matrix(unlist(x), ncol = length(x)/8, nrow = 8) :
+  data length exceeds size of matrix
+24: In matrix(unlist(x), ncol = length(x)/8, nrow = 8) :
+  data length exceeds size of matrix
+25: In matrix(unlist(x), ncol = length(x)/8, nrow = 8) :
+  data length exceeds size of matrix
+26: In matrix(unlist(x), ncol = length(x)/8, nrow = 8) :
+  data length exceeds size of matrix
+27: In matrix(unlist(x), ncol = length(x)/8, nrow = 8) :
+  data length exceeds size of matrix
+28: In matrix(unlist(x), ncol = length(x)/8, nrow = 8) :
+  data length exceeds size of matrix
+29: In matrix(unlist(x), ncol = length(x)/8, nrow = 8) :
+  data length exceeds size of matrix
+30: In matrix(unlist(x), ncol = length(x)/8, nrow = 8) :
+  data length exceeds size of matrix
+31: In matrix(unlist(x), ncol = length(x)/8, nrow = 8) :
+  data length exceeds size of matrix
+32: In matrix(unlist(x), ncol = length(x)/8, nrow = 8) :
+  data length exceeds size of matrix
+[1] "HERE"
+<simpleError in reindex_dream_log(dream_log): 'list' object cannot be coerced to type 'double'>
+[1] "clean_sleep_diary failed to be executed correctly."
+Warning messages:
+1: In matrix(unlist(x), ncol = length(x)/8, nrow = 8) :
+  data length exceeds size of matrix
+2: In matrix(unlist(x), ncol = length(x)/8, nrow = 8) :
+  data length exceeds size of matrix
+3: In matrix(unlist(x), ncol = length(x)/8, nrow = 8) :
+  data length exceeds size of matrix
+4: In matrix(unlist(x), ncol = length(x)/8, nrow = 8) :
+  data length exceeds size of matrix
+5: In matrix(unlist(x), ncol = length(x)/8, nrow = 8) :
+  data length exceeds size of matrix
+6: In matrix(unlist(x), ncol = length(x)/8, nrow = 8) :
+  data length exceeds size of matrix
+7: In matrix(unlist(x), ncol = length(x)/8, nrow = 8) :
+  data length exceeds size of matrix
+8: In matrix(unlist(x), ncol = length(x)/8, nrow = 8) :
+  data length exceeds size of matrix
+9: In matrix(unlist(x), ncol = length(x)/8, nrow = 8) :
+  data length exceeds size of matrix
+10: In matrix(unlist(x), ncol = length(x)/8, nrow = 8) :
+  data length exceeds size of matrix
+11: In matrix(unlist(x), ncol = length(x)/8, nrow = 8) :
+  data length exceeds size of matrix
+12: In matrix(unlist(x), ncol = length(x)/8, nrow = 8) :
+  data length exceeds size of matrix
+13: In matrix(unlist(x), ncol = length(x)/8, nrow = 8) :
+  data length exceeds size of matrix
+14: In matrix(unlist(x), ncol = length(x)/8, nrow = 8) :
+  data length exceeds size of matrix
+15: In matrix(unlist(x), ncol = length(x)/8, nrow = 8) :
+  data length exceeds size of matrix
+16: In matrix(unlist(x), ncol = length(x)/8, nrow = 8) :
+  data length exceeds size of matrix
+17: In matrix(unlist(x), ncol = length(x)/8, nrow = 8) :
+  data length exceeds size of matrix
+18: In matrix(unlist(x), ncol = length(x)/8, nrow = 8) :
+  data length exceeds size of matrix
+19: In matrix(unlist(x), ncol = length(x)/8, nrow = 8) :
+  data length exceeds size of matrix
+20: In matrix(unlist(x), ncol = length(x)/8, nrow = 8) :
+  data length exceeds size of matrix
+21: In matrix(unlist(x), ncol = length(x)/8, nrow = 8) :
+  data length exceeds size of matrix
+22: In matrix(unlist(x), ncol = length(x)/8, nrow = 8) :
+  data length exceeds size of matrix
+23: In matrix(unlist(x), ncol = length(x)/8, nrow = 8) :
+  data length exceeds size of matrix
+24: In matrix(unlist(x), ncol = length(x)/8, nrow = 8) :
+  data length exceeds size of matrix
+25: In matrix(unlist(x), ncol = length(x)/8, nrow = 8) :
+  data length exceeds size of matrix
+26: In matrix(unlist(x), ncol = length(x)/8, nrow = 8) :
+  data length exceeds size of matrix
+27: In matrix(unlist(x), ncol = length(x)/8, nrow = 8) :
+  data length exceeds size of matrix
+28: In matrix(unlist(x), ncol = length(x)/8, nrow = 8) :
+  data length exceeds size of matrix
+29: In matrix(unlist(x), ncol = length(x)/8, nrow = 8) :
+  data length exceeds size of matrix
+30: In matrix(unlist(x), ncol = length(x)/8, nrow = 8) :
+  data length exceeds size of matrix
+31: In matrix(unlist(x), ncol = length(x)/8, nrow = 8) :
+  data length exceeds size of matrix
+32: In matrix(unlist(x), ncol = length(x)/8, nrow = 8) :
+  data length exceeds size of matrix
+[1] "HERE"
+<simpleError in reindex_dream_log(dream_log): 'list' object cannot be coerced to type 'double'>
+[1] "clean_sleep_diary failed to be executed correctly."
+[1] "HERE"
+<simpleError in reindex_dream_log(dream_log): 'list' object cannot be coerced to type 'double'>
+[1] "clean_sleep_diary failed to be executed correctly."
+[1] "HERE"
+<simpleError in reindex_dream_log(dream_log): 'list' object cannot be coerced to type 'double'>
+[1] "clean_sleep_diary failed to be executed correctly."
+[1] "hello"
+E
  $ results:\ chr "asis"
 
 |  |                                                                              |....................................................                  |  75%

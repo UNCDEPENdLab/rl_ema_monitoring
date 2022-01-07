@@ -120,6 +120,7 @@ proc_schedule <- function(schedule_df = NULL,days_limit=35,task_limit=56,force_r
   sample_info <- do.call(rbind,lapply(proc_data,`[[`,"info_df"))
   performance_info <- do.call(rbind,lapply(proc_data,`[[`,"performance_info"))
   performance_info <- performance_info[!is.na(performance_info$date),]
+  #browser()
   sp_info_sq <- split(sample_info,sample_info$ID)
   pr_info_sq <- split(performance_info,performance_info$ID)
   sample_info$compliance <- !is.na(sample_info$completed_time)
@@ -532,6 +533,8 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
       form_data <- rbind(form_data,tk)
     }
 
+    #browser()
+
     form_data$answer_prog <- text_proc(form_data$answer)
     fdata_sp <- split(form_data,form_data$questionnaire_name)
 
@@ -539,62 +542,434 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
 
     ## REWRITE form_proc: FROM HERE ##
     #proc all the other first
-    form_proc <- lapply(fdata_sp,function(tkd){
-      #print(unique(tkd$questionnaire_name))
-      if(unique(tkd$questionnaire_name) %in% c("Mood Questionnaire","Sleep Diary","End questionnaire")) {
-        evt_q_index <- ifelse(unique(tkd$questionnaire_name) == "Mood Questionnaire",2,1)
-        if(unique(tkd$questionnaire_name) == "Mood Questionnaire") {
-          evt_q_index <- 2
-        } else if (unique(tkd$questionnaire_name) == "Sleep Diary") {
-          evt_q_index <- 1
-        } else {
-          evt_q_index <- 99
-        }
-        tkf<-do.call(rbind,lapply(split(tkd,tkd$questionnaire_number),function(mda){
-          mdb<-do.call(cbind,lapply(mda$answer_prog[mda$question!=evt_q_index],as.data.frame))
-          if(evt_q_index %in% mda$question) {
-            ###Event df proc
-            if(is.null(names(mda$answer_prog[[which(mda$question==evt_q_index)]]))) {
-              md_evt <- do.call(rbind,lapply(mda$answer_prog[[which(mda$question==evt_q_index)]],as.data.frame))
-            } else {
-              md_evt <- as.data.frame(mda$answer_prog[[which(mda$question==evt_q_index)]])
-            }
-
-            names(md_evt)[names(md_evt)=="V_1"] <- "description"
-            names(md_evt)[names(md_evt)=="V_2"] <- "time_ago"
-            if(is.null(md_evt$category)) {
-              md_evt$category <- "event/activity:unknown"
-            }
-            names(md_evt)<-gsub(".","_",names(md_evt),fixed = T)
-            mdb$event_df <- list(event_df=md_evt)
-            mdb$number_of_events <- nrow(mdb$event_df$event_df)
-          } else {
-            mdb$event_df <- NA
-            mdb$number_of_events <- 0
-          }
-          mdc <- cbind(mda[1,c("questionnaire_name","questionnaire_type","answer_time")],mdb)
-          return(mdc)
-        }))
-      } else {
-        tke<-do.call(rbind,lapply(tkd$answer_prog,as.data.frame,sep="_"))
-        tkf <- cbind(tkd[c("questionnaire_name","questionnaire_type","answer_time","question")],tke)
-      }
-      names(tkf)<-gsub(".","_",names(tkf),fixed = T)
-      tkf$ID <- raw_single$ID
-      #tkf[tkf=="NA"] <- NA
-      tkf <- tkf[order(tkf$answer_time),]
-      rownames(tkf)<-NULL
-      return(tkf)
-    })
+    # form_proc <- lapply(fdata_sp,function(tkd){
+    #   #print(unique(tkd$questionnaire_name))
+    #   if(unique(tkd$questionnaire_name) %in% c("Mood Questionnaire","Sleep Diary","End questionnaire")) {
+    #     evt_q_index <- ifelse(unique(tkd$questionnaire_name) == "Mood Questionnaire",2,1)
+    #     if(unique(tkd$questionnaire_name) == "Mood Questionnaire") {
+    #       evt_q_index <- 2
+    #     } else if (unique(tkd$questionnaire_name) == "Sleep Diary") {
+    #       evt_q_index <- 1
+    #     } else {
+    #       evt_q_index <- 99
+    #     }
+    #     tkf<-do.call(rbind,lapply(split(tkd,tkd$questionnaire_number),function(mda){
+    #       mdb<-do.call(cbind,lapply(mda$answer_prog[mda$question!=evt_q_index],as.data.frame))
+    #       if(evt_q_index %in% mda$question) {
+    #         ###Event df proc
+    #         if(is.null(names(mda$answer_prog[[which(mda$question==evt_q_index)]]))) {
+    #           md_evt <- do.call(rbind,lapply(mda$answer_prog[[which(mda$question==evt_q_index)]],as.data.frame))
+    #         } else {
+    #           md_evt <- as.data.frame(mda$answer_prog[[which(mda$question==evt_q_index)]])
+    #         }
+    #
+    #         names(md_evt)[names(md_evt)=="V_1"] <- "description"
+    #         names(md_evt)[names(md_evt)=="V_2"] <- "time_ago"
+    #         if(is.null(md_evt$category)) {
+    #           md_evt$category <- "event/activity:unknown"
+    #         }
+    #         names(md_evt)<-gsub(".","_",names(md_evt),fixed = T)
+    #         mdb$event_df <- list(event_df=md_evt)
+    #         mdb$number_of_events <- nrow(mdb$event_df$event_df)
+    #       } else {
+    #         mdb$event_df <- NA
+    #         mdb$number_of_events <- 0
+    #       }
+    #       mdc <- cbind(mda[1,c("questionnaire_name","questionnaire_type","answer_time")],mdb)
+    #       return(mdc)
+    #     }))
+    #   } else {
+    #     tke<-do.call(rbind,lapply(tkd$answer_prog,as.data.frame,sep="_"))
+    #     tkf <- cbind(tkd[c("questionnaire_name","questionnaire_type","answer_time","question")],tke)
+    #   }
+    #   names(tkf)<-gsub(".","_",names(tkf),fixed = T)
+    #   tkf$ID <- raw_single$ID
+    #   #tkf[tkf=="NA"] <- NA
+    #   tkf <- tkf[order(tkf$answer_time),]
+    #   rownames(tkf)<-NULL
+    #   return(tkf)
+    # })
     ## REWRITE form_proc: TO HERE ##
 
-    form_proc$`Mood Questionnaire`$v_a_distance <- sqrt((as.numeric(form_proc$`Mood Questionnaire`$Valence)^2) + (as.numeric(form_proc$`Mood Questionnaire`$Arousal)^2) )
-    form_proc$`Sleep Diary`$did_not_sleep<-is.na(form_proc$`Sleep Diary`$questionnaire_type)
-    if(!is.null(form_proc$`End questionnaire`)) {
-      names(form_proc$`End questionnaire`)[grepl("X[[i]]",names(form_proc$`End questionnaire`),fixed = T)] <- paste0("V",1:length(which(grepl("X[[i]]",names(form_proc$`End questionnaire`),fixed = T))))
-      form_proc$`End questionnaire`$event_df <- NULL
-      form_proc$`End questionnaire`$number_of_events <- NULL
+    # form_proc$`Mood Questionnaire`$v_a_distance <- sqrt((as.numeric(form_proc$`Mood Questionnaire`$Valence)^2) + (as.numeric(form_proc$`Mood Questionnaire`$Arousal)^2) )
+    # form_proc$`Sleep Diary`$did_not_sleep<-is.na(form_proc$`Sleep Diary`$questionnaire_type)
+    # if(!is.null(form_proc$`End questionnaire`)) {
+    #   names(form_proc$`End questionnaire`)[grepl("X[[i]]",names(form_proc$`End questionnaire`),fixed = T)] <- paste0("V",1:length(which(grepl("X[[i]]",names(form_proc$`End questionnaire`),fixed = T))))
+    #   form_proc$`End questionnaire`$event_df <- NULL
+    #   form_proc$`End questionnaire`$number_of_events <- NULL
+    # }
+
+    clean_daily_recording <- function(fdata_sp, subj_id) {
+      # run the cleaning
+      fdata_sp$`Daily recording` <- fdata_sp$`Daily recording` %>%
+        # remove these items
+        select(-answer_prog, -questionnaire_number, -answer_timestamp) %>%
+        # rename answer
+        rename('X[[i]]'=answer) %>%
+        # add an ID column
+        mutate(ID=subj_id)
+      # return the updated object
+      return(fdata_sp)
     }
+
+    clean_end_questionnaire <- function(fdata_sp, subj_id) {
+      # if the end questionnaire has not been completed yet
+      end_q_complete = "End questionnaire" %in% names(fdata_sp)
+      if(!end_q_complete) {
+        # just return the data
+        return(fdata_sp)
+      }
+      # get the answer list
+      answer_list <- fdata_sp$`End questionnaire`$answer_prog
+      # rename these to all be 'X[[i]]'
+      names(answer_list) <- paste0("V", 1:length(answer_list))
+      # run the cleaning
+      end_q_data <- fdata_sp$`End questionnaire` %>%
+        # remove these items
+        select(-answer_prog,
+               -questionnaire_number,
+               -answer_timestamp,
+               -answer,
+               -question) %>%
+        # just select the first elements
+        "["(1,) %>%
+        # convert to a list
+        as.list
+      # add the id
+      end_q_data['ID'] <- subj_id
+      # add the answers
+      end_q_data <- append(end_q_data, answer_list)
+      # apply these changes to the original df and convert list to a dataframe
+      fdata_sp$`End questionnaire` <- as.data.frame(end_q_data)
+      # return the updated object
+      return(fdata_sp)
+    }
+
+    clean_mood_post_task <- function(fdata_sp, subj_id) {
+      # get the answer list
+      answer_list <- fdata_sp$`Mood post task`$answer_prog
+      # unlist the answer_list items
+      answer_list <- lapply(answer_list, unlist)
+      # run the cleaning
+      mood_post_task_data <- fdata_sp$`Mood post task` %>%
+        # remove these items
+        select(-answer_prog,
+               -questionnaire_number,
+               -answer_timestamp,
+               -answer)
+      # get the answer_prog as a dataframe
+      answer_list <- t(do.call(cbind, answer_list))
+      # combine the mood answer list with the mood post task data
+      mood_post_task_data <- cbind(mood_post_task_data, answer_list)
+      # add the id
+      mood_post_task_data['ID'] <- subj_id
+      # update the overall object
+      fdata_sp$`Mood post task` <- mood_post_task_data
+      # return the updated object
+      return(fdata_sp)
+    }
+
+    clean_mood_questionnaire <- function(fdata_sp, subj_id) {
+      # get the answer list
+      mood_answers <- fdata_sp$`Mood Questionnaire`$answer_prog
+      # unlist the mood_answers items
+      mood_answers <- lapply(mood_answers, unlist)
+      # coerce the data as a list into a column-based list
+      mood_answers <- t(as.data.frame(t(mood_answers)))
+      # get the number of items
+      num_items <- length(fdata_sp$`Mood Questionnaire`$question)/3
+      # coerce the data as a list into a dataframe and add an index
+      #' Note: the following dataframe has column 'V1' as the index we added
+      #' and 'V2' as the actual data. Indexes of 1 and 2 are added and further
+      #' defined in the next multiline comment.
+      mood_answers <- as.data.frame(
+        cbind(
+          rep(c(1,1,2), num_items),
+          mood_answers)
+      )
+      # get a grouping
+      #' Note: the mood questionnaire data exists in triples:
+      #'   A: Valence and Arousual (1)
+      #'   B: Anxious, Elated, Sad, Irritable, Energetic (1)
+      #'   C: events/thoughts (2)
+      #' Next bit of logic is to separate A+B and C into separate entities
+
+      # get the ema data
+      #' Here, the data is split by staggered in order of valence-arousal and
+      #' emotional like so:
+      #'   Index 1 is valence-arousal
+      #'   Index 0 is emotion
+      #' V1 is this index and V2 is the actual data
+      ema_data <- mood_answers %>% filter(V1==1) %>% mutate(V1=c(1:nrow(.))%%2)
+      # get the valence-arousal data
+      val_data <- ema_data %>% filter(V1==1) %>%
+        '['('V2') %>% # get the data from V2
+        as.list %>% # convert to a list
+        "[["(1) %>% # unlist
+        as.data.frame # convert to dataframe
+      # get the emotion data
+      emo_data <- ema_data %>% filter(V1==0) %>%
+        '['('V2') %>% # get the data from V2
+        as.list %>% # convert to a list
+        "[["(1) %>% # unlist
+        as.data.frame # convert to dataframe
+      # get the event data
+      event_data <- mood_answers %>% filter(V1==2)
+      # reformatting of the data
+      event_data <- event_data$V2 %>%
+        lapply(.,
+               combine_by_response <- function(x) { # one-time use function
+                 #browser()
+                 colNames <- as.list(unique(names(x))) # get the names for the columns
+                 x <- matrix(unlist(x), ncol = length(x)/8, nrow = 8) %>% # convert to a matrix
+                   t %>% # transpose the matrix
+                   as.data.frame # convert to a dataframe
+                 colnames(x) <- colNames # apply the column names
+                 return(x) # return
+               }
+        )
+      # get the custom indices for the mood_questionnaire
+      mq_idx <- fdata_sp$`Mood Questionnaire`$question
+      # run the cleaning
+      mood_questionnaire_data <- fdata_sp$`Mood Questionnaire` %>%
+        # remove these items
+        select(-answer_prog,
+               -questionnaire_number,
+               -answer_timestamp,
+               -answer,
+               -question)
+      # drop the extra times
+      #' Note: we get 3 identical times for each entry, but for some
+      #' reason using distinct or unique functions do not handle this.
+      #' Instead, we just assign indices 1, 2, and 3 and just drop 2 and 3.
+      mood_questionnaire_data <- as.data.frame(
+        cbind(
+          mq_idx,
+          mood_questionnaire_data)
+      ) %>% filter(mq_idx == 1) %>% # remove the two extra copies
+        select(-mq_idx) # drop the temporary index we added
+      # add the valence-arousal data back to object
+      mood_questionnaire_data <- cbind(mood_questionnaire_data, t(val_data))
+      # add emotion data back to object
+      mood_questionnaire_data <- cbind(mood_questionnaire_data, t(emo_data))
+      # add the id
+      mood_questionnaire_data['ID'] <- subj_id
+      # update the overall object
+      fdata_sp$`Mood Questionnaire` <- mood_questionnaire_data
+      # add the events back
+      fdata_sp$`Mood Questionnaire`$event_df <- event_data
+      # add the number of events
+      fdata_sp$`Mood Questionnaire`$number_of_events <- sapply(fdata_sp$`Mood Questionnaire`$event_df, nrow)
+      # add the v_a_distance
+      fdata_sp$`Mood Questionnaire`$v_a_distance <- sqrt((as.numeric(fdata_sp$`Mood Questionnaire`$Valence)^2) + (as.numeric(fdata_sp$`Mood Questionnaire`$Arousal)^2) )
+      # return the updated object
+      return(fdata_sp)
+      #' Note that this implementation does not have the redundant event_df naming.
+      #' This likely shouldn't hurt anything.
+    }
+
+    clean_sleep_diary <- function(fdata_sp, subj_id) {
+      # get the answer list
+      sleep_answers <- fdata_sp$`Sleep Diary`$answer_prog
+      #browser()
+      # unlist the sleep_answers items
+      sleep_answers <- lapply(sleep_answers, unlist)
+      # coerce the data as a list into a column-based list
+      #' After this, V1 will be the raw string result and V2 will be the length
+      sleep_answers <- t(as.data.frame(t(sleep_answers))) %>%
+        as.data.frame %>%
+        #rowwise %>%
+        mutate("V2"=fdata_sp$`Sleep Diary`$question)
+      # get the sleep quality (has a idx of 0)
+      sleep_quality <- sleep_answers %>% filter(V2==0) %>%
+        '['('V1') %>% # get the data from V1
+        as.list %>% # convert to a list
+        "[["(1) %>% # unlist
+        as.data.frame %>% # convert to dataframe
+        ( # run custom function to drop NA (requires saving and reapplying rowname)
+          function(x) {
+            # save the rownames
+            colNames <- rownames(x)
+            x <- x %>% naniar::replace_with_na_all(~.x == "NA") %>% # convert "NA" to NA
+              t %>% # transpose
+              as.data.frame #%>% # convert to dataframe
+            #drop_na #%>% # drop NAs
+            #t %>% # transpose
+            #as.data.frame # convert to dataframe
+            # re-apply the colnames
+            colnames(x) <- colNames
+            # rerurn the data
+            return(x)
+          }
+        )
+      # get the dream log (has a idx of 1)
+      dream_log <- sleep_answers #%>% filter(V2==1)
+      # complicated chaining of methods and regexes to pull out the data
+      # dream_log <- str_split(toString(dream_log$V1), "c[(]") %>%
+      #   lapply(., str_remove_all, "\"") %>% # remove '\'
+      #   lapply(., str_remove_all, "`") %>% # remove '`'
+      #   lapply(., str_remove_all, "[)][,]*") %>% # remove '),'
+      #   lapply(., str_remove_all, "[\n]*") %>% # remove '\n'
+      #   lapply(., str_split, ',') %>% # split by ',' to get name-value pairs
+      #   lapply(., lapply, str_split, "=") %>% # split by '=' to separate name and value
+      #   lapply(., lapply, lapply, str_trim) # remove extra white space
+      # # delimit from the extra unneeded layer
+      # dream_log <- dream_log[[1]] #%>% '[['(2:length(.))
+      # # remove the first element, it's an empty string
+      # dream_log[[1]] <- NULL
+      # reformatting of the data
+      dream_log <- dream_log$V1 %>%
+        # lapply(.,  # mainly grabbing and applying names
+        #        apply_name_to_value <- function(x) { # one-time use function
+        #          names <- sapply(x, "[[", 1) # get the name
+        #          names(x) <- names # apply the names
+        #          x <- sapply(x, "[[", 2) # reduce value to just by the value (remove name)
+        #          return(x) # return
+        #        }
+        # ) %>%
+        # lapply(., lapply, '[[', 1) %>% # remove unneeded nesting
+        lapply(.,
+               combine_by_response <- function(x) { # one-time use function
+                 colNames <- as.list(unique(names(x))) # get the names for the columns
+                 x <- matrix(unlist(x), ncol = length(x)/8, nrow = 8) %>% # convert to a matrix
+                   t %>% # transpose the matrix
+                   as.data.frame # convert to a dataframe
+                 colnames(x) <- colNames # apply the column names
+                 return(x) # return
+               }
+        )
+      # run a sub-function to reduce the dream logs to be NA if there is no
+      # dream log and move the sleep log back one in the order otherwise
+
+      # nested function to check is an item is zero (used to drop 0s in reindex_dream_log)
+      is.zero <- function(item) {
+        tryCatch({
+          res <- item == 0
+          if(is.na(res)) {
+            return(FALSE)
+          }
+          if(length(res) > 1) {
+            return(FALSE)
+          }
+          return(res)
+        }, error = function(e) {
+          return(FALSE)
+        })
+      }
+      browser()
+      reindex_dream_log <- function(dream_log) {
+        # initialize a dream log and a variable to be the index
+        idx <- 1
+        new_dream_log <- list()
+        for(dream in dream_log) {
+          #print("Dream Log:")
+          #print(new_dream_log)
+          # if this is not a dream log
+          if(dim(dream)[1] != 0) {
+            # get the previous index
+            prev_idx <- idx - 1
+            # set the previous item as this dream log
+            new_dream_log[[prev_idx]] <- dream
+            # set the current item to be 0 so that it may be dropped later
+            new_dream_log <- append(new_dream_log, 0)
+          } else {
+            # set the current item to be NA
+            new_dream_log <- append(new_dream_log, NA)
+          }
+          # increment the index
+          idx <- idx + 1
+        }
+        #print("HERE")
+        #print(new_dream_log)
+        # drop all zeros (runs an lapply nested in a which to get the indices of elements that are zero)
+        new_dream_log <- new_dream_log[-which(lapply(new_dream_log, is.zero) == TRUE)]
+        # return the new dream log
+        return(new_dream_log)
+      }
+      # re-index the dream log
+      dream_log <- reindex_dream_log(dream_log)
+      # drop unwanted data
+      sleep_diary_data <- fdata_sp$`Sleep Diary` %>%
+        filter(question==0) %>% # select the sleep quality items
+        # remove these items
+        select(-answer_prog,
+               -questionnaire_number,
+               -answer_timestamp,
+               -answer,
+               -question)
+      # add the sleep quality data back to object
+      sleep_diary_data <- cbind(sleep_diary_data, sleep_quality)
+      # add the id
+      sleep_diary_data['ID'] <- subj_id
+      # update the overall object
+      #sleep_diary_data$event_df <- dream_log
+      # update the overall object (and convert it to a list)
+      fdata_sp$`Sleep Diary` <- sleep_diary_data %>% as.list
+      # add the events back
+      fdata_sp$`Sleep Diary`$event_df <- dream_log
+      # add the number of events
+      fdata_sp$`Sleep Diary`$number_of_events <- sapply(fdata_sp$`Sleep Diary`$event_df, nrow)
+      # set any null items in the 'number_of_events' to zero
+      fdata_sp$`Sleep Diary`$number_of_events <- sapply(fdata_sp$`Sleep Diary`$number_of_events,
+        function(x) { # nested function to correct the number of events data item
+          # if the value is an integer
+          if(is.number(x)) {
+            # return the value
+            return(x)
+          # otherwise
+          } else {
+            # it should be set to 0
+            return(0)
+          }
+        }
+      )
+      # add did_not_sleep
+      fdata_sp$`Sleep Diary`$did_not_sleep <- is.na(fdata_sp$`Sleep Diary`$questionnaire_type)
+      # convert the sleep diary into a dataframe (will convert to tibble just fine, but will not convert directly to a dataframe)
+      fdata_sp$`Sleep Diary` <- fdata_sp$`Sleep Diary` %>% as_tibble %>% as.data.frame
+      # rename the columns to have any white space replaced by '_'
+      names(fdata_sp$`Sleep Diary`) <- lapply(names(fdata_sp$`Sleep Diary`), str_replace_all, ' ', '_')
+      # return the updated object
+      return(fdata_sp)
+      #' Note that this implementation does not have the redundant event_df naming.
+      #' This likely shouldn't hurt anything. Also, overall object is now a
+      #' list and not a dataframe, hoping this won't break anything later on
+      #' but there's a good chance to break in cleanup layer.
+    }
+
+    create_form_proc <- function(fdata_sp, subj_id, to_run=list('clean_daily_recording', 'clean_end_questionnaire', 'clean_mood_post_task', 'clean_mood_questionnaire', 'clean_sleep_diary')) {
+      # basically provide a list of function that take the fdata_sp object and subj_id as input and run them within a try-catch
+      # initialize form proc
+      form_proc <- fdata_sp
+      # sub function to run the provided functions
+      run_form_proc_func <- function(fname, form_proc, subj_id) {
+        resultant_form_proc <- tryCatch({
+          print(paste0("Attempting to run: '", fname, "'"))
+          form_proc <- do.call(fname, list(form_proc, subj_id))
+        }, error = function(e) {
+          # log the error
+          print(e)
+          # print the error trace
+          #traceback(3)
+          # log which task in processing failed
+          print(paste0(fname, " failed to be executed correctly."))
+          # return the unchanged form proc
+          return(form_proc)
+        })
+        # return the resultant form proc of function run attempt
+        return(resultant_form_proc)
+      }
+      # run the list of functions for the subject given
+      for (func2run in to_run) {
+        form_proc <- run_form_proc_func(func2run, form_proc, subj_id)
+      }
+      # return the overall result
+      return(form_proc)
+    }
+
+    form_proc <- create_form_proc(fdata_sp, raw_single$ID)
+
+    print("Base data cleaning finished...")
 
     ##summary stats for how much they answered
     q_sum <- data.frame(ID = raw_single$ID,val_arr_dis_avg = mean(form_proc$`Mood Questionnaire`$v_a_distance,na.rm = T))
@@ -602,7 +977,7 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
     names(e_sum) <- paste(names(e_sum),"avg",sep = "_")
     s_sum <- data.frame(as.list(apply(form_proc$`Sleep Diary`[c("sleep_latency","woke_many_times","woke_early","overall")],2,function(x){mean(as.numeric(x),na.rm = T)})))
     names(s_sum) <- paste(names(s_sum),"avg",sep = "_")
-
+    
     q_sum <- cbind(q_sum,e_sum,s_sum)
     q_sum$emo_rate_avg <- mean(unlist(e_sum),na.rm = T)
     q_sum$sleep_di_avg <- mean(unlist(s_sum),na.rm = T)
@@ -612,6 +987,203 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
     q_sum$val_emo_cor <- cor(apply(form_proc$`Mood Questionnaire`[c("Anxious","Elated","Sad","Irritable","Energetic")],1,function(x){mean(as.numeric(x),na.rm = T)}),form_proc$`Mood Questionnaire`$v_a_distance)
     ###return proc_answer object###########
 
+    #browser()
+
+    print("Beginning payment, completion, and performance calculations...")
+    
+    # get the current schedule file
+    cur_sched_file <- grep("*.db", list.files(paste0(dataPath, '/Subjects/', raw_single$ID, '/schedule')), value=TRUE)
+    # append the path
+    cur_sched_file <- paste(paste0(dataPath, '/Subjects/', raw_single$ID, '/schedule/', cur_sched_file))
+
+    # METADATA FETCHING (site, initials, group)
+    data = dbConnect(SQLite(), cur_sched_file)
+    participant_info = dbGetQuery(data, "SELECT * FROM subject")
+    trials_1 <- dbGetQuery(data, "SELECT * FROM trials")
+    questionnaire_1 <- dbGetQuery(data, "SELECT * FROM questionnaires")
+    group <- participant_info$study_group
+    site <- case_when(participant_info$state == "PA" ~"Pitt", participant_info$state == "NC" ~"UNC")
+
+    print("Metadata was fetched")
+    #print(trials_1)
+    #print(questionnaire_1)
+
+    # COMPLETENESS CALCULATIONS (calendar day, ema day)
+    completeness_table <- function(games_input, questionnaires_input, participant_status) {
+      #cleans questionnaires input
+      questionnaires <- questionnaires_input %>%
+        filter(number != 0) %>% #drops practice rounds
+        filter(type != 19) %>% #drops mood post task
+        drop_na(start_time | completed_time) %>% #drops any incomplete tasks
+        mutate(start_timestamp = as.POSIXct(start_time/1000, origin="1970-01-01", tz="America/New_York")) %>%
+        mutate(scheduled_timestamp = as.POSIXct(scheduled_time/1000, origin="1970-01-01", tz="America/New_York")) %>%
+        #handles the case when a participant does a task between midnight and 3am, will attribute completeness to the previous day
+        mutate(start_hour = hour(.$start_timestamp)) %>%
+        mutate(quest_dates = if_else(start_hour >= 0 & start_hour<=3, as.Date(format(.$scheduled_timestamp, '%Y-%m-%d')), as.Date(format(.$start_timestamp, '%Y-%m-%d'))))
+      # if the number of rows of questionnaires_summary is zero, initialize a pre-set default
+      if(nrow(questionnaires) == 0) {
+        # use the test data only
+        questionnaires <- questionnaires_input %>%
+          filter(number == 0) %>% #keeps only practice rounds
+          filter(type != 19) %>% #drops mood post task
+          drop_na(start_time | completed_time) %>% #drops any incomplete tasks
+          mutate(start_timestamp = as.POSIXct(start_time/1000, origin="1970-01-01", tz="America/New_York")) %>%
+          mutate(scheduled_timestamp = as.POSIXct(scheduled_time/1000, origin="1970-01-01", tz="America/New_York")) %>%
+          #handles the case when a participant does a task between midnight and 3am, will attribute completeness to the previous day
+          mutate(start_hour = hour(.$start_timestamp)) %>%
+          mutate(quest_dates = if_else(start_hour >= 0 & start_hour<=3, as.Date(format(.$scheduled_timestamp, '%Y-%m-%d')), as.Date(format(.$start_timestamp, '%Y-%m-%d'))))
+      }
+      #creates df sorted by questionnaire type, and number completed on date
+      questionnaires_summary <- questionnaires %>%
+        group_by(type, description, quest_dates) %>%
+        summarize(count = n())
+      print("before cleaning games")
+      #cleans games input
+      games <- games_input %>%
+        filter(block > 5) %>% #drops practice rounds
+        filter (block < 1000) %>% #drops fmri blocks
+        filter(trial == 0) %>% #grabs only first trial of block
+        drop_na(stim_time) %>% #drops any incomplete games
+        mutate(start_timestamp = as.POSIXct(stim_time/1000, origin="1970-01-01", tz="America/New_York")) %>%
+        mutate(scheduled_timestamp = as.POSIXct(scheduled_time/1000, origin="1970-01-01", tz="America/New_York")) %>%
+        #handles the case when a participant does a task between midnight and 3am, will attribute completeness to the previous day
+        mutate(start_hour = hour(.$start_timestamp)) %>%
+        mutate(games_dates = if_else(start_hour >= 0 & start_hour<=3, as.Date(format(.$scheduled_timestamp, '%Y-%m-%d')), as.Date(format(.$start_timestamp, '%Y-%m-%d'))))
+      # if the number of rows of questionnaires_summary is zero, initialize a pre-set default
+      if(nrow(questionnaires) == 0) {
+        games <- games_input %>%
+          filter(block < 6) %>% #keeps only practice rounds
+          filter (block < 1000) %>% #drops fmri blocks
+          filter(trial == 0) %>% #grabs only first trial of block
+          drop_na(stim_time) %>% #drops any incomplete games
+          mutate(start_timestamp = as.POSIXct(stim_time/1000, origin="1970-01-01", tz="America/New_York")) %>%
+          mutate(scheduled_timestamp = as.POSIXct(scheduled_time/1000, origin="1970-01-01", tz="America/New_York")) %>%
+          #handles the case when a participant does a task between midnight and 3am, will attribute completeness to the previous day
+          mutate(start_hour = hour(.$start_timestamp)) %>%
+          mutate(games_dates = if_else(start_hour >= 0 & start_hour<=3, as.Date(format(.$scheduled_timestamp, '%Y-%m-%d')), as.Date(format(.$start_timestamp, '%Y-%m-%d'))))
+      }
+      print("after cleaning games")
+      #creates df with number of games completed on date
+      games_summary <- games %>%
+        group_by(games_dates) %>%
+        summarize(games_count = n())
+      
+      #start date is the earliest date between questionnaires and games
+      #end date is dependent on whether the participant is active or inactive
+      #active: grabs all dates up to the previous day before run date
+      #inactive: grabs all dates up to the latest date in schedule file
+      start_date = as.Date(min(min(questionnaires_summary$quest_dates), min(games_summary$games_dates)))
+      end_date = case_when(participant_status == "active" ~ Sys.Date(), participant_status == "inactive" ~ as.Date(max(max(questionnaires_summary$quest_dates), max(games_summary$games_dates))))
+      print('got start and end date')
+      #missingness padding for all tasks
+      #complete function fills in zero for any missing dates
+      #browser()
+      games_completeness <- games_summary %>%
+        complete(games_dates = seq.Date(start_date, end_date, by="day"), fill = list(games_count = 0))
+      print('got games_completeness')
+      mood_completeness <- questionnaires_summary %>%
+        filter(type == 0) %>%
+        complete(quest_dates = seq.Date(start_date, end_date, by="day"), fill = list(count = 0)) %>%
+        rename(mood_count = count)
+      print('got mood_completeness')
+      rest_completeness <- questionnaires_summary %>%
+        filter(type == 2) %>%
+        complete(quest_dates = seq.Date(start_date, end_date, by="day"), fill = list(count = 0)) %>%
+        rename(rest_count = count)
+      print('got sleep_completeness')
+      sleep_completeness <- questionnaires_summary %>%
+        filter(type == 5) %>%
+        complete(quest_dates = seq.Date(start_date, end_date, by="day"), fill = list(count = 0)) %>%
+        rename(sleep_count = count)
+      print('got sleep_completeness')
+      video_completeness <- questionnaires_summary %>%
+        filter(type == 21) %>%
+        complete(quest_dates = seq.Date(start_date, end_date, by="day"), fill = list(count = 0)) %>%
+        rename(video_count = count)
+      print('got video_completeness')
+      #completeness count contains the raw counts
+      completeness_count <- data.frame(dates = mood_completeness$quest_dates, sleep_count = sleep_completeness$sleep_count, mood_count = mood_completeness$mood_count, rest_count = rest_completeness$rest_count, games_count = games_completeness$games_count, video_count = video_completeness$video_count)
+      if (participant_status == "active") {
+        completeness_count <- completeness_count %>%
+          slice(1:(n()-1)) #removes last row with current run date bc possibility they can still complete tasks on current day
+      }
+      #completeness percentage assumes 1 sleep diary, 4 mood reports, 2 resting states, 4 game blocks, and 1 end of day video
+      completeness_perc <- completeness_count %>%
+        mutate(sleep_perc = (sleep_count/1)*100) %>%
+        mutate(mood_perc = (mood_count/4)*100) %>%
+        mutate(rest_perc = (rest_count/2)*100) %>%
+        mutate(games_perc = (games_count/4)*100) %>%
+        mutate(video_perc = (video_count/1)*100) %>%
+        select(dates, sleep_perc, mood_perc, rest_perc, games_perc, video_perc)
+
+      #calculates the ema day and calendar day used in the overview table
+      ema_day <- (max(games$block)-5)/4
+      cal_day <- as.numeric(max(completeness_perc$dates)-completeness_perc$dates[1]) + 1
+
+      completeness_output <- list(completeness_perc, ema_day, cal_day)
+      return(completeness_output)
+    }
+
+    # runs the subject with the assumption they are active
+    # the "completeness_table" function can be run with 'participant_status' set
+    # to inactive to generate a final report, but that is not implemented here.
+    task_completeness <- completeness_table(
+                              games_input = trials_1,
+                              questionnaires_input = questionnaire_1,
+                              participant_status = 'active')
+
+    print("Completeness was calculated")
+    
+    # names the task_completeness list items
+    names(task_completeness) <- c("completeness_table", "ema_day", "calendar_day")
+
+    # PAYMENT INFORMATION
+
+    payment_df <- function(completeness_perc, games_input) {
+      #adds calendar week to task percent completed df
+      completeness_perc <- completeness_perc %>%
+        mutate(cal_week = ((as.numeric(dates-dates[1]) %/% 7)+1))
+
+      #average task completed % per calendar week
+      completeness_summary <- completeness_perc %>%
+        group_by(cal_week) %>%
+        summarize(games_perc_byweek = round(mean(games_perc)), mood_perc_byweek = round(mean(mood_perc)), sleep_perc_byweek = round(mean(sleep_perc)), video_perc_byweek = round(mean(video_perc)))
+
+      #calculates game earnings for all blocks completed, including practice and fmri
+      games_all <- games_input %>%
+        drop_na(stim_time) %>% #drops any incomplete games
+        mutate(start_timestamp = as.POSIXct(stim_time/1000, origin="1970-01-01", tz="America/New_York")) %>%
+        mutate(scheduled_timestamp = as.POSIXct(scheduled_time/1000, origin="1970-01-01", tz="America/New_York")) %>%
+        #for regular games, use scheduled time, for fmri games, use start time bc scheduled time 1 year ahead
+        mutate(game_dates = case_when(block <1000 ~ as.Date(format(.$scheduled_timestamp, '%Y/%m/%d')), block >= 1000 ~ as.Date(format(.$start_timestamp, '%Y/%m/%d')))) %>%
+        mutate(cal_week = (as.numeric(game_dates-game_dates[325]) %/% 7)+1) #325 is the start of block 6 (first game of day 1)
+      #sum game earnings by calender week
+      payment_summary <- games_all %>%
+        group_by(cal_week) %>%
+        summarize(pay = sum(outcome)*.15)
+      #initialize df with NAs
+      payment_table <- data.frame(matrix(nrow=5,ncol=7))
+      colnames(payment_table) <- c("cal_week", "payment_date", "game_earnings", "games_perc_completed", "mood_perc_completed", "sleep_perc_completed", "video_perc_completed")
+      #df is created piecewise to allow for NAs for incompleteness
+      payment_table <-  payment_table %>%
+        mutate(cal_week = c(1,2,3,4,5)) %>%
+        mutate(payment_date = c(as.character(completeness_perc$dates[1]+7), as.character(completeness_perc$dates[1]+14), as.character(completeness_perc$dates[1]+21), "On Termination Date", "On Termination Date")) %>%
+        mutate(game_earnings = game_earnings <- c(payment_summary$pay[1]+payment_summary$pay[2], payment_summary$pay[3], payment_summary$pay[4], payment_summary$pay[5], payment_summary$pay[6])) %>%
+        mutate(games_perc_completed = c(completeness_summary$games_perc_byweek[1], completeness_summary$games_perc_byweek[2], completeness_summary$games_perc_byweek[3], completeness_summary$games_perc_byweek[4], completeness_summary$games_perc_byweek[5])) %>%
+        mutate(mood_perc_completed = c(completeness_summary$mood_perc_byweek[1], completeness_summary$mood_perc_byweek[2], completeness_summary$mood_perc_byweek[3], completeness_summary$mood_perc_byweek[4], completeness_summary$mood_perc_byweek[5])) %>%
+        mutate(sleep_perc_completed = c(completeness_summary$sleep_perc_byweek[1], completeness_summary$sleep_perc_byweek[2], completeness_summary$sleep_perc_byweek[3], completeness_summary$sleep_perc_byweek[4], completeness_summary$sleep_perc_byweek[5])) %>%
+        mutate(video_perc_completed = c(completeness_summary$video_perc_byweek[1], completeness_summary$video_perc_byweek[2], completeness_summary$video_perc_byweek[3], completeness_summary$video_perc_byweek[4], completeness_summary$video_perc_byweek[5]))
+
+      return(payment_table)
+    }
+
+    payment <- payment_df(
+                completeness_perc = task_completeness$completeness_table,
+                games_input = trials_1)
+
+    print("Payment was calculated")
+    
+    print("Completed payment, completion, and performance calculations.")
 
     pr_info_by_block$ID <- raw_single$ID
     raw_single$trials <- trials_df
@@ -621,7 +1193,11 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
                    performance_info=pr_info_by_block,performance_overall=px_overall,
                    form_dfs=form_proc,form_summary=q_sum,
                    ID=raw_single$ID,
-                   games_by_block=games_by_block)
+                   games_by_block=games_by_block,
+                   group=group,
+                   site=site,
+                   payment=payment,
+                   task_completeness=task_completeness)
     save(output, file = output_path)
 
     return(list(raw_data=raw_single, new_data=TRUE,
@@ -629,7 +1205,11 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
                 performance_info=pr_info_by_block,performance_overall=px_overall,
                 form_dfs=form_proc,form_summary=q_sum,
                 ID=raw_single$ID,
-                games_by_block=games_by_block))
+                games_by_block=games_by_block,
+                group=group,
+                site=site,
+                payment=payment,
+                task_completeness=task_completeness))
   }, error = function(err){
     # log the traceback
     #traceback(err)
@@ -642,6 +1222,7 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
     #return(NA)
   })
 }
+
 ####Proc physio
 proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4,
                         force_reload=FALSE,force_reproc=FALSE,save_lite=F,

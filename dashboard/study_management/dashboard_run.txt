@@ -1,0 +1,122 @@
+
+> # Test with this line #
+> #run_ema(redcap=FALSE, save_lite=FALSE, replot=TRUE, render=TRUE, push=TRUE, pull=FALSE, sched=TRUE, physio=FALSE, cleanup .... [TRUNCATED] 
+[1] "Last run started at:"
+[1] "2022-01-07 10:44:56 EST"
+[1] "Remote data storage was already mounted."
+[[1]]
+[1] "540010"
+
+[[2]]
+[1] "440411"
+
+[[3]]
+[1] "540019"
+
+[[4]]
+[1] "440328"
+
+[[5]]
+[1] "440300"
+
+[[6]]
+[1] "540012"
+
+[[7]]
+[1] "540025"
+
+[1] "Running data pull..."
+[1] "540010"
+[1] "running schedule..."
+[1] "running physio..."
+[1] "running video..."
+[1] "440411"
+[1] "running schedule..."
+[1] "running physio..."
+[1] "running video..."
+[1] "540019"
+[1] "running schedule..."
+[1] "running physio..."
+[1] "running video..."
+[1] "440328"
+[1] "running schedule..."
+[1] "running physio..."
+[1] "running video..."
+[1] "440300"
+[1] "running schedule..."
+[1] "running physio..."
+[1] "running video..."
+[1] "540012"
+[1] "running schedule..."
+[1] "running physio..."
+[1] "running video..."
+[1] "540025"
+[1] "running schedule..."
+[1] "running physio..."
+[1] "running video..."
+[1] "binding schedule"
+[1] "binding physio"
+[1] "binding video"
+[1] "Running physio calculation/aggregation..."
+[1] "Saving the physio results..."
+[1] "Running schedule calculation/aggregation..."
+[1] "/Volumes/bierka_root/datamesh/RAW/Momentum_App/data/Subjects/540010/schedule/1641570376.367471_540010_schedule.db"
+[1] "/Volumes/bierka_root/datamesh/RAW/Momentum_App/data/Subjects/440411/schedule/1641570523.292273_440411_schedule.db"
+[1] "/Volumes/bierka_root/datamesh/RAW/Momentum_App/data/Subjects/540019/schedule/1641570576.403138_540019_schedule.db"
+[1] "Attempting to run: 'clean_daily_recording'"
+[1] "Attempting to run: 'clean_end_questionnaire'"
+[1] "Attempting to run: 'clean_mood_post_task'"
+[1] "Attempting to run: 'clean_mood_questionnaire'"
+[1] "Attempting to run: 'clean_sleep_diary'"
+[1] "Base data cleaning finished..."
+[1] "Beginning payment, completion, and performance calculations..."
+[1] "Metadata was fetched"
+[1] "before cleaning games"
+[1] "after cleaning games"
+[1] "got start and end date"
+[1] "got games_completeness"
+[1] "got mood_completeness"
+[1] "got sleep_completeness"
+[1] "got sleep_completeness"
+[1] "got video_completeness"
+[1] "Completeness was calculated"
+[1] "Payment was calculated"
+[1] "Completed payment, completion, and performance calculations."
+[1] "Attempting to run: 'clean_daily_recording'"
+[1] "Attempting to run: 'clean_end_questionnaire'"
+[1] "Attempting to run: 'clean_mood_post_task'"
+[1] "Attempting to run: 'clean_mood_questionnaire'"
+[1] "Attempting to run: 'clean_sleep_diary'"
+[1] "Base data cleaning finished..."
+[1] "Beginning payment, completion, and performance calculations..."
+[1] "Metadata was fetched"
+[1] "before cleaning games"
+[1] "after cleaning games"
+[1] "got start and end date"
+[1] "got games_completeness"
+[1] "got mood_completeness"
+[1] "got sleep_completeness"
+[1] "got sleep_completeness"
+[1] "got video_completeness"
+[1] "Completeness was calculated"
+[1] "Payment was calculated"
+[1] "Completed payment, completion, and performance calculations."
+[1] "Attempting to run: 'clean_daily_recording'"
+[1] "Attempting to run: 'clean_end_questionnaire'"
+[1] "Attempting to run: 'clean_mood_post_task'"
+[1] "Attempting to run: 'clean_mood_questionnaire'"
+[1] "Attempting to run: 'clean_sleep_diary'"
+<error/tibble_error_incompatible_size>
+Tibble columns must have compatible sizes.
+* Size 0: Columns `event_df` and `number_of_events`.
+* Size 3: Columns `questionnaire_type`, `questionnaire_name`, `answer_time`, `sleep latency`, `woke many times`, and 4 more.
+ℹ Only values of size one are recycled.
+Backtrace:
+  1. base::source("~/rl_ema_monitoring/ema_runner.R", echo = TRUE)
+ 25. tibble:::as_tibble.list(.)
+ 26. tibble:::lst_to_tibble(x, .rows, .name_repair, col_lengths(x))
+ 27. tibble:::recycle_columns(x, .rows, lengths)
+[1] "clean_sleep_diary failed to be executed correctly."
+[1] "Base data cleaning finished..."
+[1] "540019 did not successfully have their schedule file processed."
+<simpleError in `[.data.frame`(form_proc$`Sleep Diary`, c("sleep_latency", "woke_many_times",     "woke_early", "overall")): undefined columns selected>

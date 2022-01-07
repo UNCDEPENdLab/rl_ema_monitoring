@@ -14,6 +14,17 @@ sleep_dist <- sl_di_avg_row$sleep_di_avg
 # ensure that the data is a flat dataframe (no nested lists/dataframes)
 diary[] <- lapply(diary, list_to_cv)
 
+# rename the dataframe columns (replace all ' ' and '-' with '_')
+colnames(diary) <- lapply(colnames(diary), function(x) { # nested function
+    # replace any '-' with '_'
+    x <- str_replace_all(x, '-', '_')
+    # replace any ' ' with '_'
+    x <- str_replace_all(x, ' ', '_')
+    # return the string
+    return(x)
+  }
+)
+
 # make the subdir if it does not exist
 if(dir.exists(paste0(dataPath, "/Subjects/", subj, "/reports")) != TRUE){
   dir.create(paste0(dataPath, "/Subjects/", subj, "/reports"))

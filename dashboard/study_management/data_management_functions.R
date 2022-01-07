@@ -242,13 +242,13 @@ sourceFromCfg('rl_ema_monitoring', 'momentum_pull_func.py') # function used for 
 sourceFromCfg('rl_ema_monitoring', 'rebuild_config_funcs.py') # function used for updating the pathing info (rough file tracking)
 
 # add the data_management python functions
-sourceFromCfg('rl_ema_monitoring', 'data_management_functions.py') 
+sourceFromCfg('rl_ema_monitoring', 'data_management_functions.py')
 
 # add the redcap function
 sourceFromCfg('rl_ema_monitoring', 'RC_pull.R') # functions for REDCap implementation
 
 # function to pull the list of active subjects
-getActiveList <- function(root_dir=NULL, root_cfg_var='data', cfg='data.json') { #  
+getActiveList <- function(root_dir=NULL, root_cfg_var='data', cfg='data.json', active=TRUE) { #
   # get the root directory path
   root_path <- findRoot(root_dir)
   #root_path <- get_cfg_var(cfg="cfg.yaml", var=root_cfg_var)
@@ -277,7 +277,11 @@ getActiveList <- function(root_dir=NULL, root_cfg_var='data', cfg='data.json') {
     # convert to a python object
     d <- r_to_py(json$loads(s))
     # get the item the python dict and convert back to r
-    active_subjs <- py_to_r(d$subjects$active)
+    if(active == TRUE) {
+      active_subjs <- py_to_r(d$subjects$active)
+    } else if(active == FALSE) {
+      active_subjs <- py_to_r(d$subjects$inactive)
+    }
   })
   active_list <- as.list(active_subjs)
   return(active_list)
@@ -498,7 +502,7 @@ get_redcap_checklist_r <- function(rc_url, rc_token, subj_id) {
 }
 
 # Function to provide list of currently cached subject schedule files
-# A vector of subject_ids can be passed in lieu of a root dir variable. This is 
+# A vector of subject_ids can be passed in lieu of a root dir variable. This is
 # especially useful when getting metadata for a specific subject.
 # @param data_dir Root of Subjects data directory
 # @importFrom checkmate assert_directory exists
@@ -521,12 +525,12 @@ get_ema_subject_metadata <- function(root_dir=NULL, subject_list=NULL, trigger_r
   if(is.null(root_dir)){
     root_dir <- basename(get_cfg_var(var="root"))
   }
-  
+
   # get a list of all participants
   if(is.null(subject_list)){
      subject_list <- getActiveList(root_dir=root_dir)
   }
-  
+
   #for (ff in folders) {
   for (sid in subject_list) {
     print(sid)

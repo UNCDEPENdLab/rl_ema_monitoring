@@ -13,6 +13,17 @@ val_avg <- val_avg_row$val_arr_dis_avg
 # ensure that the data is a flat dataframe (no nested lists/dataframes)
 mood[] <- lapply(mood, list_to_cv)
 
+# rename the dataframe columns (replace all ' ' and '-' with '_')
+colnames(mood) <- lapply(colnames(mood), function(x) { # nested function
+  # replace any '-' with '_'
+  x <- str_replace_all(x, '-', '_')
+  # replace any ' ' with '_'
+  x <- str_replace_all(x, ' ', '_')
+  # return the string
+  return(x)
+}
+)
+
 # make the subdir if it does not exist
 if(dir.exists(paste0(dataPath, "/Subjects/", subj, "/reports")) != TRUE){
   dir.create(paste0(dataPath, "/Subjects/", subj, "/reports"))

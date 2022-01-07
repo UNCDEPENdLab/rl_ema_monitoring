@@ -2,6 +2,8 @@ Overall_Compliance <- round(0, digits= 3) # output$sample_info_df$compliance
 #print(output$sample_info_df$compliance)
 current_date <- Sys.Date()
 
+
+
 #Games % Stats
 Avg_Objective_Percent_Correct_No_Feedback <- output$proc_data[[subj]]$performance_overall$abs_accurate_nofeed
 Avg_Objective_Percent_Correct_No_Feedback <- round(Avg_Objective_Percent_Correct_No_Feedback, digits = 3)
@@ -36,13 +38,15 @@ qxn <- output$proc_data[[subj]]$form_summary
 #print(qxn)
 ID_Overview = data.frame(
   subj,
-  #"Needs_RC",
-  #"Needs_RC",
-  #"Needs_RC",
-  #"Needs_RC",
-  #"Needs_RC",
-  #"Needs_RC",
-  #"Needs_RC",
+
+  output[["proc_data"]][[subj]][["site"]],
+  output[["proc_data"]][[subj]][["group"]],
+  output[["proc_data"]][[subj]][["task_completeness"]][["ema_day"]],
+  output[["proc_data"]][[subj]][["task_completeness"]][["calendar_day"]],
+  redcap_data %>% filter(record_id == "540010") %>% select(initials) %>% '[['(1),
+  redcap_data %>% filter(record_id == "540010") %>% select(sesrep_date) %>% '[['(1),
+
+
   Overall_Compliance,
   Avg_Objective_Percent_Correct_No_Feedback,
   Avg_Objective_Percent_Correct_Feedback,
@@ -50,16 +54,26 @@ ID_Overview = data.frame(
   Avg_Experienced_Percent_Correct_Feedback,
   EEG_Average,
   HR_Average,
+
+  #' Calendar Day -> calculated
+  #' Group -> sched
+  #' EMA Day -> calculated
+  #' Site -> sched
+  #' Inititials -> redcap: initials
+
   round(output$proc_data[[subj]]$performance_overall$IDe_bias, digits = 3),
   round(qxn$val_arr_dis_avg, digits = 3),
   round(qxn$emo_rate_avg, digits = 3),
-  round(qxn$val_emo_cor, digits = 3)
+  round(qxn$val_emo_cor, digits = 3),
+  Perc_Bad=percentage_bad,
+  Recent_Bad=percentage_last_ten
 )
 col_names <- c("ID",
-               #"Site", "Group", "RA", "RL-EMA Start Date", "Current Day in Protocol", "fMRI date", "fMRI completed",
+               "Site", "Group", "EMA Day", "Calendar Day", "Initials", "fMRI date",
                "Overall Compliance",
                "Avg Obj Correct (no feedback)", "Avg Obj Correct (w/ feedback)", "Avg Rel Correct (no feedback)", "Avg Rel Correct (w/ feedback)",
-               "EEG Average", "HR Average", "Left %", "Valence/Arousal Distance from Origin", "Emotion Distance from 0", "Emotion/Valence Correlation")
+               "EEG Average", "HR Average", "Left %", "Valence/Arousal Distance from Origin", "Emotion Distance from 0", "Emotion/Valence Correlation",
+               "Overall Low Acc", "Recent Low Acc")
 colnames(ID_Overview) <- col_names
 Individual_Overview <- filter(ID_Overview, ID==subj) #change for copying for other participants
 #Individual_Overview<- head(Individual_Overview,1) #remove once REDCap is figured out

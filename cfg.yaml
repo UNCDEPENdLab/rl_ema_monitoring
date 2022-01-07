@@ -1,5 +1,6 @@
 bids: null
 data: /Volumes/bierka_root/datamesh/RAW/Momentum_App/data
+redcap: /Volumes/bierka_root/datamesh/RAW/Momentum_App/data/redcap.json
 fmri: null
 root: /Users/dnplserv/rl_ema_monitoring
 video_url: https://pitt.sharepoint.com/:v:/r/sites/Momentum/Shared%20Documents/ema_app_videos
