@@ -47,7 +47,18 @@ get_overview_data <- function(id, data_dir, quiet=FALSE) {
     #filter down to just the rows that vary by overview report, not event
     df %>% dplyr::rename(id=ID) %>%
       #dplyr::mutate(across(starts_with("Avg"), round, digits=2))
-      dplyr::mutate(across(where(is.numeric), round, digits=2))
+      dplyr::mutate(across(where(is.numeric), round, digits=2)) %>%
+      dplyr::select(`id`,
+                    `Avg Obj Correct (no feedback)`, 
+                    `Avg Obj Correct (w/ feedback)`, 
+                    `Avg Rel Correct (no feedback)`, 
+                    `Avg Rel Correct (w/ feedback)`,
+                    `EEG Average`,
+                    `HR Average`,
+                    `Left %`,
+                    `Valence/Arousal Distance from Origin`,
+                    `Emotion Distance from 0`,
+                    `Emotion/Valence Correlation`)
   }
   
   if (!is.null(overview_data$all)) {

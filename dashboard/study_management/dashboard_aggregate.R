@@ -856,7 +856,7 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
           return(FALSE)
         })
       }
-      browser()
+      #browser()
       reindex_dream_log <- function(dream_log) {
         # initialize a dream log and a variable to be the index
         idx <- 1
@@ -879,10 +879,9 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
           # increment the index
           idx <- idx + 1
         }
-        #print("HERE")
-        #print(new_dream_log)
+        #print(new_dream_log[-which(lapply(new_dream_log, is.zero) == FALSE)])
         # drop all zeros (runs an lapply nested in a which to get the indices of elements that are zero)
-        new_dream_log <- new_dream_log[-which(lapply(new_dream_log, is.zero) == TRUE)]
+        new_dream_log <- new_dream_log[which(lapply(new_dream_log, is.zero) == FALSE)]
         # return the new dream log
         return(new_dream_log)
       }
@@ -1011,119 +1010,104 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
     # COMPLETENESS CALCULATIONS (calendar day, ema day)
     completeness_table <- function(games_input, questionnaires_input, participant_status) {
       #cleans questionnaires input
-      questionnaires <- questionnaires_input %>%
-        filter(number != 0) %>% #drops practice rounds
-        filter(type != 19) %>% #drops mood post task
+      questionnaires <- questionnaires_input %>% 
+        filter(type != 19) %>% #drops mood post task 
         drop_na(start_time | completed_time) %>% #drops any incomplete tasks
-        mutate(start_timestamp = as.POSIXct(start_time/1000, origin="1970-01-01", tz="America/New_York")) %>%
-        mutate(scheduled_timestamp = as.POSIXct(scheduled_time/1000, origin="1970-01-01", tz="America/New_York")) %>%
+        mutate(start_timestamp = as.POSIXct(start_time/1000, origin="1970-01-01", tz="America/New_York")) %>% 
+        mutate(scheduled_timestamp = as.POSIXct(scheduled_time/1000, origin="1970-01-01", tz="America/New_York")) %>% 
         #handles the case when a participant does a task between midnight and 3am, will attribute completeness to the previous day
-        mutate(start_hour = hour(.$start_timestamp)) %>%
+        mutate(start_hour = hour(.$start_timestamp)) %>% 
         mutate(quest_dates = if_else(start_hour >= 0 & start_hour<=3, as.Date(format(.$scheduled_timestamp, '%Y-%m-%d')), as.Date(format(.$start_timestamp, '%Y-%m-%d'))))
-      # if the number of rows of questionnaires_summary is zero, initialize a pre-set default
-      if(nrow(questionnaires) == 0) {
-        # use the test data only
-        questionnaires <- questionnaires_input %>%
-          filter(number == 0) %>% #keeps only practice rounds
-          filter(type != 19) %>% #drops mood post task
-          drop_na(start_time | completed_time) %>% #drops any incomplete tasks
-          mutate(start_timestamp = as.POSIXct(start_time/1000, origin="1970-01-01", tz="America/New_York")) %>%
-          mutate(scheduled_timestamp = as.POSIXct(scheduled_time/1000, origin="1970-01-01", tz="America/New_York")) %>%
-          #handles the case when a participant does a task between midnight and 3am, will attribute completeness to the previous day
-          mutate(start_hour = hour(.$start_timestamp)) %>%
-          mutate(quest_dates = if_else(start_hour >= 0 & start_hour<=3, as.Date(format(.$scheduled_timestamp, '%Y-%m-%d')), as.Date(format(.$start_timestamp, '%Y-%m-%d'))))
-      }
       #creates df sorted by questionnaire type, and number completed on date
-      questionnaires_summary <- questionnaires %>%
-        group_by(type, description, quest_dates) %>%
-        summarize(count = n())
-      print("before cleaning games")
+      questionnaires_summary <- questionnaires %>% 
+        dplyr::group_by(type, description, quest_dates) %>% 
+        dplyr::summarize(count = n())
       #cleans games input
-      games <- games_input %>%
-        filter(block > 5) %>% #drops practice rounds
-        filter (block < 1000) %>% #drops fmri blocks
+      games <- games_input %>% 
+        filter (block < 1000) %>% #drops fmri blocks 
         filter(trial == 0) %>% #grabs only first trial of block
         drop_na(stim_time) %>% #drops any incomplete games
-        mutate(start_timestamp = as.POSIXct(stim_time/1000, origin="1970-01-01", tz="America/New_York")) %>%
-        mutate(scheduled_timestamp = as.POSIXct(scheduled_time/1000, origin="1970-01-01", tz="America/New_York")) %>%
+        mutate(start_timestamp = as.POSIXct(stim_time/1000, origin="1970-01-01", tz="America/New_York")) %>% 
+        mutate(scheduled_timestamp = as.POSIXct(scheduled_time/1000, origin="1970-01-01", tz="America/New_York")) %>% 
         #handles the case when a participant does a task between midnight and 3am, will attribute completeness to the previous day
         mutate(start_hour = hour(.$start_timestamp)) %>%
         mutate(games_dates = if_else(start_hour >= 0 & start_hour<=3, as.Date(format(.$scheduled_timestamp, '%Y-%m-%d')), as.Date(format(.$start_timestamp, '%Y-%m-%d'))))
-      # if the number of rows of questionnaires_summary is zero, initialize a pre-set default
-      if(nrow(questionnaires) == 0) {
-        games <- games_input %>%
-          filter(block < 6) %>% #keeps only practice rounds
-          filter (block < 1000) %>% #drops fmri blocks
-          filter(trial == 0) %>% #grabs only first trial of block
-          drop_na(stim_time) %>% #drops any incomplete games
-          mutate(start_timestamp = as.POSIXct(stim_time/1000, origin="1970-01-01", tz="America/New_York")) %>%
-          mutate(scheduled_timestamp = as.POSIXct(scheduled_time/1000, origin="1970-01-01", tz="America/New_York")) %>%
-          #handles the case when a participant does a task between midnight and 3am, will attribute completeness to the previous day
-          mutate(start_hour = hour(.$start_timestamp)) %>%
-          mutate(games_dates = if_else(start_hour >= 0 & start_hour<=3, as.Date(format(.$scheduled_timestamp, '%Y-%m-%d')), as.Date(format(.$start_timestamp, '%Y-%m-%d'))))
-      }
-      print("after cleaning games")
-      #creates df with number of games completed on date
-      games_summary <- games %>%
-        group_by(games_dates) %>%
-        summarize(games_count = n())
       
-      #start date is the earliest date between questionnaires and games
+      #creates df with number of games completed on date
+      games_summary <- games %>% 
+        dplyr::group_by(games_dates) %>% 
+        dplyr::summarize(games_count = n())
+      #start date when the participants starts the practice session-practice will be sliced later
       #end date is dependent on whether the participant is active or inactive
-      #active: grabs all dates up to the previous day before run date
-      #inactive: grabs all dates up to the latest date in schedule file
-      start_date = as.Date(min(min(questionnaires_summary$quest_dates), min(games_summary$games_dates)))
-      end_date = case_when(participant_status == "active" ~ Sys.Date(), participant_status == "inactive" ~ as.Date(max(max(questionnaires_summary$quest_dates), max(games_summary$games_dates))))
-      print('got start and end date')
-      #missingness padding for all tasks
-      #complete function fills in zero for any missing dates
-      #browser()
-      games_completeness <- games_summary %>%
-        complete(games_dates = seq.Date(start_date, end_date, by="day"), fill = list(games_count = 0))
-      print('got games_completeness')
-      mood_completeness <- questionnaires_summary %>%
-        filter(type == 0) %>%
-        complete(quest_dates = seq.Date(start_date, end_date, by="day"), fill = list(count = 0)) %>%
+      #active: grabs all dates up to the previous day before run date 
+      #unless dashboard ran on same day as practice, then end date is current day
+      #inactive: grabs all dates up to the latest date in schedule file 
+      start_date = games$games_dates[1]
+      end_date = case_when(
+        participant_status == "active" && start_date < Sys.Date() ~ Sys.Date()-1, 
+        participant_status == "active" && start_date == Sys.Date() ~ Sys.Date(),
+        participant_status == "inactive" ~ as.Date(max(max(questionnaires_summary$quest_dates), max(games_summary$games_dates))))
+      
+      #missingness padding for all tasks 
+      #complete function fills in zero for any missing dates  
+      
+      games_completeness <- games_summary %>% 
+        complete(games_dates = seq.Date(start_date, end_date, by="day"), fill = list(games_count = 0)) 
+      
+      mood_completeness <- questionnaires_summary %>% 
+        filter(type == 0) %>% 
+        complete(quest_dates = seq.Date(start_date, end_date, by="day"), fill = list(count = 0)) %>% 
         rename(mood_count = count)
-      print('got mood_completeness')
-      rest_completeness <- questionnaires_summary %>%
-        filter(type == 2) %>%
-        complete(quest_dates = seq.Date(start_date, end_date, by="day"), fill = list(count = 0)) %>%
+      
+      rest_completeness <- questionnaires_summary %>% 
+        filter(type == 2) %>% 
+        complete(quest_dates = seq.Date(start_date, end_date, by="day"), fill = list(count = 0)) %>% 
         rename(rest_count = count)
-      print('got sleep_completeness')
-      sleep_completeness <- questionnaires_summary %>%
-        filter(type == 5) %>%
-        complete(quest_dates = seq.Date(start_date, end_date, by="day"), fill = list(count = 0)) %>%
+      
+      sleep_completeness <- questionnaires_summary %>% 
+        filter(type == 5) %>% 
+        complete(quest_dates = seq.Date(start_date, end_date, by="day"), fill = list(count = 0)) %>% 
         rename(sleep_count = count)
-      print('got sleep_completeness')
-      video_completeness <- questionnaires_summary %>%
-        filter(type == 21) %>%
-        complete(quest_dates = seq.Date(start_date, end_date, by="day"), fill = list(count = 0)) %>%
+      
+      video_completeness <- questionnaires_summary %>% 
+        filter(type == 21) %>% 
+        complete(quest_dates = seq.Date(start_date, end_date, by="day"), fill = list(count = 0)) %>% 
         rename(video_count = count)
-      print('got video_completeness')
-      #completeness count contains the raw counts
+      
+      #completeness count contains the raw counts 
       completeness_count <- data.frame(dates = mood_completeness$quest_dates, sleep_count = sleep_completeness$sleep_count, mood_count = mood_completeness$mood_count, rest_count = rest_completeness$rest_count, games_count = games_completeness$games_count, video_count = video_completeness$video_count)
-      if (participant_status == "active") {
+      #covers the first day case, slices off the practice session if past second day
+      #on first day, presents practice session completeness instead 
+      if (start_date < Sys.Date()-1) {
         completeness_count <- completeness_count %>%
-          slice(1:(n()-1)) #removes last row with current run date bc possibility they can still complete tasks on current day
-      }
+          slice(2:n())
+      } 
+      
       #completeness percentage assumes 1 sleep diary, 4 mood reports, 2 resting states, 4 game blocks, and 1 end of day video
-      completeness_perc <- completeness_count %>%
-        mutate(sleep_perc = (sleep_count/1)*100) %>%
-        mutate(mood_perc = (mood_count/4)*100) %>%
+      completeness_perc <- completeness_count %>% 
+        mutate(sleep_perc = (sleep_count/1)*100) %>% 
+        mutate(mood_perc = (mood_count/4)*100) %>% 
         mutate(rest_perc = (rest_count/2)*100) %>%
         mutate(games_perc = (games_count/4)*100) %>%
-        mutate(video_perc = (video_count/1)*100) %>%
+        mutate(video_perc = (video_count/1)*100) %>% 
         select(dates, sleep_perc, mood_perc, rest_perc, games_perc, video_perc)
-
+      
       #calculates the ema day and calendar day used in the overview table
       ema_day <- (max(games$block)-5)/4
-      cal_day <- as.numeric(max(completeness_perc$dates)-completeness_perc$dates[1]) + 1
-
+      if (start_date < Sys.Date()-1) {
+        cal_day <- as.numeric(max(completeness_perc$dates)-completeness_perc$dates[1]) + 1
+      }
+      else {cal_day <- 0}
+      
+      # creates the output list
       completeness_output <- list(completeness_perc, ema_day, cal_day)
+      
+      # names the task_completeness list items
+      names(completeness_output) <- c("completeness_table", "ema_day", "calendar_day")
+      
       return(completeness_output)
     }
-
+    
     # runs the subject with the assumption they are active
     # the "completeness_table" function can be run with 'participant_status' set
     # to inactive to generate a final report, but that is not implemented here.
@@ -1133,9 +1117,6 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
                               participant_status = 'active')
 
     print("Completeness was calculated")
-    
-    # names the task_completeness list items
-    names(task_completeness) <- c("completeness_table", "ema_day", "calendar_day")
 
     # PAYMENT INFORMATION
 
@@ -1176,7 +1157,7 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
 
       return(payment_table)
     }
-
+    #browser()
     payment <- payment_df(
                 completeness_perc = task_completeness$completeness_table,
                 games_input = trials_1)

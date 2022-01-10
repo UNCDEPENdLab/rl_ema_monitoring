@@ -5,8 +5,8 @@ import sys
 import hashlib
 import glob
 from datetime import datetime
-from pydrive.auth import GoogleAuth
-from pydrive.drive import GoogleDrive
+from pydrive2.auth import GoogleAuth
+from pydrive2.drive import GoogleDrive
 from data_management_functions import get_cfg_var_p
 
 def google_drive_connect(id, path, auto_auth=True):
@@ -38,11 +38,16 @@ def google_drive_connect(id, path, auto_auth=True):
         except:
             #gauth.LocalWebserverAuth()
             #gauth.Authenticate()
+            print("ERROR: Authorization refresh failed!")
             return None
+    #print("Gauth:")
+    #print(gauth)
     # Save the current credentials to the file
     #gauth.SaveCredentialsFile(credPath)
     # Initialize the Google Drive Connection
     drive = GoogleDrive(gauth)
+    #print("Drive Object:")
+    #print(drive)
     # Return the Google Drive object
     return drive
 
@@ -52,8 +57,12 @@ def subjectID2driveID(id, drive_list):
     '''
     # Initialize variable to hold the folder id
     folder_id = None
+    #print("ID")
+    #print(id)
     # Iterate through the files/folders at root to find the subject
     for file in drive_list:
+        #print("FILE")
+        #print(file)
         if file['title'] == id:
             folder_id = file['id']
     # Return the drive id
@@ -220,12 +229,19 @@ def get_pull_files(id, path, clinical_path, drive, include_failed=True, check_lo
     # try the instance where a video file would already exist
     except:
         video_local = set(video_dict["file_name"] for video_dict in file_dict["video"])
+    #print("HERE")
     # Get the PyDrive formatted list of files from 'root'
     drive_list = drive.ListFile({'q': "'root' in parents and trashed=false"}).GetList()
+    #print("Drive List:")
+    #print(drive_list)
     #Get the subject's Google Drive directory id from the subject id
     drive_id = subjectID2driveID(id=id, drive_list=drive_list)
+    #print("Drive ID:")
+    #print(drive_id)
     # Get the list of files from the subject's folder in Google Drive
     file_list = drive.ListFile({'q': "'{}' in parents and trashed=false".format(drive_id)}).GetList()
+    #print("File List:")
+    #print(file_list)
     # Initialize sets for file names from Google Drive
     schedule_gdrive = None
     physio_gdrive = list()
