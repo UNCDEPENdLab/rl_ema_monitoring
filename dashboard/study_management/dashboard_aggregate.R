@@ -1044,8 +1044,7 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
       #inactive: grabs all dates up to the latest date in schedule file 
       start_date = games$games_dates[1]
       end_date = case_when(
-        participant_status == "active" && start_date < Sys.Date() ~ Sys.Date()-1, 
-        participant_status == "active" && start_date == Sys.Date() ~ Sys.Date(),
+        participant_status == "active" ~ Sys.Date(), 
         participant_status == "inactive" ~ as.Date(max(max(questionnaires_summary$quest_dates), max(games_summary$games_dates))))
       
       #missingness padding for all tasks 
@@ -1083,6 +1082,11 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
           slice(2:n())
       } 
       
+      if (participant_status == "active") {
+        completeness_count <- completeness_count %>% 
+          slice(1:(n()-1)) #removes last row with current run date bc possibility they can still complete tasks on current day
+      } 
+      
       #completeness percentage assumes 1 sleep diary, 4 mood reports, 2 resting states, 4 game blocks, and 1 end of day video
       completeness_perc <- completeness_count %>% 
         mutate(sleep_perc = (sleep_count/1)*100) %>% 
@@ -1099,12 +1103,7 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
       }
       else {cal_day <- 0}
       
-      # creates the output list
       completeness_output <- list(completeness_perc, ema_day, cal_day)
-      
-      # names the task_completeness list items
-      names(completeness_output) <- c("completeness_table", "ema_day", "calendar_day")
-      
       return(completeness_output)
     }
     

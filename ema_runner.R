@@ -169,7 +169,7 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=FAL
   }
   # if the mount was not found
   if(mount_str != videoPath) {
-    system(paste0("rclone cmount ", videoRclone, " ", videoPath, " --daemon --vfs-cache-mode full"))
+    system(paste0("rclone cmount ", videoRclone, " ", videoPath, " --daemon --vfs-cache-mode full"), intern=TRUE)
     print("Mounting the remote data storage:")
     print(paste0("rclone cmount ", videoRclone, " ", videoPath, " --daemon --vfs-cache-mode full"))
     #exit()
@@ -401,9 +401,9 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=FAL
 #run_ema(redcap=FALSE, save_lite=FALSE, render=TRUE, pull=FALSE, sched=TRUE, physio=TRUE, cleanup_data=TRUE, nthreads = 8, force_proc=TRUE, force_reload=TRUE)
 sink(file='dashboard_run.txt')
 # Test with this line #
-#run_ema(redcap=FALSE, save_lite=FALSE, replot=FALSE, render=TRUE, push=TRUE, pull=TRUE, sched=TRUE, physio=FALSE, cleanup_data=TRUE, nthreads = 8, force_proc=TRUE, force_reload=TRUE)
+#run_ema(redcap=FALSE, save_lite=FALSE, replot=TRUE, render=TRUE, push=TRUE, pull=FALSE, sched=FALSE, physio=FALSE, cleanup_data=TRUE, nthreads = 8, force_proc=TRUE, force_reload=TRUE)
 # Run this line #
-run_ema(redcap=FALSE, save_lite=FALSE, replot=FALSE, render=TRUE, push=TRUE, pull=TRUE, sched=TRUE, physio=TRUE, cleanup_data=TRUE, nthreads = 8, force_proc=TRUE, force_reload=TRUE)
+run_ema(redcap=FALSE, save_lite=FALSE, replot=TRUE, render=TRUE, push=TRUE, pull=TRUE, sched=TRUE, physio=FALSE, cleanup_data=TRUE, nthreads = 12, force_proc=TRUE, force_reload=TRUE)
 sink(file=NULL)
 # run pull only
 #run_ema(redcap=FALSE, save_lite=FALSE, render=FALSE, pull=TRUE, sched=FALSE, physio=FALSE, cleanup_data=FALSE, nthreads = 4, force_proc=TRUE, force_reload=TRUE)
