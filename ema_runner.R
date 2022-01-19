@@ -403,7 +403,7 @@ sink(file='dashboard_run.txt')
 # Test with this line #
 #run_ema(redcap=FALSE, save_lite=FALSE, replot=TRUE, render=TRUE, push=TRUE, pull=FALSE, sched=FALSE, physio=FALSE, cleanup_data=TRUE, nthreads = 8, force_proc=TRUE, force_reload=TRUE)
 # Run this line #
-run_ema(redcap=FALSE, save_lite=FALSE, replot=TRUE, render=TRUE, push=TRUE, pull=TRUE, sched=TRUE, physio=FALSE, cleanup_data=TRUE, nthreads = 12, force_proc=TRUE, force_reload=TRUE)
+run_ema(redcap=FALSE, save_lite=FALSE, replot=TRUE, render=TRUE, push=TRUE, pull=TRUE, sched=TRUE, physio=TRUE, cleanup_data=TRUE, nthreads = 12, force_proc=TRUE, force_reload=TRUE)
 sink(file=NULL)
 # run pull only
 #run_ema(redcap=FALSE, save_lite=FALSE, render=FALSE, pull=TRUE, sched=FALSE, physio=FALSE, cleanup_data=FALSE, nthreads = 4, force_proc=TRUE, force_reload=TRUE)
