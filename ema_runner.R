@@ -104,7 +104,7 @@
 # import dependent packages
 library("pacman")
 library("anytime")
-pacman::p_load(reticulate, RSQLite, dplyr, tidyr, lubridate, rjson, R.utils, REDCapR, zoo, anytime)
+pacman::p_load(reticulate, RSQLite, dplyr, tidyr, lubridate, rjson, R.utils, REDCapR, zoo, anytime, logger)
 
 setwd("dashboard/study_management")
 
@@ -119,12 +119,54 @@ source("../../rmarkdown_site/report_functions/report_functions.R")
 
 
 # main function to be run
-run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=FALSE, redcap=TRUE, nthreads=4, output=NULL, render=TRUE, force_proc=FALSE, force_reload=TRUE, save_lite=FALSE, cleanup_data=TRUE, replot=FALSE, push=FALSE) {
+run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=FALSE, redcap=TRUE, nthreads=4, output=NULL, render=TRUE, force_proc=FALSE, force_reload=TRUE, save_lite=FALSE, cleanup_data=TRUE, replot=FALSE, push=FALSE, log_level=INFO) {
   # SET ROOT
   ## Need to refactor the repo first ##
   #if(is.null(root) != TRUE) {
   #  setwd(root)
   #}
+  
+  # Currently overrides the data directory to known test machine path
+  #dataPath <- "/Users/shanebuckley/desktop/rl_ema_monitoring/data"
+  dataPath <<- get_cfg_var_p(var="data")
+  #print(dataPath)
+  videoPath <<- get_cfg_var_p(var="videos")
+  videoURL <<- get_cfg_var_p(var="video_url")
+  videoRclone <<- get_cfg_var_p(var="video_rclone")
+  sitePath <<- get_cfg_var_p(var="site_path")
+  sitePush <<- get_cfg_var_p(var="site_push")
+  redcapCredPath <<- get_cfg_var_p(var="redcap")
+  logOutput <<- get_cfg_var_p(var="log_output")
+  
+  # get a timestamp for the day
+  time_stamp <- paste0(str_replace_all(as.Date(now()), '-', '_'))
+  
+  # logger setup
+  # by default, ensure that the logging level is at INFO
+  if ((log_level %in% c(INFO, DEBUG, TRACE)) == FALSE) {
+    #' The above line ensure we set the log-level as either one of the three:
+    #' INFO: General information we want to print out during a standard run.
+    #' DEBUG: Provides extra information beyond INFO.
+    #' TRACE: Even more information than DEBUG, this is for tracing exactly where issues occurred.
+    #' NOTE: these are global variables instantiated by loading 'logging', NOT strings.
+    log_at <<- INFO
+  } else {
+    # otherwise, use the validated log-level
+    log_at <<- log_level
+  }
+  # set the log level
+  log_threshold(log_at)
+  
+  # set the log file path from the logOutput
+  log_file <- paste0(logOutput, '/', time_stamp, '/dashboard_run.log')
+  # set the log file
+  log_appender(appender_file(t))
+  
+  # get the sink file path from the logOutput
+  sink_file = paste0(logOutput, '/', time_stamp, '/dashboard_run.txt')
+  # set up the file sink
+  sink(file=sink_file)
+  
   # get the start time
   dashboard_start_time <<- lubridate::now()
   print("Last run started at:")
@@ -140,16 +182,6 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=FAL
   #}
   # instantiate an empty list to save which active subjects have failed
   failed <<- list()
-  # Currently overrides the data directory to known test machine path
-  #dataPath <- "/Users/shanebuckley/desktop/rl_ema_monitoring/data"
-  dataPath <<- get_cfg_var_p(var="data")
-  #print(dataPath)
-  videoPath <<- get_cfg_var_p(var="videos")
-  videoURL <<- get_cfg_var_p(var="video_url")
-  videoRclone <<- get_cfg_var_p(var="video_rclone")
-  sitePath <<- get_cfg_var_p(var="site_path")
-  sitePush <<- get_cfg_var_p(var="site_push")
-  redcapCredPath <<- get_cfg_var_p(var="redcap")
 
   # initializes a REDCapR object for accessing the protocol REDCap data
   # used to fetch: Initials, fMRI Data
@@ -159,8 +191,6 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=FAL
   momentum_redcap <<- REDCapR::redcap_project(
     redcap_uri=redcap_creds$uri,
     token=redcap_creds$token)
-
-  #browser()
 
   # mount the sharepoint with rclone if it is not mounted
   mount_str <<- system(paste0("df | awk '{print $9}' | grep -Ex '", videoPath, "'"), intern=TRUE)
@@ -372,6 +402,10 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=FAL
     }
     # run the site push
     push_site(sitePath, sitePush)
+    
+    # close the file sink
+    sink(file=NULL)
+    
   }
 }
 
@@ -399,12 +433,14 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=FAL
 
 #
 #run_ema(redcap=FALSE, save_lite=FALSE, render=TRUE, pull=FALSE, sched=TRUE, physio=TRUE, cleanup_data=TRUE, nthreads = 8, force_proc=TRUE, force_reload=TRUE)
-sink(file='dashboard_run.txt')
+
+### RUN LINES ###
 # Test with this line #
-#run_ema(redcap=FALSE, save_lite=FALSE, replot=TRUE, render=TRUE, push=TRUE, pull=FALSE, sched=FALSE, physio=FALSE, cleanup_data=TRUE, nthreads = 8, force_proc=TRUE, force_reload=TRUE)
+#run_ema(redcap=FALSE, save_lite=FALSE, replot=FALSE, render=FALSE, push=FALSE, pull=FALSE, sched=TRUE, physio=FALSE, cleanup_data=TRUE, nthreads = 8, force_proc=TRUE, force_reload=TRUE, log_level=TRACE)
 # Run this line #
-run_ema(redcap=FALSE, save_lite=FALSE, replot=TRUE, render=TRUE, push=TRUE, pull=TRUE, sched=TRUE, physio=TRUE, cleanup_data=TRUE, nthreads = 12, force_proc=TRUE, force_reload=TRUE)
-sink(file=NULL)
+run_ema(redcap=FALSE, save_lite=FALSE, replot=TRUE, render=TRUE, push=TRUE, pull=TRUE, sched=TRUE, physio=TRUE, cleanup_data=TRUE, nthreads = 12, force_proc=TRUE, force_reload=TRUE, log_level=INFO)
+#################
+
 # run pull only
 #run_ema(redcap=FALSE, save_lite=FALSE, render=FALSE, pull=TRUE, sched=FALSE, physio=FALSE, cleanup_data=FALSE, nthreads = 4, force_proc=TRUE, force_reload=TRUE)
 

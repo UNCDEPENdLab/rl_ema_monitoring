@@ -8,3 +8,4 @@ videos: /Users/dnplserv/Desktop/Momentum_Videos
 video_rclone: dnplserv_Momentum_Videos:/ema_app_videos
 site_path: /Users/dnplserv/momentum_site
 site_push: michago3@michaelhallquist.com:public_html/dashboard
+log_output: /Users/dnplserv/Desktop/cron_scripts/logs
