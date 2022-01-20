@@ -140,6 +140,8 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=FAL
   
   # get a timestamp for the day
   time_stamp <- paste0(str_replace_all(as.Date(now()), '-', '_'))
+  # create the output log file path
+  dir.create(paste0(logOutput, '/', time_stamp))
   
   # logger setup
   # by default, ensure that the logging level is at INFO
@@ -160,7 +162,7 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=FAL
   # set the log file path from the logOutput
   log_file <- paste0(logOutput, '/', time_stamp, '/dashboard_run.log')
   # set the log file
-  log_appender(appender_file(t))
+  log_appender(appender_file(log_file))
   
   # get the sink file path from the logOutput
   sink_file = paste0(logOutput, '/', time_stamp, '/dashboard_run.txt')
@@ -220,7 +222,7 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=FAL
   #root <- "rl_ema_monitoring"
   root <- basename(get_cfg_var_p(var="root"))
   repoRoot <<- get_cfg_var_p(var="root")
-
+  
   ## TODO: Implement to get output subjects as subjects within the input list and flagged as active
   #else {
   #
