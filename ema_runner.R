@@ -119,7 +119,7 @@ source("../../rmarkdown_site/report_functions/report_functions.R")
 
 
 # main function to be run
-run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=FALSE, redcap=TRUE, nthreads=4, output=NULL, render=TRUE, force_proc=FALSE, force_reload=TRUE, save_lite=FALSE, cleanup_data=TRUE, replot=FALSE, push=FALSE, log_level=INFO) {
+run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=FALSE, redcap=FALSE, nthreads=4, output=NULL, render=TRUE, force_proc=FALSE, force_reload=TRUE, save_lite=FALSE, cleanup_data=TRUE, replot=FALSE, push=FALSE, log_level=INFO, sink_file=NULL) {
   # SET ROOT
   ## Need to refactor the repo first ##
   #if(is.null(root) != TRUE) {
@@ -165,9 +165,12 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=FAL
   log_appender(appender_file(log_file))
   
   # get the sink file path from the logOutput
-  sink_file = paste0(logOutput, '/', time_stamp, '/dashboard_run.txt')
+  #sink_file = paste0(logOutput, '/', time_stamp, '/dashboard_run.txt')
   # set up the file sink
-  sink(file=sink_file)
+  if(is.null(sink_file) == FALSE)
+  {
+    sink(file=paste0(logOutput, '/', time_stamp, '/', sink_file))
+  }
   
   # get the start time
   dashboard_start_time <<- lubridate::now()
@@ -199,6 +202,7 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=FAL
   if(length(mount_str) == 0) {
     mount_str <<- ""
   }
+
   # if the mount was not found
   if(mount_str != videoPath) {
     system(paste0("rclone cmount ", videoRclone, " ", videoPath, " --daemon --vfs-cache-mode full"), intern=TRUE)
@@ -406,7 +410,8 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=FAL
     push_site(sitePath, sitePush)
     
     # close the file sink
-    sink(file=NULL)
+    closeAllConnections()
+    #sink(file=NULL)
     
   }
 }
@@ -438,9 +443,9 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=FAL
 
 ### RUN LINES ###
 # Test with this line #
-#run_ema(redcap=FALSE, save_lite=FALSE, replot=FALSE, render=FALSE, push=FALSE, pull=FALSE, sched=TRUE, physio=FALSE, cleanup_data=TRUE, nthreads = 8, force_proc=TRUE, force_reload=TRUE, log_level=TRACE)
+#run_ema(save_lite=FALSE, replot=FALSE, render=TRUE, push=TRUE, pull=FALSE, sched=FALSE, physio=FALSE, cleanup_data=FALSE, nthreads = 8, force_proc=TRUE, force_reload=TRUE, log_level=TRACE, sink_file=NULL)
 # Run this line #
-run_ema(redcap=FALSE, save_lite=FALSE, replot=TRUE, render=TRUE, push=TRUE, pull=TRUE, sched=TRUE, physio=TRUE, cleanup_data=TRUE, nthreads = 12, force_proc=TRUE, force_reload=TRUE, log_level=INFO)
+run_ema(save_lite=FALSE, replot=TRUE, render=TRUE, push=TRUE, pull=TRUE, sched=TRUE, physio=TRUE, cleanup_data=TRUE, nthreads = 12, force_proc=TRUE, force_reload=TRUE, sink_file='dashboard_run.txt')
 #################
 
 # run pull only

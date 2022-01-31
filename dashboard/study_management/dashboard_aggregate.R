@@ -702,12 +702,17 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
       ema_data <- mood_answers %>% filter(V1==1) %>% mutate(V1=c(1:nrow(.))%%2)
       # get the valence-arousal data
       val_data <- ema_data %>% filter(V1==1) %>%
+        #filter(lengths(V2) == 2) %>% # ensure we only have data of length 2
         '['('V2') %>% # get the data from V2
         as.list %>% # convert to a list
         "[["(1) %>% # unlist
         as.data.frame # convert to dataframe
       # get the emotion data
       emo_data <- ema_data %>% filter(V1==0) %>%
+        # The below line was added when it was noted that on a rare occasion,
+        # the valence-arousal result can be duplicated in place or any real
+        # emotional data.
+        mutate(V2 = ifelse(lengths(V2) != 5, list(NA, NA, NA, NA, NA), V2)) %>% # ensure we only have data of length 5
         '['('V2') %>% # get the data from V2
         as.list %>% # convert to a list
         "[["(1) %>% # unlist

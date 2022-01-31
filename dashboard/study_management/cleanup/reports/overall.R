@@ -2,7 +2,7 @@ Overall_Compliance <- round(0, digits= 3) # output$sample_info_df$compliance
 #print(output$sample_info_df$compliance)
 current_date <- Sys.Date()
 
-
+#browser()
 
 #Games % Stats
 Avg_Objective_Percent_Correct_No_Feedback <- output$proc_data[[subj]]$performance_overall$abs_accurate_nofeed
@@ -25,12 +25,12 @@ EEG_Average <- round(EEG_Average, digits = 3)
 # 2021-12-14 AndyP using individual subject's processed physio
 path_to_physio <- paste0(dataPath,'/Subjects/',subj,'/physio')
 physio_proc <- list.files(path_to_physio,pattern=paste0(subj,'_physio_proc.rdata'))
-if (length(physio_proc)==1){
-  all_output <- output # preserve global variable output (which is the processed schedule file) into a temporary variable
-  load(paste0(path_to_physio,'/',physio_proc)) # loads a variable called output into global environment
-  hr_gen <- output$ecg_ov$per_Good
-  output <- all_output # revert output to processed schedule file
-}
+# if (length(physio_proc)==1){
+ all_output <- output # preserve global variable output (which is the processed schedule file) into a temporary variable
+ load(paste0(path_to_physio,'/',physio_proc)) # loads a variable called output into global environment
+ hr_gen <- output$ecg_ov$per_Good
+ output <<- all_output # revert output to processed schedule file
+# }
 #hr_gen <- output_physio$ecg$summary[[subj]]$per_Good
 HR_Average <- hr_gen*100 #[match(subj, hr_gen[[subj]])]*100
 HR_Average <- round(HR_Average, digits = 3)
@@ -43,8 +43,8 @@ ID_Overview = data.frame(
   output[["proc_data"]][[subj]][["group"]],
   output[["proc_data"]][[subj]][["task_completeness"]][["ema_day"]],
   output[["proc_data"]][[subj]][["task_completeness"]][["calendar_day"]],
-  redcap_data %>% filter(record_id == "540010") %>% select(initials) %>% '[['(1),
-  redcap_data %>% filter(record_id == "540010") %>% select(sesrep_date) %>% '[['(1),
+  redcap_data %>% filter(record_id == subj) %>% select(initials) %>% '[['(1),
+  redcap_data %>% filter(record_id == subj) %>% select(sesrep_date) %>% '[['(1),
 
 
   Overall_Compliance,
