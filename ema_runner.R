@@ -403,8 +403,9 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=FAL
       checkmate::assert_directory_exists(output_dir)
       #have exe permission on files will yield 403 errors (some images are getting +x when sent to me)
       system(paste("find", output_dir, "-type f -print0 | xargs -0 chmod 644"))
-      cat(paste0("rsync -avh ", output_dir, "/ ", push_dir, ' --delete'))
-      system(paste0("rsync -avh ", output_dir, "/ ", push_dir, ' --delete'))
+      rsync_str = paste0("rsync -ruvh ", output_dir, "/ ", push_dir, ' --delete') #avh
+      cat(rsync_str)
+      system(rsync_str)
     }
     # run the site push
     push_site(sitePath, sitePush)
@@ -443,7 +444,8 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=FAL
 
 ### RUN LINES ###
 # Test with this line #
-#run_ema(save_lite=FALSE, replot=FALSE, render=TRUE, push=TRUE, pull=FALSE, sched=FALSE, physio=FALSE, cleanup_data=FALSE, nthreads = 8, force_proc=TRUE, force_reload=TRUE, log_level=TRACE, sink_file=NULL)
+#warning('Andrew is debugging schedule/postprocessing 2022-02-03')
+#run_ema(save_lite=FALSE, replot=TRUE, render=TRUE, push=TRUE, pull=FALSE, sched=FALSE, physio=FALSE, cleanup_data=TRUE, nthreads = 8, force_proc=TRUE, force_reload=TRUE, log_level=TRACE, sink_file=NULL)
 # Run this line #
 run_ema(save_lite=FALSE, replot=TRUE, render=TRUE, push=TRUE, pull=TRUE, sched=TRUE, physio=TRUE, cleanup_data=TRUE, nthreads = 12, force_proc=TRUE, force_reload=TRUE, sink_file='dashboard_run.txt')
 #################
