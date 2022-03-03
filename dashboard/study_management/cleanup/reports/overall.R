@@ -2,8 +2,6 @@ Overall_Compliance <- round(0, digits= 3) # output$sample_info_df$compliance
 #print(output$sample_info_df$compliance)
 current_date <- Sys.Date()
 
-#browser()
-
 #Games % Stats
 Avg_Objective_Percent_Correct_No_Feedback <- output$proc_data[[subj]]$performance_overall$abs_accurate_nofeed
 Avg_Objective_Percent_Correct_No_Feedback <- round(Avg_Objective_Percent_Correct_No_Feedback, digits = 3)

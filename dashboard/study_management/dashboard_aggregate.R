@@ -84,7 +84,24 @@ load_db <- function(dbpath,table_names=NULL) {
     return(NULL)
   }
   tables<-lapply(table_names,function(dfName){
-    dbGetQuery(dbdata, paste0("SELECT * FROM ", dfName))
+    # 2022-02-03 AndyP added conditionals to handle rounding problem 
+    # see https://stackoverflow.com/questions/29761938/sqlite-how-to-disable-scientific-notation
+    if (strcmp(dfName,"EEG_muse")){
+      tables <- dbGetQuery(dbdata, paste0('SELECT printf("%f", recording_time), * FROM ', dfName))
+      if (length(tables$EEG1)>0){
+        tables <- tables %>% select(!recording_time) %>% rename(recording_time=`printf(\"%f\", recording_time)`)
+        tables$recording_time <- as.double(tables$recording_time)
+      }
+    } else if (strcmp(dfName,"Polar_heartrate")) {
+      tables <- dbGetQuery(dbdata, paste0('SELECT printf("%f", time_ms), * FROM ', dfName))
+      if (length(tables$heartrate)>0){
+        tables <- tables %>% select(!time_ms) %>% rename(time_ms=`printf(\"%f\", time_ms)`)
+        tables$time_ms <- as.double(tables$time_ms)
+      }
+    } else {   
+      tables <- dbGetQuery(dbdata, paste0("SELECT * FROM ", dfName))
+    }
+    return(tables)
   })
   names(tables) <- table_names
   #close connection before return
@@ -119,7 +136,6 @@ proc_schedule <- function(schedule_df = NULL,days_limit=35,task_limit=56,force_r
   sample_info <- do.call(rbind,lapply(proc_data,`[[`,"info_df"))
   performance_info <- do.call(rbind,lapply(proc_data,`[[`,"performance_info"))
   performance_info <- performance_info[!is.na(performance_info$date),]
-  #browser()
   sp_info_sq <- split(sample_info,sample_info$ID)
   pr_info_sq <- split(performance_info,performance_info$ID)
   sample_info$compliance <- !is.na(sample_info$completed_time)
@@ -268,7 +284,6 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
 
     ###Part I: Trial
     time_vars <- c("scheduled_time","stim_time","choice_time","feedback_time")
-    #browser()
     for (tx in time_vars) {
       raw_single$trials[[tx]] <- ms_to_date(raw_single$trials[[tx]],timezone = tz)
     }
@@ -496,7 +511,6 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
 
     # squish the games to have AM and PM be a single item
     games_by_session <- games_by_block %>% group_split(type,days)
-    #browser()
     games_by_session <- do.call(rbind, lapply(games_by_session, get_game_session))
 
     # get the info df (merge of games_by_session and questionnaires_by_session), concert this back to a base dataframe to match J's
@@ -532,12 +546,8 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
       form_data <- rbind(form_data,tk)
     }
 
-    #browser()
-
     form_data$answer_prog <- text_proc(form_data$answer)
     fdata_sp <- split(form_data,form_data$questionnaire_name)
-
-    #browser()
 
     ## REWRITE form_proc: FROM HERE ##
     #proc all the other first
@@ -723,7 +733,6 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
       event_data <- event_data$V2 %>%
         lapply(.,
                combine_by_response <- function(x) { # one-time use function
-                 #browser()
                  colNames <- as.list(unique(names(x))) # get the names for the columns
                  x <- matrix(unlist(x), ncol = length(x)/8, nrow = 8) %>% # convert to a matrix
                    t %>% # transpose the matrix
@@ -775,7 +784,6 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
     clean_sleep_diary <- function(fdata_sp, subj_id) {
       # get the answer list
       sleep_answers <- fdata_sp$`Sleep Diary`$answer_prog
-      #browser()
       # unlist the sleep_answers items
       sleep_answers <- lapply(sleep_answers, unlist)
       # coerce the data as a list into a column-based list
@@ -860,7 +868,6 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
           return(FALSE)
         })
       }
-      #browser()
       reindex_dream_log <- function(dream_log) {
         # initialize a dream log and a variable to be the index
         idx <- 1
@@ -990,8 +997,6 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
     q_sum$val_emo_cor <- cor(apply(form_proc$`Mood Questionnaire`[c("Anxious","Elated","Sad","Irritable","Energetic")],1,function(x){mean(as.numeric(x),na.rm = T)}),form_proc$`Mood Questionnaire`$v_a_distance)
     ###return proc_answer object###########
 
-    #browser()
-
     log_info("Beginning payment, completion, and performance calculations...")
     
     # get the current schedule file
@@ -1014,7 +1019,6 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
     # COMPLETENESS CALCULATIONS (calendar day, ema day)
     completeness_table <- function(games_input, questionnaires_input, participant_status) {
       # if(raw_single$ID == '440278') {
-      #   browser()
       # }
       log_debug("START: Getting the completeness table.")
       
@@ -1149,7 +1153,6 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
       }
       else {cal_day <- 0}
       log_trace("FINISH: Getting calendar day.")
-      #browser()
       log_trace("START: Getting final list.")
       completeness_output <- list(completeness_perc, ema_day, cal_day)
       log_trace("FINISH: Getting final list.")
@@ -1180,7 +1183,6 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
       log_debug("START: Getting the payment_df.")
       log_trace("START: Loading completeness_perc and mutating to include cal_week.")
       # if(raw_single$ID == '440278') {
-      #   browser()
       # }
       #adds calendar week to task percent completed df
       completeness_perc <- completeness_perc %>%
@@ -1235,7 +1237,6 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
       log_debug("FINISH: Getting the payment_df.")
       return(payment_table)
     }
-    #browser()
     payment <- payment_df(
                 completeness_perc = task_completeness$completeness_table,
                 games_input = trials_1)
@@ -1292,22 +1293,30 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
     message("Forking is not available on windows. Parallelization will be turned off.")
     thread=1
   }
+  library(pracma)
   # modify physio_df to have physio_df$file_path include the file name
   #physio_df <- within(physio_df, file_path <- paste0(file_path, '/', file_name))
   par_cl <- parallel::makeCluster(spec = thread,type = "FORK")
   exp_out<-parallel::parLapply(par_cl,unique(physio_df$subject_id),function(IDx){
-    physio_files_new <- physio_df$file_path[physio_df$subject_id==IDx]
+  #IDx = '32765'  
+  physio_files_new <- physio_df$file_path[physio_df$subject_id==IDx]
     physio_rawcache_file <- file.path(unique(dirname(physio_df$file_path[physio_df$subject_id==IDx])),paste(IDx,"_physio_raw.rdata",sep = ""))
     physio_proc_file <- file.path(unique(dirname(physio_df$file_path[physio_df$subject_id==IDx])),paste(IDx,"_physio_proc.rdata",sep = ""))
     physio_concat <- NULL
     physio_files <- NULL
     message("Found ",length(physio_files_new), " total physio files for: ",IDx)
     #par_cl <- parallel::makeCluster(spec = thread,type = "FORK")
-    message("Loading new physio data for: ",IDx)
-    physio_concat_new <- load_physio_single(allpaths_sub = physio_files_new,old_data=NULL,cl = NULL)
-    #parallel::stopCluster(par_cl)
-    physio_files<-unique(c(physio_files,physio_files_new))
-    save(physio_files,physio_concat_new,file = paste0(dataPath,'/Subjects/',IDx,'/physio/',IDx,'_physio_raw.rdata'))
+    force_recat_physio = FALSE
+    if (force_recat_physio){
+      message("Loading new physio data for: ",IDx)
+      physio_files<-unique(c(physio_files,physio_files_new))
+      physio_concat_new <- load_physio_single(allpaths_sub = physio_files_new,old_data=NULL,cl = NULL)
+      #parallel::stopCluster(par_cl)
+      save(physio_files,physio_concat_new,file = paste0(dataPath,'/Subjects/',IDx,'/physio/',IDx,'_physio_raw.rdata'))
+    } else {
+      message("Loading pre-concatenated raw physio for: ",IDx)
+      load(paste0(dataPath,'/Subjects/',IDx,'/physio/',IDx,'_physio_raw.rdata'))
+    }
     output <- NULL
     if(!force_reproc && file.exists(physio_proc_file)) {
       message("Loading processed physio data for: ",IDx)
@@ -1326,7 +1335,6 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
     ##### Quickly grabbing .db schedule file for physio, uncoupling physio from schedule file processing
     ##### 2021-11-22 AndyP
     #####
-
     if (force_reproc){ # should generally be true
       path_to_schedule <- paste0(dataPath, '/Subjects/', IDx, '/schedule')
       sched_file <- list.files(path=path_to_schedule,pattern=paste0(IDx,'_schedule.db'))
@@ -1507,34 +1515,34 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
     } else {
       return(output)
     }
-  })
+})
   parallel::stopCluster(par_cl)
-  if(save_lite) {
-    nax <- c("fb","summary", "missing", "rawsum")
-  } else {
-    nax <- c("proc","fb","summary", "missing", "rawsum")
-  }
-
-  IDlist <- unique(physio_df$subject_id)
-
-  output_fin<-lapply(c("eeg","ecg"),function(ay){
-    output_ls<-lapply(nax,function(ax){
-      output <- lapply(exp_out,`[[`,paste(ay,ax,sep = "_"))
-      names(output) <- IDlist
-      return(output)
-    })
-    names(output_ls) <- nax
-    output_ls$sample_summary <- do.call(rbind, lapply(exp_out,`[[`,paste(ay,"ov",sep = "_")))
-    return(output_ls)
-  })
-  names(output_fin) <- c("eeg","ecg")
-  tryCatch({
-    output_fin$newdata_IDs <- IDlist[sapply(exp_out,`[[`,"new_data")]
-  },
-  error=function(e){
-    message('no new data, not sure if this is important to fix rn AndyP 2021-12-03')
-  })
-  return(output_fin)
+  # if(save_lite) {
+  #   nax <- c("fb","summary", "missing", "rawsum")
+  # } else {
+  #   nax <- c("proc","fb","summary", "missing", "rawsum")
+  # }
+  # 
+  # IDlist <- unique(physio_df$subject_id)
+  # 
+  # output_fin<-lapply(c("eeg","ecg"),function(ay){
+  #   output_ls<-lapply(nax,function(ax){
+  #     output <- lapply(exp_out,`[[`,paste(ay,ax,sep = "_"))
+  #     names(output) <- IDlist
+  #     return(output)
+  #   })
+  #   names(output_ls) <- nax
+  #   output_ls$sample_summary <- do.call(rbind, lapply(exp_out,`[[`,paste(ay,"ov",sep = "_")))
+  #   return(output_ls)
+  # })
+  # names(output_fin) <- c("eeg","ecg")
+  # tryCatch({
+  #   output_fin$newdata_IDs <- IDlist[sapply(exp_out,`[[`,"new_data")]
+  # },
+  # error=function(e){
+  #   message('no new data, not sure if this is important to fix rn AndyP 2021-12-03')
+  # })
+  return(NULL)
 }
 
 load_physio_single <- function(allpaths_sub,old_data=NULL,cl=NULL) {

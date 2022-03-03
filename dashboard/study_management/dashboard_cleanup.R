@@ -194,9 +194,12 @@ initials <- momentum_redcap$read(records=unlist(active), fields=c('initials', 'r
 # get the scheduled fmri date
 fmri_date <- momentum_redcap$read(records=unlist(active), fields=c('sesrep_date', 'record_id'))$data %>% 
   filter(redcap_event_name == "mri_session_arm_1") %>% select(-redcap_event_name)
-
-# merge and load into global environment
-redcap_data <<- merge(initials, fmri_date, 'record_id')
+if (!is_empty(fmri_date$sesrep_date)){
+  # merge and load into global environment
+  redcap_data <<- merge(initials, fmri_date, 'record_id')
+} else {
+  redcap_data <<- initials %>% mutate(sesrep_date = 'NaN')
+}
 
 # run cleanup
 source_cleanup_scripts(subdir="reports")

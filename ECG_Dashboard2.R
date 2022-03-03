@@ -17,7 +17,7 @@ Sys.setenv("PKG_CXXFLAGS"="-std=c++11")
 
 #print(getwd())
 #Rcpp::sourceCpp(file.path(repo_path, "rl_ema_monitoring/data_utils/timings2samples_block_cpp.cpp"), cacheDir = getwd())
-Rcpp::sourceCpp("../../data_utils/timings2samples_block_cpp.cpp", cacheDir = getwd())
+Rcpp::sourceCpp("/Users/dnplserv/rl_ema_monitoring/data_utils/timings2samples_block_cpp.cpp", cacheDir = getwd())
 #Rcpp::sourceCpp("~/Momentum/rl_ema_monitoring/data_utils/timings2samples_block_cpp.cpp")
 #warning('AndyP changed this path to work on his computer to debug ECG, please change back on dashboard if he forgets to reset it')
 
@@ -124,6 +124,10 @@ load_ECG <- function(ECGd = NULL, HRstep = 10, sample_rate = 100) { # ,fbt,pre=1
   hr1 <- data.frame(heart_rate=rep(ECGd$heartrate, times=n_times))
   hrt1 <- data.frame(time=as.numeric(rep(ECGd$time_ms, times=n_times))) #stored as integer64 internally? Just make it numeric
 
+  hr1 <- hr1 %>% filter(intervals != 0 | !is.na(intervals))
+  hrt1 <- hrt1 %>% filter(intervals != 0 | !is.na(intervals))
+  intervals <- intervals %>% filter(intervals != 0 | !is.na(intervals))
+  
   # find irregular times
   difftimes <- hrt1 %>% mutate(hrt1-lag(hrt1))
   difftimes <- difftimes[-c(1),]
@@ -231,12 +235,12 @@ if (!nosplit){
   for (i in 1:nrow(HRsplit)){
     if ((sum(HRsplit[[i,2]]>0)>=2) & !nosplit){
       timings <- correctTimings(HRsplit[[i,1]],HRsplit[[i,2]])
-      beattimes[[i,1]] <- timings
+      beattimes[[iD,1]] <- timings
       output <- timings2samples_block_cpp(timings,HRstep=10)
       #output <- timings2samples(timings,HRstep=10)
-      times1[[i,1]] <- output[,1]
-      intervals1[[i,1]] <- output[,2]
-      rate1[[i,1]] <- output[,3]
+      times1[[iD,1]] <- output[,1]
+      intervals1[[iD,1]] <- output[,2]
+      rate1[[iD,1]] <- output[,3]
       iD <- iD+1;
     }
   }
@@ -251,10 +255,10 @@ if (!nosplit){
     intervals1 <- output[,2]
     rate1 <- output[,3]
   }
-
+  
   # check
   stopifnot(length(beattimes)==length(times1) | length(times1)==length(intervals1) | length(intervals1)==length(rate1))
-
+  
   # merge data
   if (!nosplit){
     times2 <- as.vector(times1[[1,1]])
@@ -385,7 +389,7 @@ get_good_ECG <- function(blocks,ch1_a2f){
     Nmissing[i] <- sum(temp > 0)
     temp1 <- NULL
     for (ir in 1:nrow(tempdata)){
-      sd0 <- sd(tempdata[ic,],na.rm=TRUE)
+      sd0 <- sd(tempdata[ir,],na.rm=TRUE) # 2022-02-25 AndyP switched ic -> ir to match the index, EEG %good Nnoisy was being computed on the last sd of the block
       temp1[ir] <- sum(sd0 > 5*median(sd0,na.rm=TRUE))
     }
     Nnoisy[i] <- sum(temp1)
