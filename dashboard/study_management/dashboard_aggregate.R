@@ -1295,9 +1295,9 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
     thread=1
   }
   # modify physio_df to have physio_df$file_path include the file name
-  #par_cl <- parallel::makeCluster(spec = thread,type = "FORK")
-  #exp_out<-parallel::parLapply(par_cl,unique(physio_df$subject_id),function(IDx){
-  IDx = '221817'  
+  par_cl <- parallel::makeCluster(spec = thread,type = "FORK")
+  exp_out<-parallel::parLapply(par_cl,unique(physio_df$subject_id),function(IDx){
+  #IDx = '221817'  
   physio_files_new <- physio_df$file_path[physio_df$subject_id==IDx]
     physio_rawcache_file <- file.path(unique(dirname(physio_df$file_path[physio_df$subject_id==IDx])),paste(IDx,"_physio_raw.rdata",sep = ""))
     physio_proc_file <- file.path(unique(dirname(physio_df$file_path[physio_df$subject_id==IDx])),paste(IDx,"_physio_proc.rdata",sep = ""))
@@ -1305,7 +1305,7 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
     physio_files <- NULL
     message("Found ",length(physio_files_new), " total physio files for: ",IDx)
     #par_cl <- parallel::makeCluster(spec = thread,type = "FORK")
-    force_recat_physio = FALSE
+    force_recat_physio = TRUE
     if (force_recat_physio){
       message("Loading new physio data for: ",IDx)
       physio_files<-unique(c(physio_files,physio_files_new))
@@ -1517,7 +1517,7 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
     } else {
       return(output)
     }
-#})
+})
   parallel::stopCluster(par_cl)
   # if(save_lite) {
   #   nax <- c("fb","summary", "missing", "rawsum")
