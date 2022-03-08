@@ -10,6 +10,7 @@ if(exists("failed") == FALSE){
 #source(file.path(root_dir,"ECG_Dashboard2.R"))
 ###Dependent functions:
 require(lubridate)
+library(pracma)
 if (FALSE) {
   ###!!!!!!Use this to get path_info if you have standardized data folder including .json for each subject and .db files!!!!!!######
   path_info <- get_ema_subject_metadata(root_dir = "rl_ema_monitoring")
@@ -1293,12 +1294,10 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
     message("Forking is not available on windows. Parallelization will be turned off.")
     thread=1
   }
-  library(pracma)
   # modify physio_df to have physio_df$file_path include the file name
-  #physio_df <- within(physio_df, file_path <- paste0(file_path, '/', file_name))
-  par_cl <- parallel::makeCluster(spec = thread,type = "FORK")
-  exp_out<-parallel::parLapply(par_cl,unique(physio_df$subject_id),function(IDx){
-  #IDx = '32765'  
+  #par_cl <- parallel::makeCluster(spec = thread,type = "FORK")
+  #exp_out<-parallel::parLapply(par_cl,unique(physio_df$subject_id),function(IDx){
+  IDx = '221817'  
   physio_files_new <- physio_df$file_path[physio_df$subject_id==IDx]
     physio_rawcache_file <- file.path(unique(dirname(physio_df$file_path[physio_df$subject_id==IDx])),paste(IDx,"_physio_raw.rdata",sep = ""))
     physio_proc_file <- file.path(unique(dirname(physio_df$file_path[physio_df$subject_id==IDx])),paste(IDx,"_physio_proc.rdata",sep = ""))
@@ -1387,38 +1386,40 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
       }
       trial_df <- tibble(block=block,trial=trial, fbt=fbt)
       ###EEG
-      message("Processing new EEG data for: ",IDx)
-      eeg_list <- load_EEG(EEGd = physio_concat_new$eeg, sample_rate = eeg_sample_rate,sd_times = sd_times) # updated AndyP 2021-12-02
-      eeg_raw <- eeg_list[[1]]
-      eeg_missing <- eeg_list[[2]]
-      eeg_fb <- eeg_epochs_around_feedback(EEG_data = eeg_raw,
-                                           pre = eeg_pre,post = eeg_post,sample_rate = eeg_sample_rate,
-                                           fbt = fbt)
-
-
-      eeg_stats <- NULL
-      eeg_stats$mn1 <- median(eeg_raw$Ch1,na.rm=TRUE)
-      eeg_stats$mn2 <- median(eeg_raw$Ch2,na.rm=TRUE)
-      eeg_stats$mn3 <- median(eeg_raw$Ch3,na.rm=TRUE)
-      eeg_stats$mn4 <- median(eeg_raw$Ch4,na.rm=TRUE)
-      eeg_stats$sd01 <- sd(eeg_raw$Ch1,na.rm=TRUE)
-      eeg_stats$sd02 <- sd(eeg_raw$Ch2,na.rm=TRUE)
-      eeg_stats$sd03 <- sd(eeg_raw$Ch3,na.rm=TRUE)
-      eeg_stats$sd04 <- sd(eeg_raw$Ch4,na.rm=TRUE)
-
-      eeg_rawsum <- get_good_EEG(blocks=block,a2f=eeg_fb,sd_times=sd_times,eeg_stats=eeg_stats)
-      eeg_summary <- eeg_rawsum[1:4] / eeg_rawsum$Ntotal
-      names(eeg_summary) <- paste("per_Ch",1:4,sep = "_")
-      eeg_summary$block <- eeg_rawsum$nbl
-      eeg_summary$per_worst <- apply(eeg_summary[1:4],1,min,na.rm=T)
-      #eeg_summary$session_number<-sess_map$session_number[match(eeg_summary$block,sess_map$block)]
-      eeg_summary$ID <- IDx
-      #eeg_summary <- eeg_summary[order(names(eeg_summary))]
-      eeg_ov <- data.frame(t(apply(eeg_summary[paste("per_Ch",1:4,sep = "_")],2,mean,na.rm=T)))
-      eeg_ov$avg_allCh <- apply(eeg_ov,1,mean,na.rm=T)
-      eeg_ov$worst_allCh_allblocks <- min(eeg_summary[,paste("per_Ch",1:4,sep = "_")])
-      eeg_ov$ID <- IDx
-
+      doEEG = TRUE
+      if (doEEG==TRUE){
+        message("Processing new EEG data for: ",IDx)
+        eeg_list <- load_EEG(EEGd = physio_concat_new$eeg, sample_rate = eeg_sample_rate,sd_times = sd_times) # updated AndyP 2021-12-02
+        eeg_raw <- eeg_list[[1]]
+        eeg_missing <- eeg_list[[2]]
+        eeg_fb <- eeg_epochs_around_feedback(EEG_data = eeg_raw,
+                                             pre = eeg_pre,post = eeg_post,sample_rate = eeg_sample_rate,
+                                             fbt = fbt)
+        
+        
+        eeg_stats <- NULL
+        eeg_stats$mn1 <- median(eeg_raw$Ch1,na.rm=TRUE)
+        eeg_stats$mn2 <- median(eeg_raw$Ch2,na.rm=TRUE)
+        eeg_stats$mn3 <- median(eeg_raw$Ch3,na.rm=TRUE)
+        eeg_stats$mn4 <- median(eeg_raw$Ch4,na.rm=TRUE)
+        eeg_stats$sd01 <- sd(eeg_raw$Ch1,na.rm=TRUE)
+        eeg_stats$sd02 <- sd(eeg_raw$Ch2,na.rm=TRUE)
+        eeg_stats$sd03 <- sd(eeg_raw$Ch3,na.rm=TRUE)
+        eeg_stats$sd04 <- sd(eeg_raw$Ch4,na.rm=TRUE)
+        
+        eeg_rawsum <- get_good_EEG(blocks=block,a2f=eeg_fb,sd_times=sd_times,eeg_stats=eeg_stats)
+        eeg_summary <- eeg_rawsum[1:4] / eeg_rawsum$Ntotal
+        names(eeg_summary) <- paste("per_Ch",1:4,sep = "_")
+        eeg_summary$block <- eeg_rawsum$nbl
+        eeg_summary$per_worst <- apply(eeg_summary[1:4],1,min,na.rm=T)
+        #eeg_summary$session_number<-sess_map$session_number[match(eeg_summary$block,sess_map$block)]
+        eeg_summary$ID <- IDx
+        #eeg_summary <- eeg_summary[order(names(eeg_summary))]
+        eeg_ov <- data.frame(t(apply(eeg_summary[paste("per_Ch",1:4,sep = "_")],2,mean,na.rm=T)))
+        eeg_ov$avg_allCh <- apply(eeg_ov,1,mean,na.rm=T)
+        eeg_ov$worst_allCh_allblocks <- min(eeg_summary[,paste("per_Ch",1:4,sep = "_")])
+        eeg_ov$ID <- IDx
+      }
       ###ECG
       message("Processing new ECG data for: ",IDx)
       ecg_raw <- load_ECG(ECGd = physio_concat_new$ecg, HRstep = HRstep,sample_rate = ecg_sample_rate)
@@ -1454,6 +1455,7 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
       ecg_summary$ID <- IDx
       #ecg_summary <- ecg_summary[order(names(ecg_summary))]
       ecg_ov <- NULL
+      
       tryCatch({
         ecg_ov <- aggregate(per_Good ~ ID,data = ecg_summary,FUN = mean,na.rm=T)
         ecg_ov$worst_allblocks <- min(ecg_summary$per_Good)
@@ -1515,7 +1517,7 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
     } else {
       return(output)
     }
-})
+#})
   parallel::stopCluster(par_cl)
   # if(save_lite) {
   #   nax <- c("fb","summary", "missing", "rawsum")
