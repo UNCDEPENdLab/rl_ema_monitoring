@@ -1423,6 +1423,7 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
       ###ECG
       message("Processing new ECG data for: ",IDx)
       ecg_raw <- load_ECG(ECGd = physio_concat_new$ecg, HRstep = HRstep,sample_rate = ecg_sample_rate)
+      browser()
       rlex <- rle(is.na(ecg_raw$rate))
       end_x = cumsum(rlex$lengths)
       start_x = c(1, lag(end_x)[-1] + 1)
@@ -1455,7 +1456,6 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
       ecg_summary$ID <- IDx
       #ecg_summary <- ecg_summary[order(names(ecg_summary))]
       ecg_ov <- NULL
-      
       tryCatch({
         ecg_ov <- aggregate(per_Good ~ ID,data = ecg_summary,FUN = mean,na.rm=T)
         ecg_ov$worst_allblocks <- min(ecg_summary$per_Good)

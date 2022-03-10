@@ -384,7 +384,7 @@ get_good_ECG <- function(blocks,ch1_a2f){
   for (i in 1:length(nbl)){
     perGood[i] <- (N0$Ntrials[i]-N0$Nnoisy[i]-N0$Nmissing[i])/N0$Ntrials[i]
     if (perGood[i]<0){
-      perGood[i]==0
+      perGood[i]=0
     }
   }
   
