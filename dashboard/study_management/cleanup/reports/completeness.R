@@ -1,5 +1,4 @@
 completeness <- output$proc_data[[subj]]$task_completeness$completeness_table
-
 try({
   html_name = "completeness_plot.html"
   fig_name = "completeness_plot.png"

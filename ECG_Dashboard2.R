@@ -202,7 +202,7 @@ load_ECG <- function(ECGd = NULL, HRstep = 10, sample_rate = 100) { # ,fbt,pre=1
     }
   }
 
-  if (length(isplit)>0){
+  if (length(isplit)>1){ # 2022-03-23 AndyP need isplit[i+1], was returning NaN
     I0 <- NULL
     HRsplit <- matrix(list(),length(isplit)+1,2)
     HRsplit[[1,1]] <- hrt1[1:(isplit[1]-1)]
