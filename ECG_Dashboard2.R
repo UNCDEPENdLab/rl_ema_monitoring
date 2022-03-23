@@ -17,7 +17,7 @@ Sys.setenv("PKG_CXXFLAGS"="-std=c++11")
 
 #print(getwd())
 #Rcpp::sourceCpp(file.path(repo_path, "rl_ema_monitoring/data_utils/timings2samples_block_cpp.cpp"), cacheDir = getwd())
-Rcpp::sourceCpp("../../data_utils/timings2samples_block_cpp.cpp", cacheDir = getwd())
+Rcpp::sourceCpp("/Users/dnplserv/rl_ema_monitoring/data_utils/timings2samples_block_cpp.cpp", cacheDir = getwd())
 #Rcpp::sourceCpp("~/Momentum/rl_ema_monitoring/data_utils/timings2samples_block_cpp.cpp")
 #warning('AndyP changed this path to work on his computer to debug ECG, please change back on dashboard if he forgets to reset it')
 
@@ -113,7 +113,7 @@ load_ECG <- function(ECGd = NULL, HRstep = 10, sample_rate = 100) { # ,fbt,pre=1
   # [number] is a single interval -> expanded to one element of intervals
 
   rr_parse <- gsub("^$", "0", ECGd$rr_intervals) #empty rows become 0
-  rr_parse <- gsub("[]", "NA", rr_parse, fixed=TRUE) #blank RRs become NA
+  rr_parse <- gsub("[]", "0", rr_parse, fixed=TRUE) #blank RRs become 0 2022-03-08 AndyP consistent with Matlab
   rr_parse <- gsub("[\\[\\]]", "", rr_parse, perl=TRUE) #delete [ and ] from all strings to split
   rr_list <- strsplit(rr_parse, "\\s*,\\s*", perl=TRUE) #split elements on comma
   n_times <- sapply(rr_list, length) #count numbers in each rr_interval for replicating heartrate and time_ms
@@ -123,9 +123,13 @@ load_ECG <- function(ECGd = NULL, HRstep = 10, sample_rate = 100) { # ,fbt,pre=1
   intervals <- data.frame(intervals=type.convert(unlist(rr_list), na.strings = "NA",as.is=TRUE))
   hr1 <- data.frame(heart_rate=rep(ECGd$heartrate, times=n_times))
   hrt1 <- data.frame(time=as.numeric(rep(ECGd$time_ms, times=n_times))) #stored as integer64 internally? Just make it numeric
-
+  
+  #hr1 <- hr1 %>% filter(intervals != 0 | !is.na(intervals))
+  #hrt1 <- hrt1 %>% filter(intervals != 0 | !is.na(intervals))
+  #intervals <- intervals %>% filter(intervals != 0 | !is.na(intervals))
+  
   # find irregular times
-  difftimes <- hrt1 %>% mutate(hrt1-lag(hrt1))
+  difftimes <- hrt1-lag(hrt1)
   difftimes <- difftimes[-c(1),]
   difftimes <- as.matrix(difftimes)
   ireg <- which(((difftimes+50) %% 1000) > 100)
@@ -139,13 +143,11 @@ load_ECG <- function(ECGd = NULL, HRstep = 10, sample_rate = 100) { # ,fbt,pre=1
     }
     i = i+1
   }
-
   intervals <- intervals * 1000/1024
   intervals[is.na(intervals)]=0
-
   # find discontinuities and split to sections
   hrt1 <- as.data.frame(hrt1)
-  difftimes <- hrt1 %>% mutate(hrt1-lag(hrt1))
+  difftimes <- hrt1-lag(hrt1)
   difftimes <- difftimes[-c(1),]
   difftimes <- as.matrix(difftimes)
   ilast <- c(which(difftimes != 0),nrow(hrt1))
@@ -190,7 +192,7 @@ load_ECG <- function(ECGd = NULL, HRstep = 10, sample_rate = 100) { # ,fbt,pre=1
 
   if (length(isplit)>0){
     for (i in 1:length(todelete)){
-      inds <- isplit[(todelete[i]-1)]:isplit[todelete[i]]-1
+      inds <- isplit[(todelete[i]-1)]:(isplit[todelete[i]]-1) # 2022-03-08 AndyP there is a bug here, there needed to be parentheses around the :(isplit[todelte[i]]-1)
       hrt1 <- hrt1[-c(inds)]
       hr1 <- hr1[-c(inds)]
       intervals <- intervals[-c(inds)]
@@ -200,7 +202,7 @@ load_ECG <- function(ECGd = NULL, HRstep = 10, sample_rate = 100) { # ,fbt,pre=1
     }
   }
 
-  if (length(isplit)>0){
+  if (length(isplit)>1){ # 2022-03-23 AndyP need isplit[i+1], was returning NaN
     I0 <- NULL
     HRsplit <- matrix(list(),length(isplit)+1,2)
     HRsplit[[1,1]] <- hrt1[1:(isplit[1]-1)]
@@ -219,7 +221,7 @@ load_ECG <- function(ECGd = NULL, HRstep = 10, sample_rate = 100) { # ,fbt,pre=1
       nosplit = TRUE
     }
   }
-
+  
 # merge sections
 if (!nosplit){
   wiggleroom <- NULL
@@ -231,12 +233,12 @@ if (!nosplit){
   for (i in 1:nrow(HRsplit)){
     if ((sum(HRsplit[[i,2]]>0)>=2) & !nosplit){
       timings <- correctTimings(HRsplit[[i,1]],HRsplit[[i,2]])
-      beattimes[[i,1]] <- timings
+      beattimes[[iD,1]] <- timings
       output <- timings2samples_block_cpp(timings,HRstep=10)
       #output <- timings2samples(timings,HRstep=10)
-      times1[[i,1]] <- output[,1]
-      intervals1[[i,1]] <- output[,2]
-      rate1[[i,1]] <- output[,3]
+      times1[[iD,1]] <- output[,1]
+      intervals1[[iD,1]] <- output[,2]
+      rate1[[iD,1]] <- output[,3]
       iD <- iD+1;
     }
   }
@@ -251,10 +253,10 @@ if (!nosplit){
     intervals1 <- output[,2]
     rate1 <- output[,3]
   }
-
+  
   # check
   stopifnot(length(beattimes)==length(times1) | length(times1)==length(intervals1) | length(intervals1)==length(rate1))
-
+  
   # merge data
   if (!nosplit){
     times2 <- as.vector(times1[[1,1]])
@@ -370,28 +372,40 @@ ecg_epochs_around_feedback2 <- function(ECG_data,fbt,pre=1000,post=10000,sample_
 
 get_good_ECG <- function(blocks,ch1_a2f){
   nbl <- unique(blocks)
-
-  Nmissing <- NULL
-  Ntrials <- NULL
-  Nnoisy <- NULL
   perGood <- NULL
+  a2f0 <- ch1_a2f
+  a2f0 <- a2f0 %>% pivot_longer(cols=starts_with("V"),names_to="ix",values_to="V")
+  a2f0 <- a2f0 %>% mutate(bin=rep(1:ncol(ch1_a2f),nrow(ch1_a2f)))
+  a2f0 <- a2f0 %>% arrange(bin) %>% mutate(trial=rep(1:nrow(ch1_a2f),ncol(ch1_a2f)))
+  sd0 <- a2f0 %>% group_by(trial) %>% summarize(sd0=sd(V,na.rm=TRUE),nNa=any(is.na(V)))
+  sd0 <- sd0 %>% mutate(blocks = blocks)
+  m0 <- median(sd0$sd0,na.rm=TRUE)
+  N0 <- sd0 %>% group_by(blocks) %>% summarize(Nnoisy=sum(sd0 > 5*m0,na.rm=TRUE), Nmissing = sum(nNa > 0,na.rm=TRUE),Ntrials=length(sd0))
   for (i in 1:length(nbl)){
-    ix <-which(blocks==nbl[i])
-    tempdata <- ch1_a2f[ix,]
-    temp <- NA
-    for (ic in 1:nrow(tempdata)){
-      temp[ic] <- sum(is.na(tempdata[ic,]))
+    perGood[i] <- (N0$Ntrials[i]-N0$Nnoisy[i]-N0$Nmissing[i])/N0$Ntrials[i]
+    if (perGood[i]<0){
+      perGood[i]=0
     }
-    Nmissing[i] <- sum(temp > 0)
-    temp1 <- NULL
-    for (ir in 1:nrow(tempdata)){
-      sd0 <- sd(tempdata[ic,],na.rm=TRUE)
-      temp1[ir] <- sum(sd0 > 5*median(sd0,na.rm=TRUE))
-    }
-    Nnoisy[i] <- sum(temp1)
-    Ntrials[i] <- length(ix)
-    perGood[i] <- (Ntrials[i]-Nnoisy[i]-Nmissing[i])/Ntrials[i]
   }
+  
+  # for (i in 1:length(nbl)){
+  #   ix <-which(blocks==nbl[i])
+  #   tempdata <- ch1_a2f[ix,]
+  #   temp <- NA
+  #   for (ic in 1:nrow(tempdata)){
+  #     temp[ic] <- sum(is.na(tempdata[ic,]))
+  #   }
+  #   Nmissing[i] <- sum(temp > 0, na.rm=TRUE)
+  #   temp1 <- NULL
+  #   # for (ir in 1:nrow(tempdata)){
+  #   #   sd0 <- sd(tempdata[ir,],na.rm=TRUE) # 2022-02-25 AndyP switched ic -> ir to match the index, EEG %good Nnoisy was being computed on the last sd of the block
+  #   #   temp1[ir] <- sum(sd0 > 5*median(sd0,na.rm=TRUE))
+  #   # }
+  #   # Nnoisy[i] <- sum(temp1, na.rm=TRUE)
+  #   Ntrials[i] <- length(ix)
+  #   perGood[i] <- (Ntrials[i]-Nnoisy[i]-Nmissing[i])/Ntrials[i]
+  # }
+  
   Ngood_df <- dplyr::tibble(per_Good=perGood,block=nbl)
   return(Ngood_df)
 }

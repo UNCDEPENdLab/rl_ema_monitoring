@@ -49,7 +49,7 @@ load_EEG <- function(subject_name,physio_file,abs_path=NULL,EEGd=NULL,sample_rat
     rrt0 <- seq(t0[1],ceiling(t0[1]+(length(t0)-1)*1000/sample_rate),by=1000/sample_rate)
     rrt0 <- rrt0-max(rrt0-t0)
   }
-
+  
   rrt <- real_recording_time(t,sample_rate)
 
   dt <- t-rrt

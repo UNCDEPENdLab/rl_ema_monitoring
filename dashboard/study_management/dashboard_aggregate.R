@@ -10,6 +10,7 @@ if(exists("failed") == FALSE){
 #source(file.path(root_dir,"ECG_Dashboard2.R"))
 ###Dependent functions:
 require(lubridate)
+library(pracma)
 if (FALSE) {
   ###!!!!!!Use this to get path_info if you have standardized data folder including .json for each subject and .db files!!!!!!######
   path_info <- get_ema_subject_metadata(root_dir = "rl_ema_monitoring")
@@ -68,7 +69,6 @@ if (FALSE) {
 # load_db loads data from a database file, e.g. one physio file or a schedule file
 #
 
-
 #####Functions:
 load_db <- function(dbpath,table_names=NULL) {
   print(dbpath)
@@ -85,7 +85,24 @@ load_db <- function(dbpath,table_names=NULL) {
     return(NULL)
   }
   tables<-lapply(table_names,function(dfName){
-    dbGetQuery(dbdata, paste0("SELECT * FROM ", dfName))
+    # 2022-02-03 AndyP added conditionals to handle rounding problem 
+    # see https://stackoverflow.com/questions/29761938/sqlite-how-to-disable-scientific-notation
+    if (strcmp(dfName,"EEG_muse")){
+      tables <- dbGetQuery(dbdata, paste0('SELECT printf("%f", recording_time), * FROM ', dfName))
+      if (length(tables$EEG1)>0){
+        tables <- tables %>% select(!recording_time) %>% rename(recording_time=`printf(\"%f\", recording_time)`)
+        tables$recording_time <- as.double(tables$recording_time)
+      }
+    } else if (strcmp(dfName,"Polar_heartrate")) {
+      tables <- dbGetQuery(dbdata, paste0('SELECT printf("%f", time_ms), * FROM ', dfName))
+      if (length(tables$heartrate)>0){
+        tables <- tables %>% select(!time_ms) %>% rename(time_ms=`printf(\"%f\", time_ms)`)
+        tables$time_ms <- as.double(tables$time_ms)
+      }
+    } else {   
+      tables <- dbGetQuery(dbdata, paste0("SELECT * FROM ", dfName))
+    }
+    return(tables)
   })
   names(tables) <- table_names
   #close connection before return
@@ -120,7 +137,6 @@ proc_schedule <- function(schedule_df = NULL,days_limit=35,task_limit=56,force_r
   sample_info <- do.call(rbind,lapply(proc_data,`[[`,"info_df"))
   performance_info <- do.call(rbind,lapply(proc_data,`[[`,"performance_info"))
   performance_info <- performance_info[!is.na(performance_info$date),]
-  #browser()
   sp_info_sq <- split(sample_info,sample_info$ID)
   pr_info_sq <- split(performance_info,performance_info$ID)
   sample_info$compliance <- !is.na(sample_info$completed_time)
@@ -269,7 +285,6 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
 
     ###Part I: Trial
     time_vars <- c("scheduled_time","stim_time","choice_time","feedback_time")
-    #browser()
     for (tx in time_vars) {
       raw_single$trials[[tx]] <- ms_to_date(raw_single$trials[[tx]],timezone = tz)
     }
@@ -497,7 +512,6 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
 
     # squish the games to have AM and PM be a single item
     games_by_session <- games_by_block %>% group_split(type,days)
-    #browser()
     games_by_session <- do.call(rbind, lapply(games_by_session, get_game_session))
 
     # get the info df (merge of games_by_session and questionnaires_by_session), concert this back to a base dataframe to match J's
@@ -533,12 +547,8 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
       form_data <- rbind(form_data,tk)
     }
 
-    #browser()
-
     form_data$answer_prog <- text_proc(form_data$answer)
     fdata_sp <- split(form_data,form_data$questionnaire_name)
-
-    #browser()
 
     ## REWRITE form_proc: FROM HERE ##
     #proc all the other first
@@ -703,12 +713,17 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
       ema_data <- mood_answers %>% filter(V1==1) %>% mutate(V1=c(1:nrow(.))%%2)
       # get the valence-arousal data
       val_data <- ema_data %>% filter(V1==1) %>%
+        #filter(lengths(V2) == 2) %>% # ensure we only have data of length 2
         '['('V2') %>% # get the data from V2
         as.list %>% # convert to a list
         "[["(1) %>% # unlist
         as.data.frame # convert to dataframe
       # get the emotion data
       emo_data <- ema_data %>% filter(V1==0) %>%
+        # The below line was added when it was noted that on a rare occasion,
+        # the valence-arousal result can be duplicated in place or any real
+        # emotional data.
+        mutate(V2 = ifelse(lengths(V2) != 5, list(NA, NA, NA, NA, NA), V2)) %>% # ensure we only have data of length 5
         '['('V2') %>% # get the data from V2
         as.list %>% # convert to a list
         "[["(1) %>% # unlist
@@ -719,7 +734,6 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
       event_data <- event_data$V2 %>%
         lapply(.,
                combine_by_response <- function(x) { # one-time use function
-                 #browser()
                  colNames <- as.list(unique(names(x))) # get the names for the columns
                  x <- matrix(unlist(x), ncol = length(x)/8, nrow = 8) %>% # convert to a matrix
                    t %>% # transpose the matrix
@@ -771,7 +785,6 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
     clean_sleep_diary <- function(fdata_sp, subj_id) {
       # get the answer list
       sleep_answers <- fdata_sp$`Sleep Diary`$answer_prog
-      #browser()
       # unlist the sleep_answers items
       sleep_answers <- lapply(sleep_answers, unlist)
       # coerce the data as a list into a column-based list
@@ -856,7 +869,6 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
           return(FALSE)
         })
       }
-      #browser()
       reindex_dream_log <- function(dream_log) {
         # initialize a dream log and a variable to be the index
         idx <- 1
@@ -968,7 +980,7 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
 
     form_proc <- create_form_proc(fdata_sp, raw_single$ID)
 
-    print("Base data cleaning finished...")
+    log_info("Base data cleaning finished...")
 
     ##summary stats for how much they answered
     q_sum <- data.frame(ID = raw_single$ID,val_arr_dis_avg = mean(form_proc$`Mood Questionnaire`$v_a_distance,na.rm = T))
@@ -986,9 +998,7 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
     q_sum$val_emo_cor <- cor(apply(form_proc$`Mood Questionnaire`[c("Anxious","Elated","Sad","Irritable","Energetic")],1,function(x){mean(as.numeric(x),na.rm = T)}),form_proc$`Mood Questionnaire`$v_a_distance)
     ###return proc_answer object###########
 
-    #browser()
-
-    print("Beginning payment, completion, and performance calculations...")
+    log_info("Beginning payment, completion, and performance calculations...")
     
     # get the current schedule file
     cur_sched_file <- grep("*.db", list.files(paste0(dataPath, '/Subjects/', raw_single$ID, '/schedule')), value=TRUE)
@@ -1003,12 +1013,17 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
     group <- participant_info$study_group
     site <- case_when(participant_info$state == "PA" ~"Pitt", participant_info$state == "NC" ~"UNC")
 
-    print("Metadata was fetched")
+    log_info("Metadata was fetched")
     #print(trials_1)
     #print(questionnaire_1)
 
     # COMPLETENESS CALCULATIONS (calendar day, ema day)
     completeness_table <- function(games_input, questionnaires_input, participant_status) {
+      # if(raw_single$ID == '440278') {
+      # }
+      log_debug("START: Getting the completeness table.")
+      
+      log_trace("START: Cleaning questionnaire input.")
       #cleans questionnaires input
       questionnaires <- questionnaires_input %>% 
         filter(type != 19) %>% #drops mood post task 
@@ -1018,10 +1033,16 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
         #handles the case when a participant does a task between midnight and 3am, will attribute completeness to the previous day
         mutate(start_hour = hour(.$start_timestamp)) %>% 
         mutate(quest_dates = if_else(start_hour >= 0 & start_hour<=3, as.Date(format(.$scheduled_timestamp, '%Y-%m-%d')), as.Date(format(.$start_timestamp, '%Y-%m-%d'))))
+      log_trace("FINISH: Cleaning questionnaire input.")
+      
+      log_trace("START: Creating questionnaire summary.")
       #creates df sorted by questionnaire type, and number completed on date
       questionnaires_summary <- questionnaires %>% 
         dplyr::group_by(type, description, quest_dates) %>% 
         dplyr::summarize(count = n())
+      log_trace("FINISH: Creating questionnaire summary.")
+      
+      log_trace("START: Cleaning games input.")
       #cleans games input
       games <- games_input %>% 
         filter (block < 1000) %>% #drops fmri blocks 
@@ -1032,61 +1053,86 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
         #handles the case when a participant does a task between midnight and 3am, will attribute completeness to the previous day
         mutate(start_hour = hour(.$start_timestamp)) %>%
         mutate(games_dates = if_else(start_hour >= 0 & start_hour<=3, as.Date(format(.$scheduled_timestamp, '%Y-%m-%d')), as.Date(format(.$start_timestamp, '%Y-%m-%d'))))
+      log_trace("FINISH: Cleaning games input.")
       
+      log_trace("START: Creating games completed/date dataframe.")
       #creates df with number of games completed on date
       games_summary <- games %>% 
         dplyr::group_by(games_dates) %>% 
         dplyr::summarize(games_count = n())
+      log_trace("FINISH: Creating games completed/date dataframe.")
+      
+      log_trace("START: Getting start date.")
       #start date when the participants starts the practice session-practice will be sliced later
       #end date is dependent on whether the participant is active or inactive
       #active: grabs all dates up to the previous day before run date 
       #unless dashboard ran on same day as practice, then end date is current day
       #inactive: grabs all dates up to the latest date in schedule file 
       start_date = games$games_dates[1]
-      end_date = case_when(
-        participant_status == "active" ~ Sys.Date(), 
-        participant_status == "inactive" ~ as.Date(max(max(questionnaires_summary$quest_dates), max(games_summary$games_dates))))
+      log_trace("FINISH: Getting start date.")
       
+      log_trace("START: Getting end date.")
+      end_date = case_when(
+        participant_status == "active" && start_date < Sys.Date() ~ Sys.Date()-1, 
+        participant_status == "active" && start_date == Sys.Date() ~ Sys.Date(),
+        participant_status == "inactive" ~ as.Date(max(max(questionnaires_summary$quest_dates), max(games_summary$games_dates))))
+      log_trace("FINISH: Getting end date.")
+      
+      log_trace("START: Padding game missingness.")
       #missingness padding for all tasks 
       #complete function fills in zero for any missing dates  
-      
       games_completeness <- games_summary %>% 
         complete(games_dates = seq.Date(start_date, end_date, by="day"), fill = list(games_count = 0)) 
+      log_trace("FINISH: Padding game missingness.")
       
+      log_trace("START: Padding mood missingness.")
       mood_completeness <- questionnaires_summary %>% 
         filter(type == 0) %>% 
         complete(quest_dates = seq.Date(start_date, end_date, by="day"), fill = list(count = 0)) %>% 
         rename(mood_count = count)
+      log_trace("FINISH: Padding mood missingness.")
       
+      log_trace("START: Padding rest missingness.")
       rest_completeness <- questionnaires_summary %>% 
         filter(type == 2) %>% 
         complete(quest_dates = seq.Date(start_date, end_date, by="day"), fill = list(count = 0)) %>% 
         rename(rest_count = count)
+      log_trace("FINISH: Padding rest missingness.")
       
+      log_trace("START: Padding sleep missingness.")
       sleep_completeness <- questionnaires_summary %>% 
         filter(type == 5) %>% 
         complete(quest_dates = seq.Date(start_date, end_date, by="day"), fill = list(count = 0)) %>% 
         rename(sleep_count = count)
+      log_trace("FINISH: Padding sleep missingness.")
       
+      log_trace("START: Padding video missingness.")
       video_completeness <- questionnaires_summary %>% 
         filter(type == 21) %>% 
         complete(quest_dates = seq.Date(start_date, end_date, by="day"), fill = list(count = 0)) %>% 
         rename(video_count = count)
+      log_trace("FINISH: Padding video missingness.")
       
+      log_trace("START: Getting completeness counts.")
       #completeness count contains the raw counts 
       completeness_count <- data.frame(dates = mood_completeness$quest_dates, sleep_count = sleep_completeness$sleep_count, mood_count = mood_completeness$mood_count, rest_count = rest_completeness$rest_count, games_count = games_completeness$games_count, video_count = video_completeness$video_count)
       #covers the first day case, slices off the practice session if past second day
       #on first day, presents practice session completeness instead 
+      log_trace("FINISH: Getting completeness counts.")
+      
+      log_trace("START: Slicing off practice if past first day.")
       if (start_date < Sys.Date()-1) {
         completeness_count <- completeness_count %>%
           slice(2:n())
       } 
+      log_trace("FINISH: Slicing off practice if past first day.")
       
-      if (participant_status == "active") {
-        completeness_count <- completeness_count %>% 
-          slice(1:(n()-1)) #removes last row with current run date bc possibility they can still complete tasks on current day
-      } 
+      # if (participant_status == "active") {
+      #   completeness_count <- completeness_count %>% 
+      #     slice(1:(n()-1)) #removes last row with current run date bc possibility they can still complete tasks on current day
+      # } 
       
+      log_trace("START: Getting completion percentages.")
       #completeness percentage assumes 1 sleep diary, 4 mood reports, 2 resting states, 4 game blocks, and 1 end of day video
       completeness_perc <- completeness_count %>% 
         mutate(sleep_perc = (sleep_count/1)*100) %>% 
@@ -1095,15 +1141,30 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
         mutate(games_perc = (games_count/4)*100) %>%
         mutate(video_perc = (video_count/1)*100) %>% 
         select(dates, sleep_perc, mood_perc, rest_perc, games_perc, video_perc)
+      log_trace("FINISH: Getting completion percentages.")
       
+      log_trace("START: Getting ema day.")
       #calculates the ema day and calendar day used in the overview table
       ema_day <- (max(games$block)-5)/4
+      log_trace("FINISH: Getting ema day.")
+      
+      log_trace("START: Getting calendar day.")
       if (start_date < Sys.Date()-1) {
         cal_day <- as.numeric(max(completeness_perc$dates)-completeness_perc$dates[1]) + 1
       }
       else {cal_day <- 0}
-      
+      log_trace("FINISH: Getting calendar day.")
+      log_trace("START: Getting final list.")
       completeness_output <- list(completeness_perc, ema_day, cal_day)
+      log_trace("FINISH: Getting final list.")
+      
+      log_trace("START: Adding names to final list.")
+      # names the task_completeness list items
+      names(completeness_output) <- c("completeness_table", "ema_day", "calendar_day")
+      log_trace("FINISH: Adding names to final list.")
+      
+      log_debug("START: Getting the completeness table.")
+      
       return(completeness_output)
     }
     
@@ -1115,20 +1176,28 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
                               questionnaires_input = questionnaire_1,
                               participant_status = 'active')
 
-    print("Completeness was calculated")
+    log_info("Completeness was calculated")
 
     # PAYMENT INFORMATION
 
     payment_df <- function(completeness_perc, games_input) {
+      log_debug("START: Getting the payment_df.")
+      log_trace("START: Loading completeness_perc and mutating to include cal_week.")
+      # if(raw_single$ID == '440278') {
+      # }
       #adds calendar week to task percent completed df
       completeness_perc <- completeness_perc %>%
         mutate(cal_week = ((as.numeric(dates-dates[1]) %/% 7)+1))
-
+      log_trace("FINISH: Loading completeness_perc and mutating to include cal_week.")
+      
+      log_trace("START: Getting completeness summary.")
       #average task completed % per calendar week
       completeness_summary <- completeness_perc %>%
         group_by(cal_week) %>%
         summarize(games_perc_byweek = round(mean(games_perc)), mood_perc_byweek = round(mean(mood_perc)), sleep_perc_byweek = round(mean(sleep_perc)), video_perc_byweek = round(mean(video_perc)))
-
+      log_trace("FINISH: Getting completeness summary.")
+      
+      log_trace("START: Calculating game earnings for completed blocks.")
       #calculates game earnings for all blocks completed, including practice and fmri
       games_all <- games_input %>%
         drop_na(stim_time) %>% #drops any incomplete games
@@ -1137,13 +1206,25 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
         #for regular games, use scheduled time, for fmri games, use start time bc scheduled time 1 year ahead
         mutate(game_dates = case_when(block <1000 ~ as.Date(format(.$scheduled_timestamp, '%Y/%m/%d')), block >= 1000 ~ as.Date(format(.$start_timestamp, '%Y/%m/%d')))) %>%
         mutate(cal_week = (as.numeric(game_dates-game_dates[325]) %/% 7)+1) #325 is the start of block 6 (first game of day 1)
+      log_trace("FINISH: Calculating game earnings for completed blocks.")
+      
+      log_trace("START: Summing the game earnings by calendar week.")
       #sum game earnings by calender week
       payment_summary <- games_all %>%
         group_by(cal_week) %>%
         summarize(pay = sum(outcome)*.15)
+      log_trace("FINISH: Summing the game earnings by calendar week.")
+      
+      log_trace("START: Initializing the payment table with NAs.")
       #initialize df with NAs
       payment_table <- data.frame(matrix(nrow=5,ncol=7))
+      log_trace("FINISH: Initializing the payment table with NAs.")
+      
+      log_trace("START: Initializing the payment table names.")
       colnames(payment_table) <- c("cal_week", "payment_date", "game_earnings", "games_perc_completed", "mood_perc_completed", "sleep_perc_completed", "video_perc_completed")
+      log_trace("FINISH: Initializing the payment table names.")
+      
+      log_trace("START: Final dataframe creation.")
       #df is created piecewise to allow for NAs for incompleteness
       payment_table <-  payment_table %>%
         mutate(cal_week = c(1,2,3,4,5)) %>%
@@ -1153,17 +1234,17 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
         mutate(mood_perc_completed = c(completeness_summary$mood_perc_byweek[1], completeness_summary$mood_perc_byweek[2], completeness_summary$mood_perc_byweek[3], completeness_summary$mood_perc_byweek[4], completeness_summary$mood_perc_byweek[5])) %>%
         mutate(sleep_perc_completed = c(completeness_summary$sleep_perc_byweek[1], completeness_summary$sleep_perc_byweek[2], completeness_summary$sleep_perc_byweek[3], completeness_summary$sleep_perc_byweek[4], completeness_summary$sleep_perc_byweek[5])) %>%
         mutate(video_perc_completed = c(completeness_summary$video_perc_byweek[1], completeness_summary$video_perc_byweek[2], completeness_summary$video_perc_byweek[3], completeness_summary$video_perc_byweek[4], completeness_summary$video_perc_byweek[5]))
-
+      log_trace("FINISH: Final dataframe creation.")
+      log_debug("FINISH: Getting the payment_df.")
       return(payment_table)
     }
-    #browser()
     payment <- payment_df(
                 completeness_perc = task_completeness$completeness_table,
                 games_input = trials_1)
 
-    print("Payment was calculated")
+    log_info("Payment was calculated")
     
-    print("Completed payment, completion, and performance calculations.")
+    log_info("Completed payment, completion, and performance calculations.")
 
     pr_info_by_block$ID <- raw_single$ID
     raw_single$trials <- trials_df
@@ -1214,21 +1295,27 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
     thread=1
   }
   # modify physio_df to have physio_df$file_path include the file name
-  #physio_df <- within(physio_df, file_path <- paste0(file_path, '/', file_name))
   par_cl <- parallel::makeCluster(spec = thread,type = "FORK")
   exp_out<-parallel::parLapply(par_cl,unique(physio_df$subject_id),function(IDx){
-    physio_files_new <- physio_df$file_path[physio_df$subject_id==IDx]
+  #IDx = '540039'  
+  physio_files_new <- physio_df$file_path[physio_df$subject_id==IDx]
     physio_rawcache_file <- file.path(unique(dirname(physio_df$file_path[physio_df$subject_id==IDx])),paste(IDx,"_physio_raw.rdata",sep = ""))
     physio_proc_file <- file.path(unique(dirname(physio_df$file_path[physio_df$subject_id==IDx])),paste(IDx,"_physio_proc.rdata",sep = ""))
     physio_concat <- NULL
     physio_files <- NULL
     message("Found ",length(physio_files_new), " total physio files for: ",IDx)
     #par_cl <- parallel::makeCluster(spec = thread,type = "FORK")
-    message("Loading new physio data for: ",IDx)
-    physio_concat_new <- load_physio_single(allpaths_sub = physio_files_new,old_data=NULL,cl = NULL)
-    #parallel::stopCluster(par_cl)
-    physio_files<-unique(c(physio_files,physio_files_new))
-    save(physio_files,physio_concat_new,file = paste0(dataPath,'/Subjects/',IDx,'/physio/',IDx,'_physio_raw.rdata'))
+    force_recat_physio = TRUE
+    if (force_recat_physio){
+      message("Loading new physio data for: ",IDx)
+      physio_files<-unique(c(physio_files,physio_files_new))
+      physio_concat_new <- load_physio_single(allpaths_sub = physio_files_new,old_data=NULL,cl = NULL)
+      #parallel::stopCluster(par_cl)
+      save(physio_files,physio_concat_new,file = paste0(dataPath,'/Subjects/',IDx,'/physio/',IDx,'_physio_raw.rdata'))
+    } else {
+      message("Loading pre-concatenated raw physio for: ",IDx)
+      load(paste0(dataPath,'/Subjects/',IDx,'/physio/',IDx,'_physio_raw.rdata'))
+    }
     output <- NULL
     if(!force_reproc && file.exists(physio_proc_file)) {
       message("Loading processed physio data for: ",IDx)
@@ -1247,7 +1334,6 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
     ##### Quickly grabbing .db schedule file for physio, uncoupling physio from schedule file processing
     ##### 2021-11-22 AndyP
     #####
-
     if (force_reproc){ # should generally be true
       path_to_schedule <- paste0(dataPath, '/Subjects/', IDx, '/schedule')
       sched_file <- list.files(path=path_to_schedule,pattern=paste0(IDx,'_schedule.db'))
@@ -1300,38 +1386,40 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
       }
       trial_df <- tibble(block=block,trial=trial, fbt=fbt)
       ###EEG
-      message("Processing new EEG data for: ",IDx)
-      eeg_list <- load_EEG(EEGd = physio_concat_new$eeg, sample_rate = eeg_sample_rate,sd_times = sd_times) # updated AndyP 2021-12-02
-      eeg_raw <- eeg_list[[1]]
-      eeg_missing <- eeg_list[[2]]
-      eeg_fb <- eeg_epochs_around_feedback(EEG_data = eeg_raw,
-                                           pre = eeg_pre,post = eeg_post,sample_rate = eeg_sample_rate,
-                                           fbt = fbt)
-
-
-      eeg_stats <- NULL
-      eeg_stats$mn1 <- median(eeg_raw$Ch1,na.rm=TRUE)
-      eeg_stats$mn2 <- median(eeg_raw$Ch2,na.rm=TRUE)
-      eeg_stats$mn3 <- median(eeg_raw$Ch3,na.rm=TRUE)
-      eeg_stats$mn4 <- median(eeg_raw$Ch4,na.rm=TRUE)
-      eeg_stats$sd01 <- sd(eeg_raw$Ch1,na.rm=TRUE)
-      eeg_stats$sd02 <- sd(eeg_raw$Ch2,na.rm=TRUE)
-      eeg_stats$sd03 <- sd(eeg_raw$Ch3,na.rm=TRUE)
-      eeg_stats$sd04 <- sd(eeg_raw$Ch4,na.rm=TRUE)
-
-      eeg_rawsum <- get_good_EEG(blocks=block,a2f=eeg_fb,sd_times=sd_times,eeg_stats=eeg_stats)
-      eeg_summary <- eeg_rawsum[1:4] / eeg_rawsum$Ntotal
-      names(eeg_summary) <- paste("per_Ch",1:4,sep = "_")
-      eeg_summary$block <- eeg_rawsum$nbl
-      eeg_summary$per_worst <- apply(eeg_summary[1:4],1,min,na.rm=T)
-      #eeg_summary$session_number<-sess_map$session_number[match(eeg_summary$block,sess_map$block)]
-      eeg_summary$ID <- IDx
-      #eeg_summary <- eeg_summary[order(names(eeg_summary))]
-      eeg_ov <- data.frame(t(apply(eeg_summary[paste("per_Ch",1:4,sep = "_")],2,mean,na.rm=T)))
-      eeg_ov$avg_allCh <- apply(eeg_ov,1,mean,na.rm=T)
-      eeg_ov$worst_allCh_allblocks <- min(eeg_summary[,paste("per_Ch",1:4,sep = "_")])
-      eeg_ov$ID <- IDx
-
+      doEEG = TRUE
+      if (doEEG==TRUE){
+        message("Processing new EEG data for: ",IDx)
+        eeg_list <- load_EEG(EEGd = physio_concat_new$eeg, sample_rate = eeg_sample_rate,sd_times = sd_times) # updated AndyP 2021-12-02
+        eeg_raw <- eeg_list[[1]]
+        eeg_missing <- eeg_list[[2]]
+        eeg_fb <- eeg_epochs_around_feedback(EEG_data = eeg_raw,
+                                             pre = eeg_pre,post = eeg_post,sample_rate = eeg_sample_rate,
+                                             fbt = fbt)
+        
+        
+        eeg_stats <- NULL
+        eeg_stats$mn1 <- median(eeg_raw$Ch1,na.rm=TRUE)
+        eeg_stats$mn2 <- median(eeg_raw$Ch2,na.rm=TRUE)
+        eeg_stats$mn3 <- median(eeg_raw$Ch3,na.rm=TRUE)
+        eeg_stats$mn4 <- median(eeg_raw$Ch4,na.rm=TRUE)
+        eeg_stats$sd01 <- sd(eeg_raw$Ch1,na.rm=TRUE)
+        eeg_stats$sd02 <- sd(eeg_raw$Ch2,na.rm=TRUE)
+        eeg_stats$sd03 <- sd(eeg_raw$Ch3,na.rm=TRUE)
+        eeg_stats$sd04 <- sd(eeg_raw$Ch4,na.rm=TRUE)
+        
+        eeg_rawsum <- get_good_EEG(blocks=block,a2f=eeg_fb,sd_times=sd_times,eeg_stats=eeg_stats)
+        eeg_summary <- eeg_rawsum[1:4] / eeg_rawsum$Ntotal
+        names(eeg_summary) <- paste("per_Ch",1:4,sep = "_")
+        eeg_summary$block <- eeg_rawsum$nbl
+        eeg_summary$per_worst <- apply(eeg_summary[1:4],1,min,na.rm=T)
+        #eeg_summary$session_number<-sess_map$session_number[match(eeg_summary$block,sess_map$block)]
+        eeg_summary$ID <- IDx
+        #eeg_summary <- eeg_summary[order(names(eeg_summary))]
+        eeg_ov <- data.frame(t(apply(eeg_summary[paste("per_Ch",1:4,sep = "_")],2,mean,na.rm=T)))
+        eeg_ov$avg_allCh <- apply(eeg_ov,1,mean,na.rm=T)
+        eeg_ov$worst_allCh_allblocks <- min(eeg_summary[,paste("per_Ch",1:4,sep = "_")])
+        eeg_ov$ID <- IDx
+      }
       ###ECG
       message("Processing new ECG data for: ",IDx)
       ecg_raw <- load_ECG(ECGd = physio_concat_new$ecg, HRstep = HRstep,sample_rate = ecg_sample_rate)
@@ -1428,34 +1516,34 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
     } else {
       return(output)
     }
-  })
+})
   parallel::stopCluster(par_cl)
-  if(save_lite) {
-    nax <- c("fb","summary", "missing", "rawsum")
-  } else {
-    nax <- c("proc","fb","summary", "missing", "rawsum")
-  }
-
-  IDlist <- unique(physio_df$subject_id)
-
-  output_fin<-lapply(c("eeg","ecg"),function(ay){
-    output_ls<-lapply(nax,function(ax){
-      output <- lapply(exp_out,`[[`,paste(ay,ax,sep = "_"))
-      names(output) <- IDlist
-      return(output)
-    })
-    names(output_ls) <- nax
-    output_ls$sample_summary <- do.call(rbind, lapply(exp_out,`[[`,paste(ay,"ov",sep = "_")))
-    return(output_ls)
-  })
-  names(output_fin) <- c("eeg","ecg")
-  tryCatch({
-    output_fin$newdata_IDs <- IDlist[sapply(exp_out,`[[`,"new_data")]
-  },
-  error=function(e){
-    message('no new data, not sure if this is important to fix rn AndyP 2021-12-03')
-  })
-  return(output_fin)
+  # if(save_lite) {
+  #   nax <- c("fb","summary", "missing", "rawsum")
+  # } else {
+  #   nax <- c("proc","fb","summary", "missing", "rawsum")
+  # }
+  # 
+  # IDlist <- unique(physio_df$subject_id)
+  # 
+  # output_fin<-lapply(c("eeg","ecg"),function(ay){
+  #   output_ls<-lapply(nax,function(ax){
+  #     output <- lapply(exp_out,`[[`,paste(ay,ax,sep = "_"))
+  #     names(output) <- IDlist
+  #     return(output)
+  #   })
+  #   names(output_ls) <- nax
+  #   output_ls$sample_summary <- do.call(rbind, lapply(exp_out,`[[`,paste(ay,"ov",sep = "_")))
+  #   return(output_ls)
+  # })
+  # names(output_fin) <- c("eeg","ecg")
+  # tryCatch({
+  #   output_fin$newdata_IDs <- IDlist[sapply(exp_out,`[[`,"new_data")]
+  # },
+  # error=function(e){
+  #   message('no new data, not sure if this is important to fix rn AndyP 2021-12-03')
+  # })
+  return(NULL)
 }
 
 load_physio_single <- function(allpaths_sub,old_data=NULL,cl=NULL) {
