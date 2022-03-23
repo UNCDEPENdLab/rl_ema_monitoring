@@ -1,4 +1,4 @@
-function [Ntotal, Ngood, epoch_data,bad]=EEGanalysis_test(name,path,curD,date_range)
+function [Ntotal, Ngood, epoch_data,bad]=EEGanalysis_test(name,path,curD,date_range,block)
     
     %% read modeled prediction errors
     %DATA = readtable(fullfile(fileparts(fileparts(pwd)),'Data_Processed',['subject_' name],['PE2_Heir_' name '.csv']));    
@@ -17,18 +17,28 @@ function [Ntotal, Ngood, epoch_data,bad]=EEGanalysis_test(name,path,curD,date_ra
         cd(curD);
         error('No schedule file found in %s',filename);
     end
-    temp = cell2mat(fetch(db, 'SELECT feedback_time, feedback FROM trials WHERE choice_time IS NOT NULL AND stim1>=0 AND stim2>=0 ORDER BY choice_time ASC'));
-    %temp = cell2mat(fetch(db, 'SELECT feedback_time, feedback FROM trials WHERE choice_time IS NOT NULL AND stim1>17 AND stim2>17 AND stim1<150 AND stim2<150'));
-    Trial.feedback = temp(:,2);
-    Trial.feedbackTimes = temp(:,1);
-    date = datetime(Trial.feedbackTimes,'ConvertFrom','epochtime','TicksPerSecond',1e3,'Format','dd-MMM-yyyy HH:mm:ss.SSS');
+    temp = cell2mat(fetch(db, 'SELECT block, feedback_time, feedback FROM trials WHERE choice_time IS NOT NULL ORDER BY choice_time ASC'));
+    tempT = fetch(db, 'SELECT printf("%f", feedback_time) FROM trials WHERE choice_time IS NOT NULL');
+    Trial.feedback = temp(:,3);
+    %Trial.feedbackTimes = temp(:,2);
+    
+    Trial.feedbackTimes = nan(size(tempT));
+    for iT=1:length(tempT)
+        Trial.feedbackTimes(iT) = str2double(tempT{iT});
+    end
+    Trial.block = temp(:,1);
+    date = datetime(Trial.feedbackTimes,'ConvertFrom','epochtime','TicksPerSecond',1e3,'TimeZone','UTC','Format','dd-MM-yyyy HH:mm:ss.SSS');
+    date.TimeZone = 'America/New_York';
     idx = ones(length(date),1);
     if length(date_range)>1
         idx(date < date_range{1})=0;
         idx(date > date_range{2})=0;
-    elseif length(date_range)==1
+    elseif length(date_range)==1 && ~isempty(date_range{1})
         idx(date~=date_range{1})=0;
     elseif isempty(date_range)
+    end
+    if length(block)>=1
+        idx(block~=Trial.block)=0;
     end
     backup = Trial.feedbackTimes;
     Trial.feedbackTimes(~idx)=[];
@@ -47,7 +57,7 @@ function [Ntotal, Ngood, epoch_data,bad]=EEGanalysis_test(name,path,curD,date_ra
 %     Ngood= size(epoch_data_2,1);
     
 %% load EEG file
-proc_dir = strcat(curD,'/Data_Processed/subject_',name(1:6));
+proc_dir = strcat(curD,'/Data_Processed/subject_',name);
 if exist(proc_dir,'dir')>0
     cd(proc_dir);
 else
@@ -141,16 +151,16 @@ for i=1:4
     caxis([0 1650]);
 end
 
-saveas(F,strcat(name(1:6),'-EEG1.jpg'));
-saveas(F,strcat(name(1:6),'-EEG1.fig'));
+saveas(F,strcat(name,'-EEG1-block-',mat2str(block),'.jpg'));
+saveas(F,strcat(name,'-EEG1-block-',mat2str(block),'.fig'));
 clf;
-F = figure('units','normalized','outerposition',[0 0 1 1]);
+figure('units','normalized','outerposition',[0 0 1 1]); clf;
 for i=1:4
     subplot(4,1,i); pcolor(isnan(epoch_data(:,:,i)));colorbar; shading flat; axis xy;
     caxis([0 1]);
 end
-saveas(F,strcat(name(1:6),'-EEG2.jpg'));
-saveas(F,strcat(name(1:6),'-EEG2.fig'));
+saveas(F,strcat(name,'-EEG2-block-',mat2str(block),'.jpg'));
+saveas(F,strcat(name,'-EEG2-block-',mat2str(block),'.fig'));
 clf;
 
 end   

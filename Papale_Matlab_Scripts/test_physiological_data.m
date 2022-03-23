@@ -1,7 +1,7 @@
 %This script runs a few functions to help you test the quality of your EEG and HR data
 %the path for the raw data is assumed to be: fullfile(pwd,'Data_Raw',['subject_' name])
 
-function [EEG_percen,HR_percen,bad] = test_physiological_data(name,source,date_range)
+function [EEG_percen,HR_percen,bad] = test_physiological_data(name,source,date_range,block,redoHR)
 %delete_duplicates_and_merge_physio(name,'Drive'); %merge all physio to one file
 
 assert(ischar(name),'name must be a string');
@@ -46,7 +46,7 @@ switch source
     case {'SharePoint'}
         subj_dir = '/Users/andypapale/OneDrive - University of Pittsburgh/Documents - Momentum/Momentum_App/data/Subjects';
         if exist(subj_dir,'dir')
-            path = strcat(subj_dir,'/',name(1:6));
+            path = strcat(subj_dir,'/',name);
             cd(path);
             D = dir;
             nD = length(D);
@@ -73,20 +73,22 @@ switch source
                 end
         else
             cd(curD);
-            error('directory %s does not exist',strcat(subj_dir,'/',name(1:6)));
+            error('directory %s does not exist',strcat(subj_dir,'/',name));
         end
     otherwise
         cd(curD);
         error('unknown source %s',source);
 end
 cd(curD);
-[Ntotal, Ngood, ~, bad]=EEGanalysis_test(name,path,curD,date_range); %test EEG data
-[HRoutcome, stats, HR] = getHRperOutcome(name, path,1,curD,date_range);%test HR data
+[Ntotal, Ngood, ~, bad]=EEGanalysis_test(name,path,curD,date_range,block); %test EEG data
+[HRoutcome, stats, HR] = getHRperOutcome(name, path,redoHR,curD,date_range,block);%test HR data
 % calculate the percentage of trials with good data (seperate for EEG and
 % HR). Should be above 70%.
+%bad = NaN;
+EEG_percen=NaN;
 EEG_percen=(Ngood/Ntotal)*100;
 HR_percen=NaN;
 HR_percen=((stats.Ntrials-stats.Ntrials_missing-stats.Ntrials_noisy)/stats.Ntrials)*100
 cd(curD);
-close all;
+%close all;
 end

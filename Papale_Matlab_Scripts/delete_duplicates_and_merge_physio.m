@@ -6,7 +6,7 @@ curD = pwd;
 switch source
     case {'Drive'}
     case {'Bierka'}
-        path = strcat(curD,'/Data_Raw/',name(1:6));
+        path = strcat(curD,'/Data_Raw/',name);
         if exist(path,'dir')>0
             cd(path);
             D = dir;
@@ -40,11 +40,11 @@ switch source
     case {'SharePoint'}
         subj_dir = '/Users/andypapale/OneDrive - University of Pittsburgh/Documents - Momentum/Momentum_App/data/Subjects';
         if exist(subj_dir,'dir')
-            path = strcat(subj_dir,'/',name(1:6),'/physio');
+            path = strcat(subj_dir,'/',name,'/physio');
             cd(path);
         else
             cd(curD);
-            error('directory %s does not exist',strcat(subj_dir,'/',name(1:6),'/physio'));
+            error('directory %s does not exist',strcat(subj_dir,'/',name,'/physio'));
         end
     otherwise
         cd(curD);

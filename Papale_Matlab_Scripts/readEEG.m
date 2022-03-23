@@ -2,7 +2,7 @@ function [EEG, sampling_rate,bad] = readEEG(name, refine_sampling_rate,curD)
     if nargin<2 || isempty(refine_sampling_rate); refine_sampling_rate = false; end
     
     cd(curD);
-    proc_dir = strcat(curD,'/Data_Processed/subject_',name(1:6));
+    proc_dir = strcat(curD,'/Data_Processed/subject_',name);
     if exist(proc_dir,'dir')>0
         cd(proc_dir);
     else
@@ -15,12 +15,12 @@ function [EEG, sampling_rate,bad] = readEEG(name, refine_sampling_rate,curD)
     else
         %% read from sqlite database
         
-        D = dir(strcat(name(1:6),'_physio.db'));
+        D = dir(strcat(name,'_physio.db'));
         if ~isempty(D)
             db = sqlite(D(1).name);
         else
             cd(curD);
-            error('could not find %s',strcat(name(1:6),'_physio.db'));
+            error('could not find %s',strcat(name,'_physio.db'));
         end
         DATA = fetch(db, 'SELECT recording_time,EEG1,EEG2,EEG3,EEG4 FROM EEG_muse ORDER BY recording_time ASC');
         db.close();

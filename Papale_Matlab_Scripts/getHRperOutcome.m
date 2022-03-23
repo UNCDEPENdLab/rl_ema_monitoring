@@ -1,4 +1,4 @@
-function [HRoutcome, stats, HR] = getHRperOutcome(name, path,resetFlag,curD,date_range)   
+function [HRoutcome, stats, HR] = getHRperOutcome(name, path,resetFlag,curD,date_range,block)   
     if nargin<2 || isempty(resetFlag); resetFlag = 0; end
 
     %% get HR data
@@ -16,17 +16,28 @@ function [HRoutcome, stats, HR] = getHRperOutcome(name, path,resetFlag,curD,date
         error('No schedule file found in %s',filename);
     end
     
-    temp = cell2mat(fetch(db, 'SELECT feedback_time, feedback FROM trials WHERE choice_time IS NOT NULL ORDER BY choice_time ASC'));
-    Trial.feedback = temp(:,2);
-    Trial.feedbackTimes = temp(:,1);
-    date = datetime(Trial.feedbackTimes,'ConvertFrom','epochtime','TicksPerSecond',1e3,'Format','dd-MMM-yyyy HH:mm:ss.SSS');
+    temp = cell2mat(fetch(db, 'SELECT block, feedback_time, feedback FROM trials WHERE choice_time IS NOT NULL ORDER BY choice_time ASC'));
+    tempT = fetch(db, 'SELECT printf("%f", feedback_time) FROM trials WHERE choice_time IS NOT NULL');
+    Trial.feedback = temp(:,3);
+    %Trial.feedbackTimes = temp(:,2);
+    
+    Trial.feedbackTimes = nan(size(tempT));
+    for iT=1:length(tempT)
+        Trial.feedbackTimes(iT) = str2double(tempT{iT});
+    end
+    Trial.block = temp(:,1);
+    date = datetime(Trial.feedbackTimes,'ConvertFrom','epochtime','TicksPerSecond',1e3,'TimeZone','UTC','Format','dd-MM-yyyy HH:mm:ss.SSS');
+    date.TimeZone = 'America/New_York';
     idx = ones(length(date),1);
     if length(date_range)>1
         idx(date < date_range{1})=0;
         idx(date > date_range{2})=0;
-    elseif length(date_range)==1
+    elseif length(date_range)==1 && ~isempty(date_range{1})
         idx(date~=date_range{1})=0;
     elseif isempty(date_range)
+    end
+    if length(block)>=1
+        idx(block~=Trial.block)=0;
     end
     backup = Trial.feedbackTimes;
     Trial.feedbackTimes(~idx)=[];
@@ -52,9 +63,9 @@ function [HRoutcome, stats, HR] = getHRperOutcome(name, path,resetFlag,curD,date
     
     HR_percen=((stats.Ntrials-stats.Ntrials_missing-stats.Ntrials_noisy)/stats.Ntrials)*100;
     
-    cd(strcat('~/Momentum/Data_Processed/subject_',name(1:6)));
-    F=figure(3);
+    cd(strcat('~/Momentum/Data_Processed/subject_',name));
+    F=figure('visible','off'); clf;
     plot(squeeze(mean(HRoutcome)))
     xlabel(HR_percen,'fontsize',24);
-    saveas(F,strcat(name(1:6),'-HR.jpg'));
+    saveas(F,strcat(name,'-HR-block',mat2str(block),'.jpg'));
 end
