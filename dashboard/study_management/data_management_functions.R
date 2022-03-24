@@ -154,25 +154,26 @@ getPathFromCfg <- function(root_dir, cfg_name='cfg.json', sourced_file=NA, keywo
         # iterate through the keywords given
         for (kword in keywords) {
           # drop the paths that do not contain the keyword
-          f_path <- f_path[,grepl(paste0("*", kword, "*"),names(f_path))]
+          f_path <- f_path[,grepl(paste0("*", kword),names(f_path))] # 2022-03-24 removed "*" after kword
           # break if you have reduced the number of paths to 1
           if (length(f_path) == 1) {
             break
           }
         }
       }
+      message(f_path)
       # if there are exclusion substrings
-      if ((is.na(exclusion) != TRUE) && length(f_path) > 1) {
-        # iterate through the keywords given
-        for (exclude in exclusion) {
-          # drop the paths that do not contain the keyword
-          f_path <- f_path[,!grepl(paste0("*", exclude, "*"),names(f_path))]
-          # break if you have reduced the number of paths to 1
-          if (length(f_path) == 1) {
-            break
-          }
-        }
-      }
+      # if ((is.na(exclusion) != TRUE) && length(f_path) > 1) {
+      #   # iterate through the keywords given
+      #   for (exclude in exclusion) {
+      #     # drop the paths that do not contain the keyword
+      #     f_path <- f_path[,!grepl(paste0("*", exclude, "*"),names(f_path))]
+      #     # break if you have reduced the number of paths to 1
+      #     if (length(f_path) == 1) {
+      #       break
+      #     }
+      #   }
+      # }
       # ensure there is only a string returned
       if ((is.string(f_path) != TRUE) || (is.na(f_path) != FALSE)) {
         print("Error: From the filename given, keywords selected, and exclusion substrings; either no paths or multiple paths were returned.")
