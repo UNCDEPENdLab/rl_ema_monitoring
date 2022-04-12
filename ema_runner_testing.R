@@ -366,7 +366,7 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=FAL
         # create a plots directory for the subject if one does not exist
         dir.create(plots_path, showWarnings = FALSE, recursive=TRUE)
         # try to get the rds file and append it to the list of rds files
-        #source("dashboard_cleanup.R")
+        source("dashboard_cleanup.R")
       })
     }
     build_config(rootDir=root_path) # rebuilds the project's cfg.json
@@ -377,7 +377,8 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=FAL
     for(s in active) {
       try({
         # get the path of the file
-        subject_overall_path <- paste0(getPathFromCfg(root_dir=root, cfg_name='data.json', sourced_file="overall.rds", keywords=s), '/overall.rds')
+        #subject_overall_path <- paste0(getPathFromCfg(root_dir=root, cfg_name='data.json', sourced_file="overall.rds", keywords=s), '/overall.rds')
+        subject_overall_path <- paste0('/Volumes/bierka_root/datamesh/RAW/Momentum_App/data/Subjects/',s,'/reports');
         rds_list <- append(rds_list, subject_overall_path)
       })
     }
@@ -445,7 +446,7 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=FAL
 ### RUN LINES ###
 # Test with this line #
 #warning('Andrew is testing physio 2022-02-09')
-run_ema(save_lite=FALSE, replot=FALSE, render=FALSE, push=FALSE, pull=FALSE, sched=FALSE, physio=FALSE, cleanup_data=TRUE, nthreads = 2, force_proc=TRUE, force_reload=TRUE, log_level=TRACE, sink_file=NULL)
+run_ema(save_lite=FALSE, replot=TRUE, render=TRUE, push=TRUE, pull=FALSE, sched=TRUE, physio=FALSE, cleanup_data=TRUE, nthreads = 2, force_proc=TRUE, force_reload=TRUE, log_level=TRACE, sink_file=NULL)
 # Run this line #
 #run_ema(save_lite=FALSE, replot=TRUE, render=TRUE, push=TRUE, pull=TRUE, sched=TRUE, physio=TRUE, cleanup_data=TRUE, nthreads = 21, force_proc=TRUE, force_reload=TRUE, sink_file='dashboard_run.txt')
 #################

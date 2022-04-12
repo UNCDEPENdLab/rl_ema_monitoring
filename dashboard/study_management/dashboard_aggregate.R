@@ -140,7 +140,14 @@ proc_schedule <- function(schedule_df = NULL,days_limit=35,task_limit=56,force_r
   sp_info_sq <- split(sample_info,sample_info$ID)
   pr_info_sq <- split(performance_info,performance_info$ID)
   sample_info$compliance <- !is.na(sample_info$completed_time)
-  overall_info<-cbind(aggregate(compliance ~ ID,data = sample_info[which(sample_info$scheduled_time <= Sys.Date()),],FUN = mean),do.call(plyr::rbind.fill,lapply(raw_data,`[[`,"subject")))
+  #browser()
+  
+  # 2022-04-11 AndyP code from Michael H, match merge on ID
+  subj_agg <- aggregate(compliance ~ ID,data = sample_info[which(sample_info$scheduled_time <= Sys.Date()),],FUN = mean)
+  raw_agg <- dplyr::bind_rows(lapply(raw_data,'[[',"subject"))
+  raw_agg <- raw_agg %>% mutate(ID = unlist(lapply(raw_data,'[[',"ID")))
+  overall_info <- subj_agg %>% full_join(raw_agg, by="ID")
+  #overall_info<-cbind(aggregate(compliance ~ ID,data = sample_info[which(sample_info$scheduled_time <= Sys.Date()),],FUN = mean),do.call(plyr::rbind.fill,lapply(raw_data,`[[`,"subject")))
   #overall_info$completed_session <- aggregate(session_number ~ ID,data = sample_info[!is.na(sample_info$completed_time),],FUN = max)$session_number
 
   pr_info_subjwise <-  do.call(rbind,lapply(proc_data,`[[`,"performance_overall"))
@@ -278,23 +285,26 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
         return(output)
       }
     }
-    message("Processing schedule file for: ",raw_single$ID)
+    s <- paste0("Processing schedule file for: ", raw_single$ID)
+    message(s)
+    log_info(s)
 
     raw_games <- raw_single$trials
     raw_questionnaires <- raw_single$questionnaires
 
+    log_debug(paste0("Getting the trial data for Subject: ", raw_single$ID))
     ###Part I: Trial
     time_vars <- c("scheduled_time","stim_time","choice_time","feedback_time")
     for (tx in time_vars) {
       raw_single$trials[[tx]] <- ms_to_date(raw_single$trials[[tx]],timezone = tz)
     }
 
-
     trials_df<-calcu_accuracy(trials_1=raw_single$trials,stimuli=raw_single$stimuli)
 
+    log_debug(paste0("Getting the RT for Subject: ", raw_single$ID))
     #get RT
     trials_df$rt <- as.numeric(difftime(trials_df$choice_time,trials_df$stim_time,units = "secs"))
-
+    log_debug(paste0("Getting the info by block for Subject: ", raw_single$ID))
     info_by_block<-lapply(split(trials_df,trials_df$block),function(ix){
       #print(unique(ix$block))
       #Compliance:
@@ -304,7 +314,7 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
       rx$completed_time <- max(ix$feedback_time)
       rx$duration <- difftime(rx$completed_time,rx$start_time,units = "mins")
       rx$delay <- difftime(rx$start_time,rx$scheduled_time,units = "mins")
-
+      log_trace("")
       ##Performance data:
       px <- data.frame(block=unique(ix$block),
                        date=max(as.Date(ix$feedback_time)),
@@ -320,8 +330,15 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
 
       return(list(compliance=rx,performance=px))
     })
+    log_debug(paste0("Getting the RT for Subject: ", raw_single$ID))
+    log_debug(paste0("Getting the compliance by block for Subject: ", raw_single$ID))
     tr_info_by_block <- do.call(rbind,lapply(info_by_block,`[[`,"compliance"))
+    log_debug(paste0("Finished getting the compliance by block for Subject: ", raw_single$ID))
+    log_debug(paste0("Getting the performance by block for Subject: ", raw_single$ID))
     pr_info_by_block <- do.call(rbind,lapply(info_by_block,`[[`,"performance"))
+    log_debug(paste0("Finished getting the compliance by block for Subject: ", raw_single$ID))
+    
+    log_debug(paste0("Processing the compliance for Subject: ", raw_single$ID))
     #Process compliance
     trial_info_df<-merge(raw_single$sessions,tr_info_by_block,by = "block",all = T)
     trial_info_df<-trial_info_df[,-grep("_ms",names(trial_info_df))]
@@ -361,7 +378,7 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
                               #percentage_last_ten=percentage_last_ten,
                               #mean_RT_low_performance=mean_RT_low_performance,
                               #mean_side_bias_low_performance=mean_side_bias_low_performance,
-
+    log_debug(paste0("Processing the questionnaires for Subject: ", raw_single$ID))
     ##Part II: questionnaires:
     time_vars <- c("scheduled_time","start_time","completed_time")
     for (tx in time_vars) {
@@ -379,7 +396,7 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
       }
     },USE.NAMES = F)
 
-
+    log_debug(paste0("Assigning the sessions for Subject: ", raw_single$ID))
     ##Part 0: Session Assignment:
     #### Session information data frame ####
     session_info_df <- raw_single$questionnaires
@@ -437,6 +454,7 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
     # })))
     #######DEPRECATED############
 
+    log_debug(paste0("Getting the game data for Subject: ", raw_single$ID))
     #######Get info_df###########
     # get the game data
     games <- raw_games %>%
@@ -472,7 +490,8 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
 
     # get the start date, NOTE: this is actually the day before to ensure accessing all element, decremented by 1 later
     start_date <- games_by_block %>% filter(block == 0) %>% '$'(scheduled_time) %>% '-'(lubridate::days())
-
+    
+    log_debug(paste0("Parsing the questionnaires for Subject: ", raw_single$ID))
     # get the questionnaire data
     questionnaires_by_session <- raw_questionnaires %>%
       as_tibble() %>%
@@ -498,7 +517,8 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
     } else { # If currently active, then dashboard time, which will already be set at start of run.
       drop_after <<- dashboard_start_time
     }
-
+    
+    log_debug(paste0("Getting the games by block for Subject: ", raw_single$ID))
     # filter out any contents after the drop date from the games and questionnaires
     questionnaires_by_session <- questionnaires_by_session %>% filter(scheduled_time < drop_after)
     games_by_block <- games_by_block %>% filter(scheduled_time < drop_after)
@@ -510,10 +530,12 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
     # add a block column to the questionnaire (just set all to -1...blocks are useful to keep for eeg data)
     #questionnaires_by_session <- questionnaires_by_session%>% mutate(block = -1)
 
+    log_debug(paste0("Getting the games by session for Subject: ", raw_single$ID))
     # squish the games to have AM and PM be a single item
     games_by_session <- games_by_block %>% group_split(type,days)
     games_by_session <- do.call(rbind, lapply(games_by_session, get_game_session))
 
+    log_debug(paste0("Getting the games by block for Subject: ", raw_single$ID))
     # get the info df (merge of games_by_session and questionnaires_by_session), concert this back to a base dataframe to match J's
     merge_items <- c('start_time', 'scheduled_time', 'completed_time', 'ID', 'days', 'weekday', 'meridiem', 'duration', 'delay', 'missing', 'completed', 'type') # , 'block'
     games_merge_object <- games_by_session %>% select(merge_items)
@@ -934,6 +956,7 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
           }
         }
       )
+      
       # add did_not_sleep
       fdata_sp$`Sleep Diary`$did_not_sleep <- is.na(fdata_sp$`Sleep Diary`$questionnaire_type)
       # convert the sleep diary into a dataframe (will convert to tibble just fine, but will not convert directly to a dataframe)
@@ -980,8 +1003,8 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
 
     form_proc <- create_form_proc(fdata_sp, raw_single$ID)
 
-    log_info("Base data cleaning finished...")
-
+    log_info(paste0("Base data cleaning finished"))
+    
     ##summary stats for how much they answered
     q_sum <- data.frame(ID = raw_single$ID,val_arr_dis_avg = mean(form_proc$`Mood Questionnaire`$v_a_distance,na.rm = T))
     e_sum <- data.frame(as.list(apply(form_proc$`Mood Questionnaire`[c("Anxious","Elated","Sad","Irritable","Energetic")],2,function(x){mean(as.numeric(x),na.rm = T)})))

@@ -2,6 +2,7 @@ Overall_Compliance <- round(0, digits= 3) # output$sample_info_df$compliance
 #print(output$sample_info_df$compliance)
 current_date <- Sys.Date()
 
+
 #Games % Stats
 Avg_Objective_Percent_Correct_No_Feedback <- output$proc_data[[subj]]$performance_overall$abs_accurate_nofeed
 Avg_Objective_Percent_Correct_No_Feedback <- round(Avg_Objective_Percent_Correct_No_Feedback, digits = 3)
@@ -34,6 +35,9 @@ HR_Average <- hr_gen*100 #[match(subj, hr_gen[[subj]])]*100
 HR_Average <- round(HR_Average, digits = 3)
 qxn <- output$proc_data[[subj]]$form_summary
 #print(qxn)
+
+
+
 ID_Overview = data.frame(
   subj,
 
@@ -77,3 +81,4 @@ Individual_Overview <- filter(ID_Overview, ID==subj) #change for copying for oth
 #Individual_Overview<- head(Individual_Overview,1) #remove once REDCap is figured out
 
 saveRDS(ID_Overview, paste0(dataPath, "/Subjects/", subj, "/reports/overall.rds"))
+
