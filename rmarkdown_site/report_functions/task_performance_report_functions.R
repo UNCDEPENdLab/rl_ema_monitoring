@@ -8,7 +8,7 @@ render_task_performance_table <- function(task_performance_data, field=NULL) {
   #select fields to display
   to_render <- task_performance_data[[field]] %>%
     dplyr::select(Date, Block, abs_accurate_feed, relative_accuracy_feed, abs_accurate_nofeed, 
-                  relative_accuracy_nofeed, mean_rt, IDe_bias, intox, c_earn, d_earn)
+                  relative_accuracy_nofeed, mean_rt, IDe_bias, intox) #, c_earn, d_earn)
   
   
   #formatter for feedback columns
@@ -80,9 +80,10 @@ render_task_performance_table <- function(task_performance_data, field=NULL) {
         } else {
           list(background = dds$task_performance$intoxicated$yes$background, color=dds$task_performance$intoxicated$yes$text)
         }
-      }),
-      c_earn=colDef(name="Cumulative earnings", format = colFormat(currency = "USD")), #format $
-      d_earn=colDef(name="Daily earnings", format = colFormat(currency = "USD")) #format $
+      })
+      #,
+      #c_earn=colDef(name="Cumulative earnings", format = colFormat(currency = "USD")), #format $
+      #d_earn=colDef(name="Daily earnings", format = colFormat(currency = "USD")) #format $
     )
   )
   

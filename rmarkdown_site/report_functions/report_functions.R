@@ -40,6 +40,10 @@ get_cleaned_data <- function(id, data_dir, what, quiet=FALSE) {
     summaries_file <- dashboard_file_check(id, data_dir, "mood_summaries.rds", "mood diary summaries", signal=ifelse(isTRUE(quiet), "none", "warning")) #should exist
   } else if (what == "overview") {
     main_file <- dashboard_file_check(id, data_dir, "overall.rds", "subject overview", signal=ifelse(isTRUE(quiet), "none", "error"))
+  } else if (what == "completion") {
+    main_file <- dashboard_file_check(id, data_dir, "completeness.rds", "completion")
+  } else if (what == "payment") {
+    main_file <- dashboard_file_check(id, data_dir, "payment.rds", "payment")
   } else {
     stop("Unclear what to load")
   }

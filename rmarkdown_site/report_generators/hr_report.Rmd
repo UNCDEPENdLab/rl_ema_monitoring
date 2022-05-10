@@ -8,10 +8,12 @@ hr_data <- get_hr_data(id, data_dir)
 render_hr_table(hr_data, "all")
 ```
 
+<!--
 ## Unchecked
 ```{r hr-unchecked-table, echo=FALSE, warning=FALSE, results="asis"}
 render_hr_table(hr_data, "unchecked")
 ```
+-->
 
 ## Overall graph
 ```{r ecg-overall-graph, echo=FALSE, warning=FALSE, results="asis"}

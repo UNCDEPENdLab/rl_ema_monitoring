@@ -8,7 +8,9 @@ sleep_data <- get_sleep_data(id, data_dir)
 render_sleep_table(sleep_data, "all")
 ```
 
+<!--
 ## Unchecked
 ```{r sleep-diary-unchecked-table, echo=FALSE, warning=FALSE, results="asis"}
 render_sleep_table(sleep_data, "unchecked")
 ```
+-->

@@ -10,9 +10,9 @@ try({
     geom_point(aes(shape = feedback), size=2)+
     geom_hline(yintercept=overall_with_feedback_mean, linetype="dashed", color = "cyan4")+
     geom_hline(yintercept=overall_no_feedback_mean, linetype="dashed", color = "firebrick2")+
-    ylab("% correct choice")+
+    ylab("percent correct choice")+
     ggtitle("Accuracy according to designated probabilities") +
-    labs(subtitle=sprintf("Subject ID: %s", subj)) +
+    labs(subtitle=paste0("Subject ID:",subj)) +
     theme(plot.title = element_text(hjust = 0.5))+
     scale_x_continuous(breaks = seq(0, max(objective_accuracy_by_block$block),by = 1))+
     geom_text(aes(0,overall_with_feedback_mean,label =round(overall_with_feedback_mean, digits = 1), vjust = -0.4), size = 2.8, color="cyan4") +
@@ -20,5 +20,5 @@ try({
     
   png(paste0(plots_path, "/", fig_name), res=300, width=9, height=5, units="in")
   print(acc_from_des_prob_graph)
-  dev.off()
 })
+dev.off()

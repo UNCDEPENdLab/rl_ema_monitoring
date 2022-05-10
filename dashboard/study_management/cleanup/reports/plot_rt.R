@@ -13,7 +13,8 @@ try({
     ggtitle("Reaction time by block and feedback type") +
     labs(subtitle=sprintf("Subject ID: %s", subj)) +
     theme(plot.title = element_text(hjust = 0.5))+
-    scale_x_continuous(breaks = seq(0, max(RT_by_block$block),by = 1))
+    scale_x_discrete(guide = guide_axis(check.overlap = TRUE))
+    #scale_x_continuous(breaks = seq(0, max(RT_by_block$block),by = 1))
   if (exists("blocks_with_poor_performance") && !is.na(blocks_with_poor_performance)) {
     rt_graph <- rt_graph + geom_point(data=blocks_with_poor_performance, aes(x=poor_blocks, y=1400), color="darkorchid1", size=2.2, inherit.aes = F)
   }

@@ -8,11 +8,13 @@ task_performance_data <- get_task_performance_data(id, data_dir)
 render_task_performance_table(task_performance_data, "all")
 ```
 
+<!--
 ## Unchecked
 ```{r task-performance-unchecked-table, echo=FALSE, warning=FALSE, results="asis"}
 #task performance table
 render_task_performance_table(task_performance_data, "unchecked")
 ```
+-->
 
 ## Accuracy by block
 ```{r task-exp, echo=FALSE, warning=FALSE, results="asis", fig.width = 9, fig.height = 2.5, dpi=300, fig.retina=1}

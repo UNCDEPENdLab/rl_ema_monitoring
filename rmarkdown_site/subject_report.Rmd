@@ -78,8 +78,15 @@ render_child("report_generators/overview_report.Rmd", "Subject overview")
 render_child("report_generators/task_compliance_report_long.Rmd", "Task compliance (long)")
 ```
 
+<!--
 ```{r compliance-report, echo=FALSE, results='asis', eval=TRUE}
 render_child("report_generators/task_compliance_report.Rmd", "Task compliance")
+```
+-->
+
+# Task performance {.tabset}
+```{r task-performance-report, echo=FALSE, results='asis'}
+render_child("report_generators/task_performance_report.Rmd", "Task performance")
 ```
 
 # EEG signal quality {.tabset}
@@ -87,22 +94,17 @@ render_child("report_generators/task_compliance_report.Rmd", "Task compliance")
 render_child("report_generators/eeg_report.Rmd", "EEG signal quality")
 ```
 
-# Sleep diary {.tabset}
-```{r sleep-report, echo=FALSE, results='asis'}
-render_child("report_generators/sleep_report.Rmd", "Sleep diary")
-```
-
 # Heart rate {.tabset}
 ```{r hr-report, echo=FALSE, results='asis'}
 render_child("report_generators/hr_report.Rmd", "Heart rate")
 ```
 
-# Task performance {.tabset}
-```{r task-performance-report, echo=FALSE, results='asis'}
-render_child("report_generators/task_performance_report.Rmd", "Task performance")
-```
-
 # Mood questionnaire {.tabset}
 ```{r mood-report, echo=FALSE, results='asis'}
 render_child("report_generators/mood_report.Rmd", "Mood")
+```
+
+# Sleep diary {.tabset}
+```{r sleep-report, echo=FALSE, results='asis'}
+render_child("report_generators/sleep_report.Rmd", "Sleep diary")
 ```

@@ -104,6 +104,7 @@
 # import dependent packages
 library("pacman")
 library("anytime")
+library("ggplot2")
 pacman::p_load(reticulate, RSQLite, dplyr, tidyr, lubridate, rjson, R.utils, REDCapR, zoo, anytime, logger)
 
 setwd("dashboard/study_management")
@@ -171,6 +172,13 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=FAL
   {
     sink(file=paste0(logOutput, '/', time_stamp, '/', sink_file))
   }
+  
+  # required to convert plotly html to png
+  try({
+    if(webshot::is_phantomjs_installed() != FALSE){
+      webshot::install_phantomjs(force = TRUE)
+    }
+  })
   
   # get the start time
   dashboard_start_time <<- lubridate::now()

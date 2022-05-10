@@ -29,6 +29,7 @@ render_subject_reports <- function(data_dir, site_dir, output_dir, rerender_mins
   setwd(site_dir)
   #extant <- get_report_cache(data_dir)$page_summary 
   
+  #slist <- active #<- should be able to use the active global here to not run all subjects
   slist <- get_subject_list(data_dir)
 
   for (ss in seq_len(nrow(slist))) {

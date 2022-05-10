@@ -8,10 +8,12 @@ eeg_data <- get_eeg_data(id, data_dir)
 render_eeg_table(eeg_data, "all")
 ```
 
+<!--
 ## Unchecked
 ```{r eeg-unchecked-table, echo=FALSE, warning=FALSE, results="asis"}
 render_eeg_table(eeg_data, "unchecked")
 ```
+-->
 
 ## Overall graph
 ```{r eeg-overall-graph, echo=FALSE, warning=FALSE, results="asis"}

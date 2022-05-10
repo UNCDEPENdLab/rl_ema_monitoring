@@ -8,11 +8,13 @@ mood_data <- get_mood_data(id, data_dir)
 render_mood_table(mood_data, "all")
 ```
 
+<!--
 ## Unchecked
 ```{r mood-questionnaire-unchecked-table, echo=FALSE, warning=FALSE, results="asis"}
 #mood questionnaire table
 render_mood_table(mood_data, "unchecked")
 ```
+-->
 
 ## Arousal-Energetic plot
 ```{r mood-ae, echo=FALSE, warning=FALSE, results="asis"}

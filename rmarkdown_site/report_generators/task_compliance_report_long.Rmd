@@ -1,6 +1,10 @@
 ```{r task-compliance-data-long, echo=FALSE, warning=FALSE, message=FALSE, results="asis"}
 source("../report_functions/task_compliance_report_functions_long.R")
+source("../report_functions/task_completion_report_functions.R")
+source("../report_functions/payment_functions.R")
 task_compliance_data <- get_task_compliance_data_long(id, data_dir)
+task_completion_data <- get_task_completion_data(id, data_dir)
+payment_data <- get_payment_data(id, data_dir)
 ```
 
 ## All blocks
@@ -9,9 +13,31 @@ task_compliance_data <- get_task_compliance_data_long(id, data_dir)
 render_task_compliance_table_long(task_compliance_data, "all") 
 ```
 
+## Games Delay
+```{r games-delay-graph, echo=FALSE, warning=FALSE, results="asis"}
+include_subject_figure("game_delay_plot.png", "Games Delay")
+```
+
+## Completion Table
+```{r task-compliance-all-table, echo=FALSE, warning=FALSE, message=FALSE, results="asis"}
+render_task_completion_table(task_completion_data) 
+```
+
+## Completion Graph
+```{r task-completion-graph, echo=FALSE, warning=FALSE, results="asis"}
+include_subject_figure("completeness_plot.png", "Daily Completion Summary")
+```
+
+## Payment
+```{r payment-table, echo=FALSE, warning=FALSE, message=FALSE, results="asis"}
+render_payment_table(payment_data) 
+```
+
+<!--
 ## Unchecked
 
 ```{r task-compliance-unchecked-table-long, echo=FALSE, warning=FALSE, message=FALSE, results="asis"}
 #task compliance table
 render_task_compliance_table_long(task_compliance_data, "unchecked")
 ```
+-->

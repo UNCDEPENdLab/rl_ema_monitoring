@@ -22,7 +22,7 @@ render_mood_table <- function(mood_data, field=NULL) {
         columns=list(
           category = colDef(name="Category", width=125),
           description = colDef(name="Description", width=225),
-          time_ago = colDef(name="Min. ago"),
+          time_ago = colDef(name="Hours. ago"),
           Good_Bad = colDef(name="Good-Bad"),
           Physical_Pleasure_Physical_Pain = colDef(name="Pleasure-Pain"),
           Loved_Lonely = colDef(name="Loved-Lonely"),

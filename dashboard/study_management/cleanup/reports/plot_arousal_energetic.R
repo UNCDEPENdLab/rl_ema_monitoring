@@ -11,5 +11,5 @@ try({
     labs(subtitle=sprintf("Subject ID: %s", subj)) +
   png(paste0(plots_path, "/", fig_name), res=300, width=5, height=5, units="in")
   print(a_vs_e_graph)
-  dev.off()
 })
+dev.off()
