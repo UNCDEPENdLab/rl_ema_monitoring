@@ -1365,7 +1365,7 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
     physio_files <- NULL
     message("Found ",length(physio_files_new), " total physio files for: ",IDx)
     #par_cl <- parallel::makeCluster(spec = thread,type = "FORK")
-    force_recat_physio = FALSE
+    force_recat_physio = TRUE
     if (force_recat_physio){
       message("Loading new physio data for: ",IDx)
       physio_files<-unique(c(physio_files,physio_files_new))
