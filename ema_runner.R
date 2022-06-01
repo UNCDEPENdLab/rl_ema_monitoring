@@ -104,7 +104,7 @@
 # import dependent packages
 library("pacman")
 library("anytime")
-library("ggplot2")
+
 pacman::p_load(reticulate, RSQLite, dplyr, tidyr, lubridate, rjson, R.utils, REDCapR, zoo, anytime, logger)
 
 setwd("dashboard/study_management")
@@ -172,6 +172,15 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=FAL
   {
     sink(file=paste0(logOutput, '/', time_stamp, '/', sink_file))
   }
+  
+  #ensure ggplot is working (uninstall and reinstall to prevent font error)
+  # try({
+  #   options(install.packages.compile.from.source = "always")
+  #   require(devtools)
+  #   remove.packages("ggplot2")
+  #   install.packages("ggplot2", version = "3.3.6", repos = "http://cran.us.r-project.org", type = "both")
+  #   library("ggplot2")
+  # })
   
   # required to convert plotly html to png
   try({

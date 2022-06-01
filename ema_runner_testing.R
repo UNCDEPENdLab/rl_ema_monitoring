@@ -104,7 +104,7 @@
 # import dependent packages
 library("pacman")
 library("anytime")
-library("ggplot2")
+#library("ggplot2")
 pacman::p_load(reticulate, RSQLite, dplyr, tidyr, lubridate, rjson, R.utils, REDCapR, zoo, anytime, logger)
 
 setwd("dashboard/study_management")
@@ -126,6 +126,17 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=FAL
   #if(is.null(root) != TRUE) {
   #  setwd(root)
   #}
+  
+  # #ensure ggplot is working (uninstall and reinstall to prevent font error)
+  # try({
+  #   options(install.packages.compile.from.source = "always")
+  #   require(devtools)
+  #   remove.packages("ggplot2")
+  # 
+  #   install.packages("ggplot2", version = "3.3.6", repos = "http://cran.us.r-project.org", type = "both")
+  #   library("ggplot2")
+  # })
+  
   
   # Currently overrides the data directory to known test machine path
   #dataPath <- "/Users/shanebuckley/desktop/rl_ema_monitoring/data"
@@ -172,7 +183,6 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=FAL
   {
     sink(file=paste0(logOutput, '/', time_stamp, '/', sink_file))
   }
-  
   # get the start time
   dashboard_start_time <<- lubridate::now()
   print("Last run started at:")
@@ -447,7 +457,7 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=FAL
 ### RUN LINES ###
 # Test with this line #
 #warning('Andrew is testing physio 2022-02-09')
-run_ema(save_lite=FALSE, replot=FALSE, render=TRUE, push=TRUE, pull=FALSE, sched=FALSE, physio=FALSE, cleanup_data=TRUE, nthreads = 2, force_proc=TRUE, force_reload=TRUE, log_level=TRACE, sink_file=NULL)
+run_ema(save_lite=FALSE, replot=TRUE, render=TRUE, push=TRUE, pull=FALSE, sched=TRUE, physio=FALSE, cleanup_data=FALSE, nthreads = 2, force_proc=TRUE, force_reload=TRUE, log_level=TRACE, sink_file=NULL)
 # Run this line #
 #run_ema(save_lite=FALSE, replot=TRUE, render=TRUE, push=TRUE, pull=TRUE, sched=TRUE, physio=TRUE, cleanup_data=TRUE, nthreads = 21, force_proc=TRUE, force_reload=TRUE, sink_file='dashboard_run.txt')
 #################

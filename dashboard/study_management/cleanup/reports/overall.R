@@ -36,7 +36,17 @@ HR_Average <- round(HR_Average, digits = 3)
 qxn <- output$proc_data[[subj]]$form_summary
 #print(qxn)
 
+rc_initials <- tryCatch(
+  {redcap_data %>% filter(record_id == subj) %>% select(initials) %>% '[['(1)},
+  error = function(e){
+    return("NOT FOUND")
+  })
 
+rc_sesrepDate <- tryCatch(
+  {redcap_data %>% filter(record_id == subj) %>% select(sesrep_date) %>% '[['(1)},
+  error = function(e){
+    return(-1)
+  })
 
 ID_Overview = data.frame(
   subj,
@@ -45,8 +55,8 @@ ID_Overview = data.frame(
   output[["proc_data"]][[subj]][["group"]],
   output[["proc_data"]][[subj]][["task_completeness"]][["ema_day"]],
   output[["proc_data"]][[subj]][["task_completeness"]][["calendar_day"]],
-  redcap_data %>% filter(record_id == subj) %>% select(initials) %>% '[['(1),
-  redcap_data %>% filter(record_id == subj) %>% select(sesrep_date) %>% '[['(1),
+  rc_initials,
+  rc_sesrepDate,
 
 
   Overall_Compliance,

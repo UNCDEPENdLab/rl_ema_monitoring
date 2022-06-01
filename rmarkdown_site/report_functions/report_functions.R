@@ -209,8 +209,12 @@ include_subject_figure <- function(fname, desc=NULL) {
 get_all_overviews <- function(data_dir, quiet=TRUE) {
   slist <- get_subject_list(data_dir)
   overview_data <- do.call(rbind, lapply(slist$id, function(id) {
-    df <- get_overview_data(id, data_dir, quiet=TRUE)$all
-    return(df)
+    tryCatch({
+      df <- get_overview_data(id, data_dir, quiet=TRUE)$all
+      return(df)
+    }, error = function(e){
+      print(paste0(id, ": ", e))
+    })
   }))
   
   #populate missing subject overviews with NAs

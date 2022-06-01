@@ -4,7 +4,7 @@ library('reticulate')
 library('rjson')
 library('tinsel')
 library('RSQLite')
-library('tidyverse')
+library('tidyr')
 library("dplyr")
 library("yaml")
 
