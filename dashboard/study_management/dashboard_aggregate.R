@@ -75,6 +75,7 @@ load_db <- function(dbpath,table_names=NULL) {
   on_server <- function(dbpath){
     dbdata = dbConnect(SQLite(), dbpath)
     all_table_names <- dbListTables(dbdata)
+    return(dbdata)
   }
 
   copy_to_HD <- function(dbpath){
@@ -83,6 +84,7 @@ load_db <- function(dbpath,table_names=NULL) {
     filename <- length(tempstr[[1]])
     dbpath1 <- paste0('~/Desktop/temp/',tempstr[[1]][filename])
     dbdata = dbConnect(SQLite(), dbpath1)
+    return(dbdata)
   }
   
   dbdata <- tryCatch({
@@ -1048,8 +1050,9 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
 
     # METADATA FETCHING (site, initials, group)
     on_server <- function(cur_sched_file){
-      dbdata = dbConnect(SQLite(), cur_sched_file)
-      all_table_names <- dbListTables(dbdata)
+      data = dbConnect(SQLite(), cur_sched_file)
+      all_table_names <- dbListTables(cur_sched_file)
+      return(data)
     }
     
     copy_to_HD <- function(cur_sched_file){
@@ -1057,7 +1060,8 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
       tempstr <- str_split(cur_sched_file,'/')
       filename <- length(tempstr[[1]])
       dbpath1 <- paste0('~/Desktop/temp/',tempstr[[1]][filename])
-      dbdata = dbConnect(SQLite(), dbpath1)
+      data = dbConnect(SQLite(), dbpath1)
+      return(data)
     }
     
     data <- tryCatch({
@@ -1357,7 +1361,7 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
   # modify physio_df to have physio_df$file_path include the file name
   par_cl <- parallel::makeCluster(spec = thread,type = "FORK")
   exp_out<-parallel::parLapply(par_cl,unique(physio_df$subject_id),function(IDx){
-  #IDx = '540080'  
+  #IDx = '540042'  
   physio_files_new <- physio_df$file_path[physio_df$subject_id==IDx]
     physio_rawcache_file <- file.path(unique(dirname(physio_df$file_path[physio_df$subject_id==IDx])),paste(IDx,"_physio_raw.rdata",sep = ""))
     physio_proc_file <- file.path(unique(dirname(physio_df$file_path[physio_df$subject_id==IDx])),paste(IDx,"_physio_proc.rdata",sep = ""))
@@ -1402,6 +1406,7 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
         on_server <- function(sched_file){
           sched_data_for_physio = dbConnect(SQLite(), sched_file)
           all_table_names <- dbListTables(sched_data_for_physio)
+          return(sched_data_for_physio)
         }
         
         copy_to_HD <- function(sched_file){
@@ -1410,6 +1415,7 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
           filename <- length(tempstr[[1]])
           dbpath1 <- paste0('~/Desktop/temp/',tempstr[[1]][filename])
           sched_data_for_physio = dbConnect(SQLite(), dbpath1)
+          return(sched_data_for_physio)
         }
         
         sched_data_for_physio <- tryCatch({
