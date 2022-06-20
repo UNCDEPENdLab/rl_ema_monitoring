@@ -3,6 +3,7 @@
 # create the directory if it doesn't exist
 #dir.create(path=paste0(site, "/static/static/subjects/", subj), showWarnings = FALSE, recursive = TRUE)
 # save the graph as an image file
+
 fig_name = paste0("rt_graph.png")
 try({
   rt_graph <- ggplot(data=RT_by_block, aes(x=block, y=mean, group=feedback, colour=feedback)) +
@@ -13,10 +14,12 @@ try({
     ggtitle("Reaction time by block and feedback type") +
     labs(subtitle=sprintf("Subject ID: %s", subj)) +
     theme(plot.title = element_text(hjust = 0.5))+
-    scale_x_discrete(guide = guide_axis(check.overlap = TRUE))
+    scale_x_continuous(guide = guide_axis(check.overlap = TRUE))
     #scale_x_continuous(breaks = seq(0, max(RT_by_block$block),by = 1))
-  if (exists("blocks_with_poor_performance") && !is.na(blocks_with_poor_performance)) {
-    rt_graph <- rt_graph + geom_point(data=blocks_with_poor_performance, aes(x=poor_blocks, y=1400), color="darkorchid1", size=2.2, inherit.aes = F)
+  if (exists("blocks_with_poor_performance") && !isempty(blocks_with_poor_performance$poor_blocks)){
+    if (!is.na(blocks_with_poor_performance)) {
+      rt_graph <- rt_graph + geom_point(data=blocks_with_poor_performance, aes(x=poor_blocks, y=1400), color="darkorchid1", size=2.2, inherit.aes = F)
+    }
   }
   png(paste0(plots_path, "/", fig_name), res=300, width=9, height=5, units="in")
   print(rt_graph)

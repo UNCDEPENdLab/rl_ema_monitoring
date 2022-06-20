@@ -44,8 +44,11 @@ try({
 })
 
 try({
-  fig_games_by_session <- plotly::plot_ly(x = games_delay_am$days, y = games_delay_am$delay/60000, type = 'bar', name = 'AM Session') %>% 
-    plotly::add_trace(y = games_delay_pm$delay/60000, name = 'PM Session') %>% 
+  # AndyP 2022-06-20 Fixed conversion error in plot sec -> min.  The proper way to do this would be to define games_delay_am in minutes when it is defined, 
+  # e.g. difference <- difftime(timeEnd, timeStart, units='mins')
+  
+  fig_games_by_session <- plotly::plot_ly(x = games_delay_am$days, y = games_delay_am$delay/60, type = 'bar', name = 'AM Session') %>% 
+    plotly::add_trace(y = games_delay_pm$delay/60, name = 'PM Session') %>% 
     plotly::layout(title = "Minutes Late to Scheduled Game Sessions", 
            xaxis = list(title="Game Session Day", tick0=0, dtick=1),          
            yaxis = list(title="Minutes Late"))
