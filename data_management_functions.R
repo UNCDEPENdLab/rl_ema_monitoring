@@ -552,18 +552,20 @@ get_ema_subject_metadata <- function(root_dir=NULL, subject_list=NULL, trigger_r
   }
   print("binding schedule")
   # drops subjects whose data has not yet been collected (set to active -> are about to start ema, but have not started yet)
-  #sched_list <- sched_list[sapply(sched_list, function(x) dim(x)[1]) > 0]
-  iC <- 1;
-  nsched <- length(sched_list)
-  for (iC in 1:nsched){
-    if (dim(sched_list[[iC]])[1]==1){
-      sched_list[[iC]] <- sched_list[[iC]]
-    } else if (dim(sched_list[[iC]])[1]==0){
-      sched_list[[iC]] <- NULL
-    }
-    iC <- iC + 1;
-    nsched <- length(sched_list)
-  }
+  sched_list <- sched_list[sapply(sched_list, function(x) dim(x)[1]) > 0]
+  # iC <- 1;
+  # nsched <- length(sched_list)
+  # for (iC in 1:nsched){
+  #   if (dim(sched_list[[iC]])[1]==1){
+  #     sched_list[[iC]] <- sched_list[[iC]]
+  #   } else if (dim(sched_list[[iC]])[1]==0){
+  #     sched_list[[iC]] <- NULL
+  #   }
+  #   nsched <- length(sched_list)
+  #   if (iC > nsched){
+  #     break;
+  #   }
+  # }
   sched_df <- bind_rows(sched_list)
   # something like
   # subject_id  subject_folder                                                      last_cached   active   cache_failure
@@ -571,18 +573,20 @@ get_ema_subject_metadata <- function(root_dir=NULL, subject_list=NULL, trigger_r
   # 9002        /projects/rl_ema_monitoring/Subjects/9002/schedule/9002_schedule.db    2Feb2021    FALSE           FALSE
   print("binding physio")
   # drops subjects whose data has not yet been collected (set to active -> are about to start ema, but have not started yet)
-  #physio_list <- physio_list[sapply(physio_list, function(x) dim(x)[1]) > 0]
-  iC <- 1;
-  nphysio <- length(physio_list)
-  for (iC in 1:nphysio){
-    if (dim(physio_list[[iC]])[1]==1){
-      physio_list[[iC]] <- physio_list[[iC]]
-    } else if (dim(physio_list[[iC]])[1]==0){
-      physio_list[[iC]] <- NULL
-    }
-    iC = iC + 1;
-    nphysio <- length(physio_list)
-  }
+  physio_list <- physio_list[sapply(physio_list, function(x) dim(x)[1]) > 0]
+  # iC <- 1;
+  # nphysio <- length(physio_list)
+  # for (iC in 1:nphysio){
+  #   if (dim(physio_list[[iC]])[1]==1){
+  #     physio_list[[iC]] <- physio_list[[iC]]
+  #   } else if (dim(physio_list[[iC]])[1]==0){
+  #     physio_list[[iC]] <- NULL
+  #   }
+  #   nphysio <- length(physio_list)
+  #   if (iC > nphysio){
+  #     break;
+  #   }
+  # }
   physio_df <- bind_rows(physio_list)
   #something like (if forget: do we get one file per recording? If so, we'd have multiple rows per sub)
   # subject_id                                        physio_file    last_cached  active
@@ -591,18 +595,20 @@ get_ema_subject_metadata <- function(root_dir=NULL, subject_list=NULL, trigger_r
   #       9002   /abspath/Subjects/9002/physio/somethingphysio.db        2Feb2021   FALSE
   print("binding video")
   # drops subjects whose data has not yet been collected (set to active -> are about to start ema, but have not started yet)
-  #video_list <- video_list[sapply(video_list, function(x) dim(x)[1]) > 0]
-  iC <- 1
-  nvideo <- length(video_list)
-  for (iC in 1:nvideo){
-    if (dim(video_list[[iC]])[1]==1){
-      video_list[[iC]] <- video_list[[i]]
-    } else if (dim(video_list[[iC]])[1]==0){
-      video_list[[iC]] <- NULL
-    }
-    iC <- iC + 1
-    nvideo <- length(video_list)
-  }
+  video_list <- video_list[sapply(video_list, function(x) dim(x)[1]) > 0]
+  # iC <- 1
+  # nvideo <- length(video_list)
+  # for (iC in 1:nvideo){
+  #   if (dim(video_list[[iC]])[1]==1){
+  #     video_list[[iC]] <- video_list[[i]]
+  #   } else if (dim(video_list[[iC]])[1]==0){
+  #     video_list[[iC]] <- NULL
+  #   }
+  #   nvideo <- length(video_list)
+  #   if (iC > nvideo){
+  #     break;
+  #   }
+  # }
   video_df <- bind_rows(video_list)
   #something like
   # subject_id                             video_file     last_cached  active
