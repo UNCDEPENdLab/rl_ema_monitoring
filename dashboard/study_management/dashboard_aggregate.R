@@ -84,6 +84,7 @@ load_db <- function(dbpath,table_names=NULL) {
     filename <- length(tempstr[[1]])
     dbpath1 <- paste0('~/Desktop/temp/',tempstr[[1]][filename])
     dbdata = dbConnect(SQLite(), dbpath1)
+    all_table_names <- dbListTables(dbdata)
     return(dbdata)
   }
   
@@ -107,20 +108,39 @@ load_db <- function(dbpath,table_names=NULL) {
   tables<-lapply(table_names,function(dfName){
     # 2022-02-03 AndyP added conditionals to handle rounding problem 
     # see https://stackoverflow.com/questions/29761938/sqlite-how-to-disable-scientific-notation
+    # 2022-08-25 AndyP now handles corrupt db files by returning NULL
     if (strcmp(dfName,"EEG_muse")){
-      tables <- dbGetQuery(dbdata, paste0('SELECT printf("%f", recording_time), * FROM ', dfName))
+      tables <- tryCatch({
+        tables <- dbGetQuery(dbdata, paste0('SELECT printf("%f", recording_time), * FROM ', dfName))
+      },
+      error = function(e){
+        tables <- list()
+        tables$EEG1 <- NULL
+      })
       if (length(tables$EEG1)>0){
         tables <- tables %>% select(!recording_time) %>% rename(recording_time=`printf(\"%f\", recording_time)`)
         tables$recording_time <- as.double(tables$recording_time)
       }
     } else if (strcmp(dfName,"Polar_heartrate")) {
-      tables <- dbGetQuery(dbdata, paste0('SELECT printf("%f", time_ms), * FROM ', dfName))
+      tables <- tryCatch({
+        tables <- dbGetQuery(dbdata, paste0('SELECT printf("%f", time_ms), * FROM ', dfName))
+      },
+      error = function(e){
+        tables <- list()
+        tables$heartrate = NULL
+      })
       if (length(tables$heartrate)>0){
         tables <- tables %>% select(!time_ms) %>% rename(time_ms=`printf(\"%f\", time_ms)`)
         tables$time_ms <- as.double(tables$time_ms)
       }
     } else {   
-      tables <- dbGetQuery(dbdata, paste0("SELECT * FROM ", dfName))
+      tables <- tryCatch({
+        tables <- dbGetQuery(dbdata, paste0("SELECT * FROM ", dfName))
+      },
+      error = function(e){
+        tables <- list()
+        # Put stuff to get through corrupt schedule file without errors here 2022-08-25 AP
+      })
     }
     return(tables)
   })
@@ -136,6 +156,7 @@ ms_to_date <- function(ms, t0="1970-01-01", timezone=Sys.timezone()) {
 
 proc_schedule <- function(schedule_df = NULL,days_limit=35,task_limit=56,force_reproc=FALSE,tz="EST") {
   #load in data using shane's function
+  
   raw_data <<- lapply(1:nrow(schedule_df),function(i){
     dbpath <- schedule_df$file_path[[i]] # paste0(schedule_df$file_path[[i]], '/', schedule_df$file_name[[i]])
     db_raw <- load_db(dbpath=dbpath,table_names = NULL)
@@ -172,6 +193,7 @@ proc_schedule <- function(schedule_df = NULL,days_limit=35,task_limit=56,force_r
 
   pr_info_subjwise <-  do.call(rbind,lapply(proc_data,`[[`,"performance_overall"))
   q_summary <-  do.call(rbind,lapply(proc_data,`[[`,"form_summary"))
+  
 
   return(list(proc_data=proc_data,newdata_IDs=sapply(proc_data,`[[`,"ID",USE.NAMES = F)[sapply(proc_data,`[[`,"new_data")],
               subj_info = sp_info_sq,sample_info_df=overall_info,
@@ -1179,6 +1201,7 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
       
       log_trace("START: Getting completeness counts.")
       #completeness count contains the raw counts 
+      
       completeness_count <- data.frame(dates = mood_completeness$quest_dates, sleep_count = sleep_completeness$sleep_count, mood_count = mood_completeness$mood_count, rest_count = rest_completeness$rest_count, games_count = games_completeness$games_count, video_count = video_completeness$video_count)
       #covers the first day case, slices off the practice session if past second day
       #on first day, presents practice session completeness instead 
@@ -1359,9 +1382,9 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
     thread=1
   }
   # modify physio_df to have physio_df$file_path include the file name
-  par_cl <- parallel::makeCluster(spec = thread,type = "FORK")
-  exp_out<-parallel::parLapply(par_cl,unique(physio_df$subject_id),function(IDx){
-  #IDx = '540042'  
+  #par_cl <- parallel::makeCluster(spec = thread,type = "FORK")
+  #exp_out<-parallel::parLapply(par_cl,unique(physio_df$subject_id),function(IDx){
+  IDx = '540091'  
   physio_files_new <- physio_df$file_path[physio_df$subject_id==IDx]
     physio_rawcache_file <- file.path(unique(dirname(physio_df$file_path[physio_df$subject_id==IDx])),paste(IDx,"_physio_raw.rdata",sep = ""))
     physio_proc_file <- file.path(unique(dirname(physio_df$file_path[physio_df$subject_id==IDx])),paste(IDx,"_physio_proc.rdata",sep = ""))
@@ -1602,7 +1625,7 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
     } else {
       return(output)
     }
-})
+#})
   parallel::stopCluster(par_cl)
   # if(save_lite) {
   #   nax <- c("fb","summary", "missing", "rawsum")

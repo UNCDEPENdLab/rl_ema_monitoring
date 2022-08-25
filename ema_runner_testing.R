@@ -120,7 +120,7 @@ source("../../rmarkdown_site/report_functions/report_functions.R")
 
 
 # main function to be run
-run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=FALSE, redcap=FALSE, nthreads=4, output=NULL, render=TRUE, force_proc=FALSE, force_reload=TRUE, save_lite=FALSE, cleanup_data=TRUE, replot=FALSE, push=FALSE, log_level=INFO, sink_file=NULL) {
+run_ema <- function(root=NULL, subjects="all", pull=FALSE, sched=TRUE, physio=FALSE, redcap=FALSE, nthreads=4, output=NULL, render=TRUE, force_proc=FALSE, force_reload=TRUE, save_lite=FALSE, cleanup_data=TRUE, replot=FALSE, push=TRUE, log_level=INFO, sink_file=NULL) {
   # SET ROOT
   ## Need to refactor the repo first ##
   #if(is.null(root) != TRUE) {
@@ -309,6 +309,7 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=FAL
     #print(path_info$schedule)
     print("Running schedule calculation/aggregation...")
     # Run schedule
+  
     output <- proc_schedule(schedule_df = path_info$schedule,tz=Sys.timezone(),days_limit=60,force_reproc=force_proc)
     # Run REDCap merging into "output"
     #if(redcap == TRUE) {
@@ -457,7 +458,7 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=FAL
 ### RUN LINES ###
 # Test with this line #
 #warning('Andrew is testing physio 2022-02-09')
-run_ema(save_lite=TRUE, replot=TRUE, render=TRUE, push=TRUE, pull=FALSE, sched=TRUE, physio=TRUE, cleanup_data=TRUE, nthreads = 26, force_proc=TRUE, force_reload=TRUE, log_level=TRACE, sink_file=NULL)
+run_ema(save_lite=TRUE, replot=TRUE, render=FALSE, push=FALSE, pull=FALSE, sched=TRUE, physio=TRUE, cleanup_data=TRUE, nthreads = 1, force_proc=TRUE, force_reload=TRUE, log_level=TRACE, sink_file=NULL)
 # Run this line #
 #run_ema(save_lite=FALSE, replot=TRUE, render=TRUE, push=TRUE, pull=TRUE, sched=TRUE, physio=TRUE, cleanup_data=TRUE, nthreads = 21, force_proc=TRUE, force_reload=TRUE, sink_file='dashboard_run.txt')
 #################
