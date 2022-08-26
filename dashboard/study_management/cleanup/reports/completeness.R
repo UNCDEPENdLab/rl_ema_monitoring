@@ -22,9 +22,11 @@ try({
              yaxis = list(title = "% Complete"))
   #rbokeh::widget2png(completeness_figure, paste0(plots_path, '/', fig_name))
   # plotly is annoying with image export -> first convert to html
-  htmlwidgets::saveWidget(completeness_figure, file = paste0(plots_path, '/', html_name))
+  
+  save_image(completeness_figure,paste0(plots_path,'/', fig_name),engine="kaleido")
+  #htmlwidgets::saveWidget(completeness_figure, file = paste0(plots_path, '/', html_name))
   # convert html to png
-  webshot::webshot(paste0(plots_path, '/', html_name), paste0(plots_path, '/', fig_name))
+  #webshot::webshot(paste0(plots_path, '/', html_name), paste0(plots_path, '/', fig_name))
   #plotly_IMAGE(fig_games_by_session, file = paste0(fig_name), width=5*96, height=5*96) # path, "/", 
   #png(paste0(plots_path, "/", fig_name), res=300, width=5, height=5, units="in")
   #print(fig_games_by_session)

@@ -52,10 +52,11 @@ try({
     plotly::layout(title = "Minutes Late to Scheduled Game Sessions", 
            xaxis = list(title="Game Session Day", tick0=0, dtick=1),          
            yaxis = list(title="Minutes Late"))
+  save_image(fig_games_by_session,paste0(plots_path,'/', fig_name),engine="kaleido")
   # plotly is annoying with image export -> first convert to html
-  htmlwidgets::saveWidget(fig_games_by_session, file = paste0(plots_path, '/', html_name))
+  #htmlwidgets::saveWidget(fig_games_by_session, file = paste0(plots_path, '/', html_name))
   # convert html to png
-  webshot::webshot(paste0(plots_path, '/', html_name), paste0(plots_path, '/', fig_name))
+  #webshot::webshot(paste0(plots_path, '/', html_name), paste0(plots_path, '/', fig_name))
   #plotly_IMAGE(fig_games_by_session, file = paste0(fig_name), width=5*96, height=5*96) # path, "/", 
   #png(paste0(plots_path, "/", fig_name), res=300, width=5, height=5, units="in")
   #print(fig_games_by_session)

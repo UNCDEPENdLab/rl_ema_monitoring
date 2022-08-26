@@ -48,6 +48,13 @@ rc_sesrepDate <- tryCatch(
     return(-1)
   })
 
+if (length(rc_initials)==0){
+  rc_initials <- 'N/A'
+}
+if (length(rc_sesrepDate)==0){
+  rc_sesrepDate <- 'N/A'
+}
+
 ID_Overview = data.frame(
   subj,
 
