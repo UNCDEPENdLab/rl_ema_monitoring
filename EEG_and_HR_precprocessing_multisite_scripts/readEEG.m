@@ -23,7 +23,7 @@ function [EEG, sampling_rate] = readEEG(name, refine_sampling_rate)
         clear DATA
 
         db = sqlite(dbname);
-        DATA = fetch(db, 'SELECT recording_time ISGOOD1,ISGOOD2,ISGOOD3,ISGOOD4 FROM EEG_muse ORDER BY recording_time ASC');
+        DATA = fetch(db, 'SELECT recording_time, ISGOOD1,ISGOOD2,ISGOOD3,ISGOOD4 FROM EEG_muse ORDER BY recording_time ASC');
         db.close();
         EEG.isgood(:,1) = cellfun(@str2double,DATA(:,2)); % 2022-10-05 AndyP: I believe the first index is recording time
         EEG.isgood(:,2) = cellfun(@str2double,DATA(:,3));
