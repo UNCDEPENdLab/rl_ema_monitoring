@@ -43,7 +43,7 @@
         HR.intervals = cellfun(@(x)str2double(x{1}),intervals);
 
         %%  save
-        save(filename, 'HR');
+        save(filename, 'HR','-v7.3'); % 2022-10-05 AndyP: support for data > 2GB
     end
     
     %% find irregular times

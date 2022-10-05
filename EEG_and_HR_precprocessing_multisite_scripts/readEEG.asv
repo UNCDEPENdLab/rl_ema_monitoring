@@ -72,7 +72,7 @@ function [EEG, sampling_rate] = readEEG(name, refine_sampling_rate)
     for channel = 1:4
         indGood = EEG.isgood(:,channel);
         mn = nanmedian(EEG.data(indGood,channel)); %#ok<NANMEDIAN>
-        sd = nanstd(EEG.data(indGood,channel)); %#ok<NANSTD>
+        sd = nanstd(EEG.data(indGood,channel));
         %nogood = EEG.data(:,channel) > mn + 10*sd | EEG.data(:,channel) < mn - 10*sd | EEG.data(:,channel)<=0 |  EEG.data(:,channel)<1650/20  |  EEG.data(:,channel)>19*1650/20;
         nogood_10sd = EEG.data(:,channel)>mn+10*sd | EEG.data(:,channel) < mn-10*sd;
         nogood_neg = EEG.data(:,channel)<=0;

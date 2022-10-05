@@ -127,7 +127,7 @@ classdef Utilities < handle
                     if (~isempty(data)); insert(db, tables{t}, columns(1:end), data); end
                 end
                 newdb.close();
-                delete(fullfile(path, files(f).name));
+                %delete(fullfile(path, files(f).name)); 2022-10-05 AndyP: do not delete raw data
             end
             db.close();
         end 

@@ -16,12 +16,11 @@ function [best_single, best_two_config, best_three_config, EEG_percen_single, EE
     good_one_three_four = intersect(intersect(trials_with_good_one,trials_with_good_four),trials_with_good_three);
     good_two_three_four = intersect(intersect(trials_with_good_three,trials_with_good_two),trials_with_good_four);
     % find maximum of g123, g124, g134, g234, shouldn't we set this = TRUE
-    % and have the default be FALSE? 2022-10-05 AndyP
+    % and have the default be FALSE?
     [max_three, ind_three] = max([length(good_one_two_three), length(good_one_two_four), length(good_one_three_four), length(good_two_three_four)]);
     best_three_config= optional_cofig_three(ind_three);
     EEG_percen_best_three= (max_three/Ntotal)*100;
-    ind_na_best_three = true(Ntotal,1); 
-    % 2022-10-05 AndyP: I think the default should be FALSE and we should conditionally set ind_na_best_three=TRUE based on index of max
+    ind_na_best_three = true(Ntotal,1);
     if ind_three==1
        ind_na_best_three(good_one_two_three)=false;
     elseif ind_three==2

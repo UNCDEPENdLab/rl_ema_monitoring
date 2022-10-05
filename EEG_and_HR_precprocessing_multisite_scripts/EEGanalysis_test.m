@@ -12,6 +12,7 @@ function EEGanalysis_test(name, output_folder)
     
     %% read EEG and remove trials with NaN
     [EEG, sampling_rate] = readEEG(name);
+    EEG.data(EEG.remove~=0)=nan; % 2022-10-05 AndyP: now remove noisy data
     epoch_data = Utilities.epoch(EEG.times, EEG.data, Trial.feedbackTimes, 500, 1500, sampling_rate);
     ind_na_all = any(any(isnan(epoch_data),2),3);
     epoch_data_filtered_all = epoch_data(~ind_na_all,:,:);
