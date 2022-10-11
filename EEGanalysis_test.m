@@ -1,4 +1,4 @@
-function [Ntotal, Ngood, epoch_data]=EEGanalysis_test(name, first_block, last_block)
+function [Ntotal, Ngood, epoch_data]=EEGanalysis_test(output_folder, name, first_block, last_block)
     
     %% read modeled prediction errors
     %DATA = readtable(fullfile(fileparts(fileparts(pwd)),'Data_Processed',['subject_' name],['PE2_Heir_' name '.csv']));    
@@ -8,7 +8,7 @@ function [Ntotal, Ngood, epoch_data]=EEGanalysis_test(name, first_block, last_bl
     %if iscell(Trial.slowPE); ind_na = cellfun(@(x)strcmp(x,'NA'),Trial.slowPE); Trial.slowPE(ind_na) = {NaN}; Trial.slowPE = cellfun(@str2double,Trial.slowPE); end
     
     %% read trial data
-    filename = fullfile(pwd,'Data_Raw',['subject_' name],[name '_schedule.db']);
+    filename = fullfile(output_folder,'Data_Raw',['subject_' name],[name '_schedule.db']);
     db = sqlite(filename);
     
     temp = cell2mat(fetch(db, 'SELECT feedback_time, feedback, block FROM trials WHERE choice_time IS NOT NULL AND stim1>=0 AND stim2>=0 ORDER BY choice_time ASC'));

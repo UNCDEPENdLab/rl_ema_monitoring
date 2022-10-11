@@ -1,12 +1,15 @@
-function [HRoutcome_filtered,HRoutcome_all ,stats, HR, HR_percen] = getHRperOutcome(name, resetFlag, output_folder)   
+function [HRoutcome_filtered,HRoutcome_all ,stats, HR, HR_percen] = getHRperOutcome(output_folder, name, resetFlag)   
     if nargin<4 || isempty(resetFlag); resetFlag = 0; end
 
     %% get HR data
-    HR = readHR(name, resetFlag);
+    HR = readHR(output_folder,name, resetFlag);
     
     %% read trial data
-    filename = fullfile(pwd,'Data_Raw',['subject_' name],[name '_schedule.db']);
-    db = sqlite(filename);   
+    filename = dir(strcat(fullfile(output_folder,'Data_Raw',['subject_' name],'schedule'),'/*schedule.db'));
+    if length(filename) > 1
+        error(sprintf('multiple schedule files found for subject',name,'%s'));
+    end
+    db = sqlite(strcat(filename(1).folder,'/',filename(1).name));
     temp = cell2mat(fetch(db, 'SELECT feedback_time, feedback, block FROM trials WHERE choice_time IS NOT NULL ORDER BY choice_time ASC'));
     Trial.feedback = temp(:,2);
     Trial.feedbackTimes = temp(:,1);
@@ -26,7 +29,7 @@ function [HRoutcome_filtered,HRoutcome_all ,stats, HR, HR_percen] = getHRperOutc
     HRoutcome_filtered = epoch_data(inc,:,:);   
     HR_percen=((stats.Ntrials-stats.Ntrials_missing-stats.Ntrials_noisy)/stats.Ntrials)*100;
     ind_na_HR = ~inc;
-    save(fullfile(output_folder, ['subject_' name] , [name '_HR.mat']), 'HRoutcome_filtered','HRoutcome_all' ,'stats', 'HR', 'HR_percen', 'HR', 'ind_na_HR')
+    save(fullfile(output_folder, 'Data_Processed', ['subject_' name] , [name '_HR.mat']), 'HRoutcome_filtered','HRoutcome_all' ,'stats', 'HR', 'HR_percen', 'HR', 'ind_na_HR')
     %figure
     %plot(squeeze(mean(HRoutcome)))
 end

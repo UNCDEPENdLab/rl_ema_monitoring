@@ -1,13 +1,16 @@
-function [EEG, sampling_rate] = readEEG(name, refine_sampling_rate)   
-    if nargin<2 || isempty(refine_sampling_rate); refine_sampling_rate = false; end
+function [EEG, sampling_rate] = readEEG(output_folder,name, refine_sampling_rate)   
+    if nargin<3 || isempty(refine_sampling_rate); refine_sampling_rate = false; end
 
     filename = fullfile(pwd,'Data_Processed',['subject_' name],[name '_EEG.mat']);
     if exist(filename, 'file') 
         load(filename,'EEG');
     else
         %% read EEG from physio.db
-        dbname = fullfile(pwd,'Data_Raw',['subject_' name],[name '_physio.db']);
-        db = sqlite(dbname);
+        filename = dir(strcat(fullfile(output_folder,'Data_Processed',['subject_' name]),'/*physio.db'));
+        if length(filename) > 1
+            error(sprintf('multiple physio files found for subject',name,'%s'));
+        end
+        db = sqlite(strcat(filename(1).folder,'/',filename(1).name));
         
         DATA = fetch(db, 'SELECT recording_time,EEG1,EEG2,EEG3,EEG4 FROM EEG_muse ORDER BY recording_time ASC');
        
@@ -22,7 +25,7 @@ function [EEG, sampling_rate] = readEEG(name, refine_sampling_rate)
         EEG.data(:,4) =  cellfun(@str2double,DATA(:,5));
         clear DATA
 
-        db = sqlite(dbname);
+        db = sqlite(strcat(filename(1).folder,'/',filename(1).name));
         DATA = fetch(db, 'SELECT recording_time, ISGOOD1,ISGOOD2,ISGOOD3,ISGOOD4 FROM EEG_muse ORDER BY recording_time ASC');
         db.close();
         EEG.isgood(:,1) = cellfun(@str2double,DATA(:,2)); % 2022-10-05 AndyP: I believe the first index is recording time
@@ -83,7 +86,7 @@ function [EEG, sampling_rate] = readEEG(name, refine_sampling_rate)
     end
     
     %%  now save with remove computation and corrected times
-    if ~exist(filename, 'file')
+    if ~exist(strcat(filename(1).folder,'/',filename(1).name),'file')
         save(filename, 'EEG');
     end
        

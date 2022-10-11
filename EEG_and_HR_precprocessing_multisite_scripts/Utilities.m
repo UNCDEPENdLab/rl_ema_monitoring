@@ -98,15 +98,24 @@ classdef Utilities < handle
             db.close();
         end
         
-        function mergeDatabases(path, name, database)
+        function mergeDatabases(output_folder,path, name, database)
             datasbasename = fullfile(path, [name '_' database '.db']);
-            if ~exist(datasbasename, 'file') db = sqlite(datasbasename, 'create');
-            else db = sqlite(datasbasename, 'connect');
+            % 2022-10-11 AndyP, can not open db from path + file name,
+            % need to cd into the directory
+            homedir = cd;
+            cd(path);
+            if ~exist(datasbasename, 'file') 
+                db = sqlite([name '_' database '.db'], 'create');
+            else
+                db = sqlite([name '_' database '.db'], 'connect');
             end
-                
-            files = dir(fullfile(path, [name '_' database '_*.db']));
+            cd(homedir);    
+            files = dir(strcat(output_folder,'/','Data_Raw','/','subject_',name,'/','physio','/','*.db'));
             for f= 1:length(files)
-                newdb = sqlite(fullfile(path, files(f).name), 'connect');
+                homedir = cd;
+                cd(strcat(output_folder,'/','Data_Raw','/','subject_',name,'/','physio','/'));
+                newdb = sqlite(files(f).name, 'connect');
+                cd(homedir);
                 tables = fetch(newdb,'SELECT name FROM sqlite_master WHERE type==''table''');
                 tables(strcmp(tables, 'android_metadata')) = [];
                 
