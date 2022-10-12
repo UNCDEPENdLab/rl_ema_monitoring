@@ -7,6 +7,8 @@
 
 #library(plyr)
 
+library(plotly)
+
 # little helper function to create named list from objects
 name_list <- function(...) {
   vnames <- as.character(match.call())[-1]

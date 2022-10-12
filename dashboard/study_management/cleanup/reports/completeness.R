@@ -23,7 +23,7 @@ try({
   #rbokeh::widget2png(completeness_figure, paste0(plots_path, '/', fig_name))
   # plotly is annoying with image export -> first convert to html
   
-  save_image(completeness_figure,paste0(plots_path,'/', fig_name),engine="kaleido")
+  plotly::save_image(completeness_figure,paste0(plots_path,'/', fig_name),engine="kaleido")
   #htmlwidgets::saveWidget(completeness_figure, file = paste0(plots_path, '/', html_name))
   # convert html to png
   #webshot::webshot(paste0(plots_path, '/', html_name), paste0(plots_path, '/', fig_name))

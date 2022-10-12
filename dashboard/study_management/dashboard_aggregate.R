@@ -84,7 +84,12 @@ load_db <- function(dbpath,table_names=NULL) {
     filename <- length(tempstr[[1]])
     dbpath1 <- paste0('~/Desktop/temp/',tempstr[[1]][filename])
     dbdata = dbConnect(SQLite(), dbpath1)
-    all_table_names <- dbListTables(dbdata)
+    tryCatch({
+      all_table_names <- dbListTables(dbdata)
+    },
+    error = function(e){
+      dbdata <- NULL
+    })
     return(dbdata)
   }
   
@@ -94,7 +99,11 @@ load_db <- function(dbpath,table_names=NULL) {
   error = function(e){
     copy_to_HD(dbpath)
   })
-  all_table_names <- dbListTables(dbdata)
+  all_table_names<- tryCatch({
+    all_table_names <- dbListTables(dbdata)
+  }, error = function(e){
+    all_table_names <- NULL
+  })
   if(is.null(table_names)){
     table_names<-all_table_names
   } else if (any(!table_names %in% all_table_names)) {
@@ -105,49 +114,51 @@ load_db <- function(dbpath,table_names=NULL) {
     message("No tables to pull.")
     return(NULL)
   }
-  tables<-lapply(table_names,function(dfName){
-    # 2022-02-03 AndyP added conditionals to handle rounding problem 
-    # see https://stackoverflow.com/questions/29761938/sqlite-how-to-disable-scientific-notation
-    # 2022-08-25 AndyP now handles corrupt db files by returning NULL
-    if (strcmp(dfName,"EEG_muse")){
-      tables <- tryCatch({
-        tables <- dbGetQuery(dbdata, paste0('SELECT printf("%f", recording_time), * FROM ', dfName))
-      },
-      error = function(e){
-        tables <- list()
-        tables$EEG1 <- NULL
-      })
-      if (length(tables$EEG1)>0){
-        tables <- tables %>% select(!recording_time) %>% rename(recording_time=`printf(\"%f\", recording_time)`)
-        tables$recording_time <- as.double(tables$recording_time)
+  if (!all(is.null(table_names))){
+    tables<-lapply(table_names,function(dfName){
+      # 2022-02-03 AndyP added conditionals to handle rounding problem 
+      # see https://stackoverflow.com/questions/29761938/sqlite-how-to-disable-scientific-notation
+      # 2022-08-25 AndyP now handles corrupt db files by returning NULL
+      if (strcmp(dfName,"EEG_muse")){
+        tables <- tryCatch({
+          tables <- dbGetQuery(dbdata, paste0('SELECT printf("%f", recording_time), * FROM ', dfName))
+        },
+        error = function(e){
+          tables <- list()
+          tables$EEG1 <- NULL
+        })
+        if (length(tables$EEG1)>0){
+          tables <- tables %>% select(!recording_time) %>% rename(recording_time=`printf(\"%f\", recording_time)`)
+          tables$recording_time <- as.double(tables$recording_time)
+        }
+      } else if (strcmp(dfName,"Polar_heartrate")) {
+        tables <- tryCatch({
+          tables <- dbGetQuery(dbdata, paste0('SELECT printf("%f", time_ms), * FROM ', dfName))
+        },
+        error = function(e){
+          tables <- list()
+          tables$heartrate = NULL
+        })
+        if (length(tables$heartrate)>0){
+          tables <- tables %>% select(!time_ms) %>% rename(time_ms=`printf(\"%f\", time_ms)`)
+          tables$time_ms <- as.double(tables$time_ms)
+        }
+      } else {   
+        tables <- tryCatch({
+          tables <- dbGetQuery(dbdata, paste0("SELECT * FROM ", dfName))
+        },
+        error = function(e){
+          tables <- list()
+          # Put stuff to get through corrupt schedule file without errors here 2022-08-25 AP
+        })
       }
-    } else if (strcmp(dfName,"Polar_heartrate")) {
-      tables <- tryCatch({
-        tables <- dbGetQuery(dbdata, paste0('SELECT printf("%f", time_ms), * FROM ', dfName))
-      },
-      error = function(e){
-        tables <- list()
-        tables$heartrate = NULL
-      })
-      if (length(tables$heartrate)>0){
-        tables <- tables %>% select(!time_ms) %>% rename(time_ms=`printf(\"%f\", time_ms)`)
-        tables$time_ms <- as.double(tables$time_ms)
-      }
-    } else {   
-      tables <- tryCatch({
-        tables <- dbGetQuery(dbdata, paste0("SELECT * FROM ", dfName))
-      },
-      error = function(e){
-        tables <- list()
-        # Put stuff to get through corrupt schedule file without errors here 2022-08-25 AP
-      })
-    }
+      return(tables)
+    })
+    names(tables) <- table_names
+    #close connection before return
+    dbDisconnect(dbdata)
     return(tables)
-  })
-  names(tables) <- table_names
-  #close connection before return
-  dbDisconnect(dbdata)
-  return(tables)
+  }
 }
 
 ms_to_date <- function(ms, t0="1970-01-01", timezone=Sys.timezone()) {
@@ -1384,7 +1395,7 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
   # modify physio_df to have physio_df$file_path include the file name
   par_cl <- parallel::makeCluster(spec = thread,type = "FORK")
   exp_out<-parallel::parLapply(par_cl,unique(physio_df$subject_id),function(IDx){
-  #IDx = '540091'  
+  #IDx = '440594'  
   physio_files_new <- physio_df$file_path[physio_df$subject_id==IDx]
     physio_rawcache_file <- file.path(unique(dirname(physio_df$file_path[physio_df$subject_id==IDx])),paste(IDx,"_physio_raw.rdata",sep = ""))
     physio_proc_file <- file.path(unique(dirname(physio_df$file_path[physio_df$subject_id==IDx])),paste(IDx,"_physio_proc.rdata",sep = ""))

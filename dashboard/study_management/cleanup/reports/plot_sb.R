@@ -16,9 +16,9 @@ try({
     scale_x_continuous(guide = guide_axis(check.overlap = TRUE))
     #scale_x_continuous(breaks = seq(0, max(side_bias_by_block$block),by = 1))
   if (exists("blocks_with_poor_performance")){
-    if (length(blocks_with_poor_performance==1)){
-      if (!is.na(blocks_with_poor_performance)) {
-        if (!isempty(blocks_with_poor_performance$poor_blocks)){
+    if (length(blocks_with_poor_performance)==1){
+      if (!isempty(blocks_with_poor_performance$poor_blocks)) {
+        if (!any(is.na(blocks_with_poor_performance$poor_blocks))){
           sb_graph=sb_graph+geom_point(data=blocks_with_poor_performance, aes(x=poor_blocks, y=0.5), color="darkorchid1", size=2.2)
         }
       }
