@@ -1084,7 +1084,7 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
     # METADATA FETCHING (site, initials, group)
     on_server <- function(cur_sched_file){
       data = dbConnect(SQLite(), cur_sched_file)
-      all_table_names <- dbListTables(cur_sched_file)
+      all_table_names <- dbListTables(data)
       return(data)
     }
     
