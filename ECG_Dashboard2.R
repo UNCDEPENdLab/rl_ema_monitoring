@@ -190,7 +190,7 @@ load_ECG <- function(ECGd = NULL, HRstep = 10, sample_rate = 100) { # ,fbt,pre=1
     }
   }
 
-  if (length(isplit)>0){
+  if ((length(isplit)>0 & length(todelete) > 0)){ # 2022-10-13 AndyP
     for (i in 1:length(todelete)){
       inds <- isplit[(todelete[i]-1)]:(isplit[todelete[i]]-1) # 2022-03-08 AndyP there is a bug here, there needed to be parentheses around the :(isplit[todelte[i]]-1)
       hrt1 <- hrt1[-c(inds)]
