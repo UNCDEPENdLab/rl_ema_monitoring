@@ -110,19 +110,23 @@ classdef Utilities < handle
                 db = sqlite([name '_' database '.db'], 'connect');
             end
             cd(homedir);    
-            files = dir(strcat(output_folder,'/','Data_Raw','/',name,'/','physio','/','*.db'));
+            files = dir(strcat(output_folder,'/','Data_Raw','/','subject_',name,'/','physio','/','*.db'));
             for f= 1:length(files)
                 homedir = cd;
-                cd(strcat(output_folder,'/','Data_Raw','/',name,'/','physio','/'));
+                cd(strcat(output_folder,'/','Data_Raw','/','subject_',name,'/','physio','/'));
                 newdb = sqlite(files(f).name, 'connect');
                 cd(homedir);
                 tables = fetch(newdb,'SELECT name FROM sqlite_master WHERE type==''table''');
-                tables(strcmp(tables,'android_metadata'))=[];
+                tables = table2cell(tables);
+                tables(strcmp(tables, 'android_metadata')) = [];
                 
                 for t = 1:length(tables)
+                    disp(tables{t})
                     if ~strcmp(tables{t},'android_metadata')
                         fetch_str = sprintf('SELECT sql FROM sqlite_master WHERE tbl_name = ''%s'' AND type = ''table''',tables{t});
                         str = fetch(newdb,fetch_str);
+                        str = table2cell(str);
+                        str{1} = char(str{1});
                         str = regexprep(str, 'CREATE TABLE', 'CREATE TABLE IF NOT EXISTS');
                         db.exec(str{1});
                         columns = regexp(str{1},'\(.*\)', 'match');

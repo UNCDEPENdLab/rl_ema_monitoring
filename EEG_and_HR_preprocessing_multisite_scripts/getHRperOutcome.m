@@ -1,11 +1,13 @@
-function [HRoutcome_filtered,HRoutcome_all ,stats, HR, HR_percen] = getHRperOutcome(output_folder, name, resetFlag)   
-    if nargin<4 || isempty(resetFlag); resetFlag = 0; end
+function [HRoutcome_filtered,HRoutcome_all ,stats, HR, HR_percen] = getHRperOutcome(name)   
+	output_folder = '/bgfs/adombrovski/DNPL_DataMesh/Data/Momentum_EMA';
+	resetFlag = 1;    
+	%if nargin<4 || isempty(resetFlag); resetFlag = 0; end
 
     %% get HR data
     HR = readHR(output_folder,name, resetFlag);
     
     %% read trial data
-    filename = dir(strcat(fullfile(output_folder,'Data_Raw',['subject_' name],'schedule'),'/*schedule.db'));
+    filename = dir(strcat(fullfile(output_folder,'Data_Raw',[name],'schedule'),'/*schedule.db'));
     if length(filename) > 1
         error(sprintf('multiple schedule files found for subject',name,'%s'));
     end

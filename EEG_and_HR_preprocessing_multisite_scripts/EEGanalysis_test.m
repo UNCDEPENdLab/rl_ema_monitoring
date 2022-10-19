@@ -1,7 +1,8 @@
-function EEGanalysis_test(output_folder,name)
-          
+function EEGanalysis_test(name)
+    
+	output_folder = '/bgfs/adombrovski/DNPL_DataMesh/Data/Momentum_EMA';      
     %% read trial data
-    filename = dir(strcat(fullfile(output_folder,'Data_Raw',['subject_' name],'schedule'),'/*schedule.db'));
+    filename = dir(strcat(fullfile(output_folder,'Data_Raw',[name],'schedule'),'/*schedule.db'));
     if length(filename) > 1
         error(sprintf('multiple schedule files found for subject',name,'%s'));
     end

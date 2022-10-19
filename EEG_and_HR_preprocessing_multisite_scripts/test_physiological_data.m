@@ -3,24 +3,24 @@
 %functions are.
 % 2022-10-05 AndyP added site
 clear; clc; close all
-site = 'pitt';
+%site = 'pitt';
 %output folder-the folder where all of the results will be saved.
-if strcmp(site,'jer')
-    output_folder = 'G:\My Drive\Lab\EEG_and_HR_Data\data_after_preprocessing_single';
+%if strcmp(site,'jer')
+%    output_folder = 'G:\My Drive\Lab\EEG_and_HR_Data\data_after_preprocessing_single';
     %read subjects codes from an excel file (each subject code in a seperate row):
-    names = string(xlsread('G:\My Drive\Lab\EEG_and_HR_Data\preprocessing_updated_version\test_single_subject.xlsx')); 
-elseif strcmp(site,'unc')
-    output_folder = '';
-    names = '';
-elseif strcmp(site,'pitt')
-    output_folder = '~/Momentum';
-    names = {'440366'};
+%    names = string(xlsread('G:\My Drive\Lab\EEG_and_HR_Data\preprocessing_updated_version\test_single_subject.xlsx')); 
+%elseif strcmp(site,'unc')
+%    output_folder = '';
+%    names = '';
+%elseif strcmp(site,'pitt')
+%    output_folder = '~/Momentum';
+%    names = {'440366'};
 end
 %loop over all subjects, run preprocessing, and save the relvant EEG and HR data of
 %each subject in the output folder:
-for i = 1:length(names)
+for i = 1:length(name)
     close all;
-    name = names{i} ;
+    %name = name{i} ;
     out_dir = fullfile(output_folder, 'Data_Processed', ['subject_' name]);
     if exist(out_dir,'dir')==0
         mkdir(out_dir) %the mereged physio file will be saved in this folder
