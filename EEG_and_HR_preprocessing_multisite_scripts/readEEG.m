@@ -83,6 +83,7 @@ function [EEG, sampling_rate] = readEEG(output_folder,name, refine_sampling_rate
         EEG.remove(nogood_10sd,channel) = 1;
         EEG.remove(nogood_neg,channel) = 2;
         EEG.remove(nogood_range,channel) = 3;
+        EEG.remove(EEG.isgood(:,channel),channel) = 4;
     end
     
     %%  now save with remove computation and corrected times
