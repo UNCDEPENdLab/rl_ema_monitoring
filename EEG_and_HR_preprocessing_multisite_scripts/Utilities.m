@@ -146,6 +146,40 @@ classdef Utilities < handle
             db.close();
         end 
         
+        function mergeDatabasesHUJI(path, name, database)
+            datasbasename = fullfile(path, [name '_' database '.db']);
+            if ~exist(datasbasename, 'file') db = sqlite(datasbasename, 'create');
+            else db = sqlite(datasbasename, 'connect');
+            end
+                
+            files = dir(fullfile(path, [name '_' database '_*.db']));
+            for f= 1:length(files)
+                newdb = sqlite(fullfile(path, files(f).name), 'connect');
+                tables = fetch(newdb,'SELECT name FROM sqlite_master WHERE type==''table''');
+                tables(strcmp(tables, 'android_metadata')) = [];
+                
+                for t = 1:length(tables)
+                    str = fetch(newdb,['SELECT sql FROM sqlite_master WHERE tbl_name = ''' tables{t} ''' AND type = ''table''']);
+                    str = regexprep(str, 'CREATE TABLE', 'CREATE TABLE IF NOT EXISTS');
+                    db.exec(str{1});
+                    columns = regexp(str{1},'\(.*\)', 'match');
+                    columns = regexp(columns{1},'[a-z_0-9]+', 'match','ignorecase');
+                    columns(cellfun(@(x)strcmp(x,'TEXT'),columns)) = [];
+                    columns(cellfun(@(x)strcmp(x,'INTEGER'),columns)) = [];
+                    columns(cellfun(@(x)strcmp(x,'FLOAT'),columns)) = [];
+                                        
+                    for c=1:length(columns)
+                        newdb.exec(['UPDATE ' tables{t} ' SET ' columns{c} '=-1 WHERE ' columns{c} ' IS NULL']); 
+                    end
+                    data = fetch(newdb, ['SELECT ' strjoin(columns(1:end),',') ' FROM ' tables{t}]);
+                    if (~isempty(data)); insert(db, tables{t}, columns(1:end), data); end
+                end
+                newdb.close();
+                delete(fullfile(path, files(f).name));
+            end
+            db.close();
+        end 
+        
         function edata = epoch(times, data, timings, pre, post, sampling_rate)
             step = 1000/sampling_rate;
             pre = round(pre / step);

@@ -1,8 +1,13 @@
-function EEGanalysis_test(name)
-    
-	output_folder = '/bgfs/adombrovski/DNPL_DataMesh/Data/Momentum_EMA';      
+function EEGanalysis_test(output_folder, name, site)
+    if nargin<2
+        output_folder = '/bgfs/adombrovski/DNPL_DataMesh/Data/Momentum_EMA';      
+    end
     %% read trial data
-    filename = dir(strcat(fullfile(output_folder,'Data_Raw',[name],'schedule'),'/*schedule.db'));
+    if strcmp(site,'HUJI')
+        filename = dir(strcat(fullfile(pwd,'Data_Raw',['subject_' name]),'/*schedule.db'));
+    else
+        filename = dir(strcat(fullfile(output_folder,'Data_Raw',[name],'schedule'),'/*schedule.db'));
+    end
     if length(filename) > 1
         error(sprintf('multiple schedule files found for subject',name,'%s'));
     end
@@ -14,9 +19,9 @@ function EEGanalysis_test(name)
     db.close;
     
     %% read EEG and remove trials with NaN
-    [EEG, sampling_rate] = readEEG(output_folder,name);
-    EEG.data(EEG.remove~=0)=nan; % 2022-10-05 AndyP: now remove noisy data
-    epoch_data = Utilities.epoch(EEG.times, EEG.data, Trial.feedbackTimes, 500, 1500, sampling_rate);
+    [EEG, sampling_rate] = readEEG(output_folder,name, site);
+    EEG.cleandata=EEG.data; EEG.cleandata(EEG.remove~=0)=nan; % 2022-10-05 AndyP: now remove noisy data
+    epoch_data = Utilities.epoch(EEG.times, EEG.cleandata, Trial.feedbackTimes, 500, 1500, sampling_rate);
     ind_na_all = any(any(isnan(epoch_data),2),3);
     epoch_data_filtered_all = epoch_data(~ind_na_all,:,:);
     Ntotal = length(Trial.feedbackTimes);
@@ -32,13 +37,13 @@ function EEGanalysis_test(name)
    
 %% figures before cleaning data: figure 1 all data, figure 2-missing data
 
-    %figure
-%for i=1:4
- %   subplot(4,1,i); imagesc(epoch_data(:,:,i));colorbar;
-%end
-%figure
-%for i=1:4
- %   subplot(4,1,i); imagesc(isnan(epoch_data(:,:,i)));colorbar;        
-%end
+figure
+for i=1:4
+    subplot(4,1,i); imagesc(epoch_data(:,:,i));colorbar;
+end
+figure
+for i=1:4
+    subplot(4,1,i); imagesc(isnan(epoch_data(:,:,i)));colorbar;        
+end
 
 
