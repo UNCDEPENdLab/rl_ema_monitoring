@@ -1,5 +1,5 @@
 function HR = readHR(output_folder,name, site, resetFlag)
-if nargin<3 || isempty(resetFlag); resetFlag = 0; end
+if nargin<4 || isempty(resetFlag); resetFlag = 0; end
 HRstep = 10;
 if strcmp(site,'HUJI') 
     filename = fullfile(output_folder,'Data_Processed',['subject_' name],[name '_HR.mat']);
