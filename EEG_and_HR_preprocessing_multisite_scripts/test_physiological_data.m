@@ -6,7 +6,7 @@ clear; clc; close all
 site = 'HUJI';
 %output folder-the folder where all of the results will be saved.
 if strcmp(site,'HUJI')
-    output_folder = 'G:\My Drive\Lab\EEG_HR_new_scripts\single';
+    output_folder = 'G:\My Drive\Lab\EEG_for_nadav\single';
     %read subjects codes from an excel file (each subject code in a seperate row):
     names = string(xlsread('G:\My Drive\Lab\EEG_HR_new_scripts\single.xlsx')); 
 %elseif strcmp(site,'unc')
@@ -32,7 +32,7 @@ for i = 1:length(names)
     %EEGanalysis_test: this function performs preprocessing for each subject
     %and saves a mat file (a seprate file for each subject) that contains "epoch data" (the signal during each trial in each electrode)
     %;classifications of trials (good/bad signal) across different electrodes configurations and more information we might use in the future.
-    %EEGanalysis_test(output_folder, name, site);
+    EEGanalysis_test(output_folder, name, site);
     %getHRperOutcome outputs: HRoutcome_filtered-HR signal during good trials,
     %HRoutcome_all-HR signal during all trials, stats-summary of good/bad
     %trials, HR_percent-percentage of trials with good signal;HR-more

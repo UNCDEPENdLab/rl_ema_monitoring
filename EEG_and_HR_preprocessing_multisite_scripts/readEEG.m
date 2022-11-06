@@ -67,7 +67,7 @@ function [EEG, sampling_rate] = readEEG(output_folder,name, site, refine_samplin
     [corrected_times, break_indices] = Utilities.correctRealTime(real_recording_time, times, sampling_rate);
     
     % refine sampling rate
-    if refine_sampling_rate
+    if (refine_sampling_rate) && (length(break_indices)>10) 
         [~, longest_breaks] = sort(diff(break_indices));
         for i = 1:10
             start_ind = break_indices(longest_breaks(end+1-i)) + 100;
@@ -101,7 +101,7 @@ function [EEG, sampling_rate] = readEEG(output_folder,name, site, refine_samplin
     %%  now save with remove computation and corrected times
     if strcmp(site,'HUJI')
         if ~exist(fullfile(output_folder,'Data_Processed',['subject_' name],[name '_EEG.mat']), 'file')
-            save(filename, 'EEG');
+            save(fullfile(output_folder, '\Data_Processed', ['subject_' name] , [name '_EEG.mat']), 'EEG');
         end
         else
             if ~exist(strcat(filename(1).folder,'/',filename(1).name),'file')
