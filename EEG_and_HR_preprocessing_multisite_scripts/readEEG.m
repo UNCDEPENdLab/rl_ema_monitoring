@@ -1,16 +1,28 @@
-function [EEG, sampling_rate] = readEEG(output_folder,name, refine_sampling_rate)   
-    if nargin<3 || isempty(refine_sampling_rate); refine_sampling_rate = false; end
-
-    filename = fullfile(pwd,'Data_Processed',['subject_' name],[name '_EEG.mat']);
+function [EEG, sampling_rate] = readEEG(output_folder,name, site, refine_sampling_rate)   
+    if nargin<4 || isempty(refine_sampling_rate); refine_sampling_rate = false; end
+    if strcmp(site,'HUJI')
+        filename = fullfile(output_folder,'Data_Processed',['subject_' name],[name '_EEG.mat']);
+    else
+        filename = fullfile(pwd,'Data_Processed',['subject_' name],[name '_EEG.mat']);
+    end
     if exist(filename, 'file') 
         load(filename,'EEG');
     else
         %% read EEG from physio.db
-        filename = dir(strcat(fullfile(output_folder,'Data_Processed',['subject_' name]),'/*physio.db'));
+        if strcmp(site,'HUJI')
+            filename = dir(strcat(fullfile(pwd,'Data_Raw',['subject_' name]),'/*physio.db'));
+        else
+            filename = dir(strcat(fullfile(output_folder,'Data_Processed',['subject_' name]),'/*physio.db'));
+        end
         if length(filename) > 1
             error(sprintf('multiple physio files found for subject',name,'%s'));
         end
-        db = sqlite(strcat(filename(1).folder,'/',filename(1).name));
+        if strcmp(site,'HUJI')
+            dbname = fullfile(pwd,'Data_Raw',['subject_' name],[name '_physio.db']);
+            db = sqlite(dbname);
+        else
+            db = sqlite(strcat(filename(1).folder,'/',filename(1).name));
+        end
         
         DATA = fetch(db, 'SELECT recording_time,EEG1,EEG2,EEG3,EEG4 FROM EEG_muse ORDER BY recording_time ASC');
        
@@ -55,7 +67,7 @@ function [EEG, sampling_rate] = readEEG(output_folder,name, refine_sampling_rate
     [corrected_times, break_indices] = Utilities.correctRealTime(real_recording_time, times, sampling_rate);
     
     % refine sampling rate
-    if refine_sampling_rate
+    if (refine_sampling_rate) && (length(break_indices)>10) 
         [~, longest_breaks] = sort(diff(break_indices));
         for i = 1:10
             start_ind = break_indices(longest_breaks(end+1-i)) + 100;
@@ -83,12 +95,18 @@ function [EEG, sampling_rate] = readEEG(output_folder,name, refine_sampling_rate
         EEG.remove(nogood_10sd,channel) = 1;
         EEG.remove(nogood_neg,channel) = 2;
         EEG.remove(nogood_range,channel) = 3;
-        EEG.remove(EEG.isgood(:,channel),channel) = 4; % 2022-10-20 AndyP
+        EEG.remove(~EEG.isgood(:,channel),channel) = 4; % 2022-10-20 AndyP
     end
     
     %%  now save with remove computation and corrected times
-    if ~exist(strcat(filename(1).folder,'/',filename(1).name),'file')
-        save(filename, 'EEG');
+    if strcmp(site,'HUJI')
+        if ~exist(fullfile(output_folder,'Data_Processed',['subject_' name],[name '_EEG.mat']), 'file')
+            save(fullfile(output_folder, '\Data_Processed', ['subject_' name] , [name '_EEG.mat']), 'EEG');
+        end
+        else
+            if ~exist(strcat(filename(1).folder,'/',filename(1).name),'file')
+            save(filename, 'EEG');
+            end
     end
        
 end
