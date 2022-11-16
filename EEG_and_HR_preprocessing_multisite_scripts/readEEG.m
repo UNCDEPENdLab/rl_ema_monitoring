@@ -105,7 +105,7 @@ function [EEG, sampling_rate] = readEEG(output_folder,name, site, refine_samplin
         end
         else
             if ~exist(strcat(filename(1).folder,'/',filename(1).name),'file')
-            save(filename, 'EEG');
+            save(filename, 'EEG','-v7.3');
             end
     end
        

@@ -1,7 +1,6 @@
-function EEGanalysis_test(output_folder, name, site)
-    if nargin<2
-        output_folder = '/bgfs/adombrovski/DNPL_DataMesh/Data/Momentum_EMA';      
-    end
+function EEGanalysis_test(name)
+    output_folder = '/bgfs/adombrovski/DNPL_DataMesh/Data/Momentum_EMA';
+	site = 'pitt';      
     %% read trial data
     if strcmp(site,'HUJI')
         filename = dir(strcat(fullfile(pwd,'Data_Raw',['subject_' name]),'/*schedule.db'));
@@ -32,7 +31,7 @@ function EEGanalysis_test(output_folder, name, site)
     [best_single, best_two_config, best_three_config, EEG_percen_single, EEG_percen_best_two, EEG_percen_best_three, ind_na_best_single, ind_na_best_two, ind_na_best_three]=find_optimal_comb(epoch_data, Ntotal);
 
     
-    save(fullfile(output_folder, 'Data_Processed',['subject_' name] ,[name '_EEG.mat']), 'epoch_data', 'EEG_percen_all', 'ind_na_all', 'best_single', 'best_two_config', 'best_three_config', 'EEG_percen_single', 'EEG_percen_best_two', 'EEG_percen_best_three', 'ind_na_best_single', 'ind_na_best_two', 'ind_na_best_three', 'sampling_rate', 'EEG')
+    save(fullfile(output_folder, 'Data_Processed',['subject_' name] ,[name '_EEG.mat']), 'epoch_data', 'EEG_percen_all', 'ind_na_all', 'best_single', 'best_two_config', 'best_three_config', 'EEG_percen_single', 'EEG_percen_best_two', 'EEG_percen_best_three', 'ind_na_best_single', 'ind_na_best_two', 'ind_na_best_three', 'sampling_rate', 'EEG','-v7.3')
       
    
 %% figures before cleaning data: figure 1 all data, figure 2-missing data

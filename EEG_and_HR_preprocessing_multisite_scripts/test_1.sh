@@ -1,6 +1,6 @@
 #!/bin/bash
 
-subj_list=$(ls '/bgfs/adombrovski/DNPL_DataMesh/Data/Momentum_EMA/Data_Raw/')
+subj_list=('440529' '440522' '440366' '440554' '440570' '440571' '440594' '540060' '540068' '540085' '540091')
 echo $subj_list
 for i in ${subj_list[@]}
 do

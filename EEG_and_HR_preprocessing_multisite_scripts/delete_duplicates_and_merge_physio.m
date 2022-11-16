@@ -1,11 +1,9 @@
 % Run this function only once, to prepare a subject's physio files for further processing
 % INPUT: name - character string indicating subejct (e.g., '101')
 % 2022-10-05 AndyP modified
-function delete_duplicates_and_merge_physio(output_folder,name,site)
-    if nargin<3 %if output folder wasn't an output
-       output_folder = '/bgfs/adombrovski/DNPL_DataMesh/Data/Momentum_EMA';
-    end
-    %site = 'pitt';
+function delete_duplicates_and_merge_physio(name)
+    output_folder = '/bgfs/adombrovski/DNPL_DataMesh/Data/Momentum_EMA';
+    site = 'pitt';
     if ~strcmp(site,'HUJI')
 	addpath('/bgfs/adombrovski/lab_resources/rl_ema_monitoring/EEG_and_HR_preprocessing_multisite_scripts');
 	out_dir = fullfile(output_folder,'Data_Processed',['subject_' name]);
