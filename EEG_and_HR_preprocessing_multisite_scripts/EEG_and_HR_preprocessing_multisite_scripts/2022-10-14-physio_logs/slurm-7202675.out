@@ -1,0 +1,13 @@
+540068
+{Error using sqlite/exec
+Received exception upon attempting an operation. Exception: [The database
+540068_physio_20220523182137.db is corrupt. (database disk image is
+malformed)]. Details: [doSql(UPDATE Polar_accelerometer SET time_ms =-1 WHERE
+time_ms IS NULL)].
+
+Error in Utilities.mergeDatabases (line 136)
+                            newdb.exec(exec_str);
+
+Error in delete_duplicates_and_merge_physio (line 24)
+        Utilities.mergeDatabases(output_folder, path, name, 'physio');
+} 
