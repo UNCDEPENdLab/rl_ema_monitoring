@@ -1,0 +1,6 @@
+221518
+Found a total of 3945996 samples out of 3976263
+[Warning: Variable 'EEG' was not saved. For variables larger than 2GB use
+MAT-file version 7.3 or later.] 
+[> In EEGanalysis_test (line 34)] 
+Found a total of 8585598 samples out of 8718819

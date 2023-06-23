@@ -59,7 +59,7 @@ classdef Utilities < handle
             tables = fetch(db,'SELECT name FROM sqlite_master WHERE type==''table''');
             tables(strcmp(tables, 'android_metadata')) = [];
             for t = 1:length(tables)
-                tables{t}
+                
                 fetch(db, ['SELECT count(rowid) FROM ' tables{t}])
                 str = fetch(db,['SELECT sql FROM sqlite_master WHERE tbl_name = ''' tables{t} ''' AND type = ''table''']);
                 str = regexprep(str, 'CREATE TABLE', 'CREATE TABLE IF NOT EXISTS');
@@ -110,12 +110,51 @@ classdef Utilities < handle
                 db = sqlite([name '_' database '.db'], 'connect');
             end
             cd(homedir);    
-            files = dir(strcat(output_folder,'/','Data_Raw','/','subject_',name,'/','physio','/','*.db'));
+            files = dir(strcat(output_folder,'/','Data_Raw','/',name,'/','physio','/','*.db'));
             for f= 1:length(files)
                 homedir = cd;
-                cd(strcat(output_folder,'/','Data_Raw','/','subject_',name,'/','physio','/'));
+                cd(strcat(output_folder,'/','Data_Raw','/',name,'/','physio','/'));
                 newdb = sqlite(files(f).name, 'connect');
                 cd(homedir);
+                tables = fetch(newdb,'SELECT name FROM sqlite_master WHERE type==''table''');
+                tables(strcmp(tables,'android_metadata'))=[];
+                
+                for t = 1:length(tables)
+                    if ~strcmp(tables{t},'android_metadata')
+                        fetch_str = sprintf('SELECT sql FROM sqlite_master WHERE tbl_name = ''%s'' AND type = ''table''',tables{t});
+                        str = fetch(newdb,fetch_str);
+                        str = regexprep(str, 'CREATE TABLE', 'CREATE TABLE IF NOT EXISTS');
+                        db.exec(str{1});
+                        columns = regexp(str{1},'\(.*\)', 'match');
+                        columns = regexp(columns{1},'[a-z_0-9]+', 'match','ignorecase');
+                        columns(cellfun(@(x)strcmp(x,'TEXT'),columns)) = [];
+                        columns(cellfun(@(x)strcmp(x,'INTEGER'),columns)) = [];
+                        columns(cellfun(@(x)strcmp(x,'FLOAT'),columns)) = [];
+
+                        for c=1:length(columns)
+                            exec_str = sprintf('UPDATE %s SET %s =-1 WHERE %s IS NULL',tables{t},columns{c},columns{c});
+                            newdb.exec(exec_str);
+                        end
+                        fetch_str = sprintf('SELECT %s FROM %s',strjoin(columns(1:end),','),tables{t});
+                        data = fetch(newdb, fetch_str);
+                        if (~isempty(data)); insert(db, tables{t}, columns(1:end), data); end
+                    end
+                end
+                newdb.close();
+                %delete(fullfile(path, files(f).name)); 2022-10-05 AndyP: do not delete raw data
+            end
+            db.close();
+        end 
+        
+        function mergeDatabasesHUJI(path, name, database)
+            datasbasename = fullfile(path, [name '_' database '.db']);
+            if ~exist(datasbasename, 'file') db = sqlite(datasbasename, 'create');
+            else db = sqlite(datasbasename, 'connect');
+            end
+                
+            files = dir(fullfile(path, [name '_' database '_*.db']));
+            for f= 1:length(files)
+                newdb = sqlite(fullfile(path, files(f).name), 'connect');
                 tables = fetch(newdb,'SELECT name FROM sqlite_master WHERE type==''table''');
                 tables(strcmp(tables, 'android_metadata')) = [];
                 
@@ -136,7 +175,7 @@ classdef Utilities < handle
                     if (~isempty(data)); insert(db, tables{t}, columns(1:end), data); end
                 end
                 newdb.close();
-                %delete(fullfile(path, files(f).name)); 2022-10-05 AndyP: do not delete raw data
+                delete(fullfile(path, files(f).name));
             end
             db.close();
         end 

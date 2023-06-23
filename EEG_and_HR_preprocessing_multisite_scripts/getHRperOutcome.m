@@ -1,11 +1,18 @@
-function [HRoutcome_filtered,HRoutcome_all ,stats, HR, HR_percen] = getHRperOutcome(output_folder, name, resetFlag)   
-    if nargin<4 || isempty(resetFlag); resetFlag = 0; end
+function [HRoutcome_filtered,HRoutcome_all ,stats, HR, HR_percen] = getHRperOutcome(name)
+    output_folder = '/bgfs/adombrovski/DNPL_DataMesh/Data/Momentum_EMA';
+	site = 'pitt';
+	resetFlag = 1;    
+	%if nargin<4 || isempty(resetFlag); resetFlag = 0; end
 
     %% get HR data
-    HR = readHR(output_folder,name, resetFlag);
+    HR = readHR(output_folder,name, site, resetFlag);
     
     %% read trial data
-    filename = dir(strcat(fullfile(output_folder,'Data_Raw',['subject_' name],'schedule'),'/*schedule.db'));
+    if strcmp(site,'HUJI')
+        filename = dir(strcat(fullfile(pwd,'Data_Raw',['subject_' name]),'/*schedule.db'));
+    else
+        filename = dir(strcat(fullfile(output_folder,'Data_Raw',[name],'schedule'),'/*schedule.db'));
+    end
     if length(filename) > 1
         error(sprintf('multiple schedule files found for subject',name,'%s'));
     end
@@ -29,7 +36,7 @@ function [HRoutcome_filtered,HRoutcome_all ,stats, HR, HR_percen] = getHRperOutc
     HRoutcome_filtered = epoch_data(inc,:,:);   
     HR_percen=((stats.Ntrials-stats.Ntrials_missing-stats.Ntrials_noisy)/stats.Ntrials)*100;
     ind_na_HR = ~inc;
-    save(fullfile(output_folder, 'Data_Processed', ['subject_' name] , [name '_HR.mat']), 'HRoutcome_filtered','HRoutcome_all' ,'stats', 'HR', 'HR_percen', 'HR', 'ind_na_HR')
-    %figure
-    %plot(squeeze(mean(HRoutcome)))
+    save(fullfile(output_folder, 'Data_Processed', ['subject_' name] , [name '_HR.mat']), 'HRoutcome_filtered','HRoutcome_all' ,'stats', 'HR', 'HR_percen', 'ind_na_HR','-v7.3')
+    figure
+    plot(squeeze(mean(HRoutcome_filtered)))
 end

@@ -1,0 +1,10 @@
+540091
+{The logical indices in position 1 contain a true value outside of the array
+bounds.
+
+Error in readEEG (line 89)
+        mn = nanmedian(EEG.data(indGood,channel)); %#ok<NANMEDIAN>
+
+Error in EEGanalysis_test (line 21)
+    [EEG, sampling_rate] = readEEG(output_folder,name, site, 1);
+} 

@@ -1,17 +1,29 @@
-function HR = readHR(output_folder,name, resetFlag)
-if nargin<2 || isempty(resetFlag); resetFlag = 0; end
+function HR = readHR(output_folder,name, site, resetFlag)
+if nargin<4 || isempty(resetFlag); resetFlag = 0; end
 HRstep = 10;
-
-filename = fullfile(pwd,'Data_Processed',['subject_' name],[name '_HR.mat']);
+if strcmp(site,'HUJI') 
+    filename = fullfile(output_folder,'Data_Processed',['subject_' name],[name '_HR.mat']);
+else
+    filename = fullfile(pwd,'Data_Processed',['subject_' name],[name '_HR.mat']);
+end
 if ~resetFlag && exist(filename, 'file')
     load(filename, 'HR');
 else
     %% get times and intervals
-    filename = dir(strcat(fullfile(output_folder,'Data_Processed',['subject_' name]),'/*physio.db'));
+    if strcmp(site,'HUJI')
+        filename = dir(strcat(fullfile(pwd,'Data_Raw',['subject_' name]),'/*physio.db'));
+    else
+        filename = dir(strcat(fullfile(output_folder,'Data_Processed',['subject_' name]),'/*physio.db'));
+    end
     if length(filename) > 1
         error(sprintf('multiple physio files found for subject',name,'%s'));
     end
-    db = sqlite(strcat(filename(1).folder,'/',filename(1).name));
+    if strcmp(site,'HUJI')
+       dbname = fullfile(pwd,'Data_Raw',['subject_' name],[name '_physio.db']);
+       db = sqlite(dbname);
+    else
+       db = sqlite(strcat(filename(1).folder,'/',filename(1).name));
+    end
     try
         DATA = fetch(db, 'SELECT time_ms, rr_intervals, heartrate, contact FROM Polar_heartrate ORDER BY time_ms ASC');
         HR.contact = cellfun(@(x)strcmp(x,'true'),DATA(:,4));
@@ -46,12 +58,19 @@ else
     HR.intervals = cellfun(@(x)str2double(x{1}),intervals);
     
     %%  save
-    if ~exist(strcat(filename(1).folder,'/',filename(1).name),'file')
-        homedir = cd;
-        cd(filename(1).folder)
-        save(filename(1).name, 'HR','-v7.3'); % 2022-10-05 AndyP: support for data > 2GB
-        cd(homedir);
-    end
+    if strcmp(site,'HUJI')
+       if ~exist(strcat(output_folder, '\Data_Processed', ['\subject_', name],'\' ,[name, '_HR.mat']))  
+           save(fullfile(output_folder, '\Data_Processed', ['subject_' name] , [name '_HR.mat']), 'HR', '-v7.3')
+       end
+    else
+        if ~exist(strcat(filename(1).folder,'/',filename(1).name),'file')
+            homedir = cd;
+            cd(filename(1).folder)
+            save(filename(1).name, 'HR','-v7.3'); % 2022-10-05 AndyP: support for data > 2GB
+            cd(homedir);
+        end
+     end
+    %end
 end
 
 %% find irregular times

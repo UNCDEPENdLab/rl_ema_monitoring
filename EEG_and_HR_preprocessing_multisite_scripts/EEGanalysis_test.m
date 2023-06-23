@@ -1,7 +1,12 @@
-function EEGanalysis_test(output_folder,name)
-          
+function EEGanalysis_test(name)
+    output_folder = '/bgfs/adombrovski/DNPL_DataMesh/Data/Momentum_EMA';
+	site = 'pitt';      
     %% read trial data
-    filename = dir(strcat(fullfile(output_folder,'Data_Raw',['subject_' name],'schedule'),'/*schedule.db'));
+    if strcmp(site,'HUJI')
+        filename = dir(strcat(fullfile(pwd,'Data_Raw',['subject_' name]),'/*schedule.db'));
+    else
+        filename = dir(strcat(fullfile(output_folder,'Data_Raw',[name],'schedule'),'/*schedule.db'));
+    end
     if length(filename) > 1
         error(sprintf('multiple schedule files found for subject',name,'%s'));
     end
@@ -13,9 +18,9 @@ function EEGanalysis_test(output_folder,name)
     db.close;
     
     %% read EEG and remove trials with NaN
-    [EEG, sampling_rate] = readEEG(output_folder,name);
-    EEG.data(EEG.remove~=0)=nan; % 2022-10-05 AndyP: now remove noisy data
-    epoch_data = Utilities.epoch(EEG.times, EEG.data, Trial.feedbackTimes, 500, 1500, sampling_rate);
+    [EEG, sampling_rate] = readEEG(output_folder,name, site, 1);
+    EEG.cleandata=EEG.data; EEG.cleandata(EEG.remove~=0)=nan; % 2022-10-05 AndyP: now remove noisy data
+    epoch_data = Utilities.epoch(EEG.times, EEG.cleandata, Trial.feedbackTimes, 500, 1500, sampling_rate);
     ind_na_all = any(any(isnan(epoch_data),2),3);
     epoch_data_filtered_all = epoch_data(~ind_na_all,:,:);
     Ntotal = length(Trial.feedbackTimes);
@@ -26,18 +31,18 @@ function EEGanalysis_test(output_folder,name)
     [best_single, best_two_config, best_three_config, EEG_percen_single, EEG_percen_best_two, EEG_percen_best_three, ind_na_best_single, ind_na_best_two, ind_na_best_three]=find_optimal_comb(epoch_data, Ntotal);
 
     
-    save(fullfile(output_folder, 'Data_Processed',['subject_' name] ,[name '_EEG.mat']), 'epoch_data', 'EEG_percen_all', 'ind_na_all', 'best_single', 'best_two_config', 'best_three_config', 'EEG_percen_single', 'EEG_percen_best_two', 'EEG_percen_best_three', 'ind_na_best_single', 'ind_na_best_two', 'ind_na_best_three', 'sampling_rate', 'EEG')
+    save(fullfile(output_folder, 'Data_Processed',['subject_' name] ,[name '_EEG.mat']), 'epoch_data', 'EEG_percen_all', 'ind_na_all', 'best_single', 'best_two_config', 'best_three_config', 'EEG_percen_single', 'EEG_percen_best_two', 'EEG_percen_best_three', 'ind_na_best_single', 'ind_na_best_two', 'ind_na_best_three', 'sampling_rate', 'EEG','-v7.3')
       
    
 %% figures before cleaning data: figure 1 all data, figure 2-missing data
 
-    %figure
-%for i=1:4
- %   subplot(4,1,i); imagesc(epoch_data(:,:,i));colorbar;
-%end
-%figure
-%for i=1:4
- %   subplot(4,1,i); imagesc(isnan(epoch_data(:,:,i)));colorbar;        
-%end
+figure
+for i=1:4
+    subplot(4,1,i); imagesc(epoch_data(:,:,i));colorbar;
+end
+figure
+for i=1:4
+    subplot(4,1,i); imagesc(isnan(epoch_data(:,:,i)));colorbar;        
+end
 
 
