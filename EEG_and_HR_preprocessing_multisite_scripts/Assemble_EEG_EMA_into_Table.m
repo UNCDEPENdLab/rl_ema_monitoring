@@ -29,8 +29,8 @@ best_two0 = [];
 times0 = [];
 stim10 = [];
 stim20 = [];
-for iS = 1:nS
-    if regexp(subs(iS).name,'subject_\d\d\d\d\d\d')
+for iS = 51:101
+    if ~isempty(regexp(subs(iS).name,'subject_\d\d\d\d\d\d', 'once')) & isempty(regexp(subs(iS).name,'bug', 'once')) %#ok<AND2>
         disp(subs(iS).name);
         cd(subs(iS).name);
         subj_str = strsplit(subs(iS).name,'_');
@@ -44,14 +44,14 @@ for iS = 1:nS
             stimuli = double(cell2mat(fetch(db, 'SELECT number, image,rank FROM stimuli')));
             stimrewpun = cell2mat(fetch(db,'SELECT reward, punishment FROM stimuli'));
             stimuli = cat(2,stimuli,stimrewpun);
-            stim10 = trial_block_outcome_feedback(:,3);
-            stim20 = trial_block_outcome_feedback(:,4);
+            stim1temp = trial_block_outcome_feedback(:,3);
+            stim2temp = trial_block_outcome_feedback(:,4);
             nT = size(trial_block_outcome_feedback,1);
             for iT=1:nT
-                stim1_idx = find(stimuli(:,1)==stim10(iT,1),1,'first');
+                stim1_idx = find(stimuli(:,1)==stim1temp(iT,1),1,'first');
                 stim10 = cat(1,stim10,stimuli(stim1_idx,:));
-                stim2_idx = find(stimuli(:,1)==stim20(iT,1),1,'first');
-                stim20 = cat(1,stim10,stimuli(stim2_idx,:));
+                stim2_idx = find(stimuli(:,1)==stim2temp(iT,1),1,'first');
+                stim20 = cat(1,stim20,stimuli(stim2_idx,:));
             end
             reward_feedback_trials= find(trial_block_outcome_feedback(:,7)==1 & trial_block_outcome_feedback(:,5)==1);
             pun_feedback_trials= find(trial_block_outcome_feedback(:,7)==-1 & trial_block_outcome_feedback(:,5)==1);
@@ -94,3 +94,13 @@ for iS = 1:nS
         cd(data_in);
     end
 end
+
+writetable(table(EEG_data1),'EEG1_batch2.csv');
+writetable(table(EEG_data2),'EEG2_batch2.csv');
+writetable(table(EEG_data3),'EEG3_batch2.csv');
+writetable(table(EEG_data4),'EEG4_batch2.csv');
+writetable(table(times0),'times_batch2.csv');
+writetable(table(trial_data),'trial_data_batch2.csv');
+writetable(table(subj),'subj_batch2.csv');
+misc_stats = cat(2,EEG_percen_all0,EEG_percen_best_three0,EEG_percen_best_two0,rew_fb0, pun_fb0, neu_fb0);
+writetable(table(misc_stats),'misc_stats_batch2.csv');
