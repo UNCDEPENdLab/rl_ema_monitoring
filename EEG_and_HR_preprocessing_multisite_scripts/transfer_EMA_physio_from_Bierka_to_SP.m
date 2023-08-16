@@ -1,8 +1,8 @@
 % 2023-06-21 AndyP
 % copy Momentum EMA files from Bierka to SP, remove raw data
 
-data_in = '/Volumes/bierka_root/datamesh/PROC/MMTM/Momentum_EMA/Data_Processed';
-data_out = '/Users/andypapale/Library/CloudStorage/OneDrive-UniversityofPittsburgh/Documents - Momentum/Momentum_EMA';
+data_in = '/Volumes/bierka_root/datamesh/PROC/MMTM/Momentum_EMA/Data_Processed_bigger_window';
+data_out = '/Users/andypapale/Library/CloudStorage/OneDrive-UniversityofPittsburgh/Documents - Momentum/Momentum_EMA_bigger_window';
 
 cd(data_in);
 subs = dir('*');

@@ -17,7 +17,7 @@ db = sqlite(strcat(filename(1).folder,'/',filename(1).name));
 %outcome, feedback FROM trials WHERE choice==0 OR choice==1')); %
 %2023-06-26 AndyP, this was returning a different number of trials than the
 %epoch_data variable
-trial_block_outcome_feedback = cell2mat(fetch(db, 'SELECT * FROM trials WHERE choice_time IS NOT NULL AND stim1>=0 AND stim2>=0 ORDER BY choice_time ASC'));
+trial_block_outcome_feedback = cell2mat(fetch(db, 'SELECT * FROM trials WHERE choice_time IS NOT NULL AND stim1>=0 AND stim2>=-1000 ORDER BY choice_time ASC'));
 reward_feedback_trials= find(trial_block_outcome_feedback(:,3)==1 & trial_block_outcome_feedback(:,4)==1);
 pun_feedback_trials= find(trial_block_outcome_feedback(:,3)==-1 & trial_block_outcome_feedback(:,4)==1);
 neu_feedback_trials= find(trial_block_outcome_feedback(:,3)==0 & trial_block_outcome_feedback(:,4)==1);
