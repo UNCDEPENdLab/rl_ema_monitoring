@@ -1,0 +1,254 @@
+completed
+440300
+440411
+440420
+440429
+440449
+440464
+440457
+440464
+440499
+440522
+440544
+440643
+440750
+540009
+540010
+
+bash is not picking up on the leading zero, causing it to not find the files
+32765
+61898
+
+redo EEG
+217234
+220256
+221518
+221566
+221604
+221817
+221960
+440004
+440328
+440360
+440366
+440376
+440394
+440452
+440453
+440473
+440484
+440488
+440490
+440500
+440504
+440513
+440518
+440519
+440521
+440525
+440550
+440562
+440565
+440567
+440578
+440585
+440589
+440591
+440611
+440612
+440616
+440618
+440625
+440662
+440664
+440666
+440667
+440668
+440669
+440670
+440676
+440678
+440680
+440683
+440684
+440685
+440692
+440701
+440703
+440706
+440713
+440725
+440729
+440730
+540001
+540012
+
+Error
+221504
+221819
+440088
+440108
+440195
+440197
+440220
+440242
+440278
+440289
+440439
+440441
+440443
+440447
+440448
+440450
+440465
+440472
+440479
+440485
+440494
+440517
+440524
+440532
+440538
+440539
+440554
+440557
+440558
+440570
+440571
+440581
+440594
+440595
+440605
+440609
+440635
+440654
+440712
+440724
+440738
+540005
+{Matrix index is out of range for deletion.
+
+Error in epoch2 (line 19)
+        subsequent_samples_ind(redundant_samples_ind) = [];
+
+Error in EEGanalysis_test (line 26)
+    epoch_data_feedback = epoch2(EEG.times, EEG.data, Trial.feedbackTimes,
+    1500, 1500, sampling_rate);
+} 
+
+Out of Memroy
+221839
+440498
+{Out of memory.
+
+Error in sqlite/fetch
+
+Error in readEEG (line 27)
+        DATA = fetch(db, 'SELECT recording_time,EEG1,EEG2,EEG3,EEG4 FROM
+        EEG_muse ORDER BY recording_time ASC');
+
+Error in EEGanalysis_test (line 24)
+    [EEG, sampling_rate] = readEEG(output_folder,name, site, 1);
+} 
+
+Error
+440168
+440418
+440425
+440510
+440548
+{Index in position 1 exceeds array bounds (must not exceed 468).
+
+Error in EEGanalysis_test (line 35)
+    ind_na_all_feedback =
+    any(any(isnan(epoch_data_feedback_filtered(333:693,:,:)),2),3); %feedback
+    appears at sample 385 and ends at sample 641, so trials with nan in the
+    range of [-0.2, +0.2] from feedback will be considered as noisy
+} 
+
+440427
+[Warning: Iteration limit reached.] 
+[> In statrobustfit (line 80)
+In robustfit (line 114)
+In Utilities.adjustSamplingRate (line 242)
+In readEEG (line 75)
+In EEGanalysis_test (line 24)] 
+{Matrix index is out of range for deletion.
+
+Error in epoch2 (line 19)
+        subsequent_samples_ind(redundant_samples_ind) = [];
+
+Error in EEGanalysis_test (line 26)
+    epoch_data_feedback = epoch2(EEG.times, EEG.data, Trial.feedbackTimes,
+    1500, 1500, sampling_rate);
+} 
+
+440523
+Found a total of 12888198 samples out of 13408788
+Found a total of 12888279 samples out of 13408788
+Found a total of 12888290 samples out of 13408788
+{Error using vertcat
+Dimensions of arrays being concatenated are not consistent.
+
+Error in epoch2 (line 16)
+        all_epoch_ind = vertcat(gap+1,subsequent_epoch_indices);
+
+Error in EEGanalysis_test (line 31)
+    epoch_data_feedback_filtered = epoch2(EEG.cleandata, EEG.data,
+    Trial.feedbackTimes, 1500, 1500, sampling_rate);
+} 
+
+440529
+{Error using sqlite/fetch
+Received exception upon attempting an operation. Exception: [The database
+440529_physio_20220725091704.db is corrupt. (database disk image is
+malformed)]. Details: [SELECT name FROM sqlite_master WHERE type=='table'].
+
+Error in Utilities.mergeDatabases (line 119)
+                tables = fetch(newdb,'SELECT name FROM sqlite_master WHERE
+                type==''table''');
+
+Error in delete_duplicates_and_merge_physio (line 24)
+        Utilities.mergeDatabases(output_folder, path, name, 'physio');
+} 
+
+440663
+{Error using sqlite/fetch
+Received exception upon attempting an operation. Exception: [The database
+440663_physio_20230131080343.db is corrupt. (database disk image is
+malformed)]. Details: [SELECT name FROM sqlite_master WHERE type=='table'].
+
+Error in Utilities.mergeDatabases (line 119)
+                tables = fetch(newdb,'SELECT name FROM sqlite_master WHERE
+                type==''table''');
+
+Error in delete_duplicates_and_merge_physio (line 24)
+        Utilities.mergeDatabases(output_folder, path, name, 'physio');
+} 
+
+440623
+540003
+{Index exceeds the number of array elements (17187316).
+
+Error in epoch2 (line 14)
+        subsequent_times = times(subsequent_samples_ind);
+
+Error in EEGanalysis_test (line 26)
+    epoch_data_feedback = epoch2(EEG.times, EEG.data, Trial.feedbackTimes,
+    1500, 1500, sampling_rate);
+} 
+
+440671
+{Error using sqlite/fetch
+Received exception upon attempting an operation. Exception: [The database
+440671_physio_20230308065348.db is corrupt. (database disk image is
+malformed)]. Details: [SELECT name FROM sqlite_master WHERE type=='table'].
+
+Error in Utilities.mergeDatabases (line 119)
+                tables = fetch(newdb,'SELECT name FROM sqlite_master WHERE
+                type==''table''');
+
+Error in delete_duplicates_and_merge_physio (line 24)
+        Utilities.mergeDatabases(output_folder, path, name, 'physio');
+} 
+

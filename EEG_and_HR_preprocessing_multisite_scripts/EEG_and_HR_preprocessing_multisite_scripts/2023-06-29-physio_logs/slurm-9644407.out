@@ -1,0 +1,9 @@
+440437
+[Warning: Iteration limit reached.] 
+[> In statrobustfit (line 80)
+In robustfit (line 114)
+In Utilities.adjustSamplingRate (line 242)
+In readEEG (line 75)
+In EEGanalysis_test (line 21)] 
+Found a total of 6579564 samples out of 6579564
+Found a total of 9605124 samples out of 9605124

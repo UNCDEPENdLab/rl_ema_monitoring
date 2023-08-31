@@ -1,0 +1,12 @@
+540077
+{Out of memory.
+
+Error in sqlite/fetch
+
+Error in readEEG (line 27)
+        DATA = fetch(db, 'SELECT recording_time,EEG1,EEG2,EEG3,EEG4 FROM
+        EEG_muse ORDER BY recording_time ASC');
+
+Error in EEGanalysis_test (line 24)
+    [EEG, sampling_rate] = readEEG(output_folder,name, site, 1);
+} 
