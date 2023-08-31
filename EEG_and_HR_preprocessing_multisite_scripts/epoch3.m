@@ -14,8 +14,7 @@ for i = 1:length(timings)
         ind1 = ind0 - 1;
         gap0 = times(ind0)-timings(i); % gap between aligned physio timestamp and alignment event
         gap1 = times(ind1)-timings(i);
-        gap_min = min(gap0,gap1);
-        ix_gap = find(min(gap0,gap1));
+        [gap_min,ix_gap] = min(cat(1,gap0,gap1));
         if ix_gap ==1 % use gap0 if gap0 <= gap1
         elseif ix_gap == 2 % use gap1
                 ind0 = ind1;
