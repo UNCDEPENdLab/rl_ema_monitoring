@@ -1,88 +1,61 @@
-function [Ntotal, Ngood, epoch_data]=EEGanalysis_test(output_folder, name, first_block, last_block)
+function EEGanalysis_test(name)
     
-    %% read modeled prediction errors
-    %DATA = readtable(fullfile(fileparts(fileparts(pwd)),'Data_Processed',['subject_' name],['PE2_Heir_' name '.csv']));    
-    %Trial.fastPE = table2array(DATA(:,2));
-    %Trial.slowPE = table2array(DATA(:,3));
-    %if iscell(Trial.fastPE); ind_na = cellfun(@(x)strcmp(x,'NA'),Trial.fastPE); Trial.fastPE(ind_na) = {NaN}; Trial.fastPE = cellfun(@str2double,Trial.fastPE); end
-    %if iscell(Trial.slowPE); ind_na = cellfun(@(x)strcmp(x,'NA'),Trial.slowPE); Trial.slowPE(ind_na) = {NaN}; Trial.slowPE = cellfun(@str2double,Trial.slowPE); end
+	site = 'Pitt';
+	if nargin<2
+        output_folder = '/bgfs/adombrovski/DNPL_DataMesh/Data/Momentum_EMA';      
+    end
+
+    filename = dir(strcat(fullfile(output_folder,'Data_Raw',name,'schedule'),'/*schedule.db'));
+    if length(filename) > 1
+        error(sprintf('multiple schedule files found for subject',name,'%s'));
+    end
+    db = sqlite(strcat(filename(1).folder,'/',filename(1).name));
+    temp = cell2mat(fetch(db, 'SELECT feedback_time, stim_time, choice_time, feedback, block FROM trials WHERE choice_time IS NOT NULL AND stim1>=0 AND stim2>=-1000 ORDER BY choice_time ASC'));
     
-    %% read trial data
-    filename = fullfile(output_folder,'Data_Raw',['subject_' name],[name '_schedule.db']);
-    db = sqlite(filename);
-    
-    temp = cell2mat(fetch(db, 'SELECT feedback_time, feedback, block FROM trials WHERE choice_time IS NOT NULL AND stim1>=0 AND stim2>=0 ORDER BY choice_time ASC'));
     %temp = cell2mat(fetch(db, 'SELECT feedback_time, feedback FROM trials WHERE choice_time IS NOT NULL AND stim1>17 AND stim2>17 AND stim1<150 AND stim2<150'));
-    Trial.feedback = temp(find((first_block<=temp(:,3)&(last_block>=temp(:,3)))),2);
-    Trial.feedbackTimes = temp(find((first_block<=temp(:,3)&(last_block>=temp(:,3)))),1);
+    Trial.feedbackTimes = temp(:,1);
+    Trial.stimTimes = temp(:,2);
+    Trial.choiceTimes = temp(:,3);
+    Trial.feedback = temp(:,4);
+    
     db.close;
     
+	tol = 5; % 5ms tolerance of alignment
+	pre_window = 1500; %1.5s
+	post_window = 1500; 
     %% read EEG and remove trials with NaN
-    [EEG, sampling_rate] = readEEG(name, first_block, last_block);
-    epoch_data_2 = Utilities.epoch(EEG.times, EEG.data, Trial.feedbackTimes, 500, 1500, sampling_rate);
-    ind_na = any(any(isnan(epoch_data_2),2),3);
-    epoch_data_2 = epoch_data_2(~ind_na,:,:);
+    [EEG, sampling_rate] = readEEG(output_folder,name, site, 0);
+    % raw data AndyP 2023-08-16
+    [epoch_data_feedback,gap_feedback] = epoch3(EEG.times, EEG.data, Trial.feedbackTimes, pre_window, post_window, sampling_rate,tol);
+    [epoch_data_stim,gap_stim] = epoch3(EEG.times, EEG.data, Trial.stimTimes, pre_window, post_window, sampling_rate,tol);
+    [epoch_data_choice,gap_choice] = epoch3(EEG.times, EEG.data, Trial.choiceTimes, pre_window, post_window, sampling_rate,tol);
+    
+    EEG.cleandata = EEG.data; EEG.cleandata(EEG.remove~=0)=NaN;
+    [epoch_data_feedback_filtered,gap_feedback_filtered] = epoch3(EEG.times, EEG.cleandata, Trial.feedbackTimes, pre_window, post_window, sampling_rate,tol);
+    [epoch_data_stim_filtered,gap_stim_filtered] = epoch3(EEG.times, EEG.remove, Trial.stimTimes, pre_window, post_window, sampling_rate,tol);
+    [epoch_data_choice_filtered,gap_choice_filtered] = epoch3(EEG.times, EEG.remove, Trial.choiceTimes, pre_window, post_window, sampling_rate,tol);
+    
+    if pre_window==post_window && pre_window==1500
+        ind_na_all_feedback = any(any(isnan(epoch_data_feedback_filtered(:,333:693,:)),2),3); %feedback appears at sample 385 and ends at sample 641, so trials with nan in the range of [-0.2, +0.2] from feedback will be considered as noisy
+        ind_na_all_stim = any(any(isnan(epoch_data_stim_filtered(:,333:693,:)),2),3); %stim appears at sample 385 and ends at sample 641, so trials with nan in the range of [-0.2, +0.2] from feedback will be considered as noisy
+        ind_na_all_choice = any(any(isnan(epoch_data_choice_filtered(:,333:693,:)),2),3); %choice occurs at sample 385 and ends at sample 641, so trials with nan in the range of [-0.2, +0.2] from feedback will be considered as noisy
+        epoch_data_feedback_filtered = epoch_data_feedback_filtered(~ind_na_all_feedback,:,:);
+        epoch_data_stim_filtered = epoch_data_stim_filtered(~ind_na_all_stim,:,:);
+        epoch_data_choice_filtered = epoch_data_choice_filtered(~ind_na_all_choice,:,:);
+    else
+        ind_na_all_feedback = [];
+        ind_na_all_stim = [];
+        ind_na_all_choice = [];
+    end
     Ntotal = length(Trial.feedbackTimes);
-    Ngood= size(epoch_data_2,1);
+    Ngood_all= size(epoch_data_feedback_filtered,1);
+    EEG_percen_all=(Ngood_all/Ntotal)*100;
     
-%% load EEG file
-filename = fullfile(pwd,'Data_Processed',['subject_' name],[name '_EEG.mat']);
-load(filename)
+    %find the optimal combinatin of three electrodes:
+    [best_single, best_two_config, best_three_config, EEG_percen_single, EEG_percen_best_two, EEG_percen_best_three, ind_na_best_single, ind_na_best_two, ind_na_best_three]=find_optimal_comb(epoch_data_feedback, Ntotal);
 
-%% infer real times of samples
-sampling_rate = 256.03;
-times = double(EEG.times);
-% check if times are in milli or nanoseconds
-diff_times = diff(times);
-median_diff_times = median(diff_times(diff_times>0));
-if median_diff_times > 50; times = times/1000;
-elseif median_diff_times > 1; error('Neither here nor there, check time data');
-end
-% first pass with pre-specified sampling rate
-real_recording_time = Utilities.createRealTime(times, sampling_rate);
-[corrected_times, break_indices] = Utilities.correctRealTime(real_recording_time, times, sampling_rate);
-EEG.times = corrected_times;
-epoch_data = Utilities.epoch(EEG.times, EEG.data, Trial.feedbackTimes, 500, 1500, 256.03)
-    %%correspondence check
-    %if any(isnan(Trial.fastPE(Trial.feedback==1))) || any(isnan(Trial.slowPE(Trial.feedback==1))) || any(~isnan(Trial.fastPE(Trial.feedback==0)) & Trial.fastPE(Trial.feedback==0)~=0) || any(~isnan(Trial.slowPE(Trial.feedback==0)) & Trial.slowPE(Trial.feedback==0)~=0)
-     %   error('Incompatibility');
-    %end
     
-    %% isolate feedback trials
-    %Trial.feedbackTimes = Trial.feedbackTimes(Trial.feedback==1); 
-    %Trial.fastPE = Trial.fastPE(Trial.feedback==1);
-    %Trial.slowPE = Trial.slowPE(Trial.feedback==1);
-    
-    %% read EEG and remove trials with NaN
-    %[EEG, sampling_rate] = readEEG(name);
-    %epoch_data = Utilities.epoch(EEG.times, EEG.data, Trial.feedbackTimes, 500, 1500, sampling_rate);
-    %ind_na = any(any(isnan(epoch_data),2),3);
-    %epoch_data = epoch_data(~ind_na,:,:);
-    %Ntotal = length(Trial.feedbackTimes);
-    %Ngood= size(epoch_data,1);
-    %TF = EEGtimefreq(epoch_data, sampling_rate);
-    %TF.fastPE = Trial.fastPE(~ind_na);
-    %TF.slowPE = Trial.slowPE(~ind_na);       
-    %TF.times = Trial.feedbackTimes(~ind_na);       
-    
-    %% decode
-    %[Slow.decodability, Slow.pval, Slow.predicted, Slow.regs] = EEGdecode(TF.slowPE, zscore(TF.data));
-    %[Fast.decodability, Fast.pval, Fast.predicted, Fast.regs] = EEGdecode(TF.fastPE, zscore(TF.data));
-    %Slow.times = TF.times;
-    %Fast.times = TF.times;
-    %save(fullfile(fileparts(fileparts(pwd)),'Data_Processed',['subject_' name],'PE_decoding'),'Slow','Fast');
-    %Slow
-    %Fast
-   
-    %% figures before cleaning data: figure 1 all data, figure 2-missing data
+    save(fullfile(output_folder, 'Data_Processed',['subject_' name] ,[name '_EEG1.mat']), 'ind_na_all_feedback','ind_na_all_stim','ind_na_all_choice','epoch_data_feedback','epoch_data_feedback_filtered','epoch_data_stim','epoch_data_stim_filtered','epoch_data_choice','epoch_data_choice_filtered', 'EEG_percen_all', 'best_single', 'best_two_config', 'best_three_config', 'EEG_percen_single', 'EEG_percen_best_two', 'EEG_percen_best_three', 'ind_na_best_single', 'ind_na_best_two', 'ind_na_best_three', 'sampling_rate','gap_feedback','gap_stim','gap_choice','gap_feedback_filtered','gap_stim_filtered','gap_choice_filtered','tol')
+      
 
-    figure
-for i=1:4
-    subplot(4,1,i); imagesc(epoch_data(:,:,i));colorbar;
-end
-figure
-for i=1:4
-    subplot(4,1,i); imagesc(isnan(epoch_data(:,:,i)));colorbar;
-end
 
-end   

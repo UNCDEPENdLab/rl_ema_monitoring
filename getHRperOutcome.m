@@ -1,15 +1,25 @@
-function [HRoutcome, stats, HR] = getHRperOutcome(name, first_block, last_block, resetFlag)   
-    if nargin<4 || isempty(resetFlag); resetFlag = 0; end
+function [HRoutcome_filtered,HRoutcome_all ,stats, HR, HR_percen] = getHRperOutcome(name)
+    output_folder = '/bgfs/adombrovski/DNPL_DataMesh/Data/Momentum_EMA';
+	site = 'pitt';
+	resetFlag = 1;    
+	%if nargin<4 || isempty(resetFlag); resetFlag = 0; end
 
     %% get HR data
-    HR = readHR(name, first_block, last_block, resetFlag);
+    HR = readHR(output_folder,name, site, resetFlag);
     
     %% read trial data
-    filename = fullfile(pwd,'Data_Raw',['subject_' name],[name '_schedule.db']);
-    db = sqlite(filename);   
+    if strcmp(site,'HUJI')
+        filename = dir(strcat(fullfile(pwd,'Data_Raw',['subject_' name]),'/*schedule.db'));
+    else
+        filename = dir(strcat(fullfile(output_folder,'Data_Raw',[name],'schedule'),'/*schedule.db'));
+    end
+    if length(filename) > 1
+        error(sprintf('multiple schedule files found for subject',name,'%s'));
+    end
+    db = sqlite(strcat(filename(1).folder,'/',filename(1).name));
     temp = cell2mat(fetch(db, 'SELECT feedback_time, feedback, block FROM trials WHERE choice_time IS NOT NULL ORDER BY choice_time ASC'));
-    Trial.feedback = temp(find((first_block<=temp(:,3)&(last_block>=temp(:,3)))),2);
-    Trial.feedbackTimes = temp(find((first_block<=temp(:,3)&(last_block>=temp(:,3)))),1);
+    Trial.feedback = temp(:,2);
+    Trial.feedbackTimes = temp(:,1);
     db.close;
     
     %% get HR for each outcome
@@ -22,7 +32,11 @@ function [HRoutcome, stats, HR] = getHRperOutcome(name, first_block, last_block,
     
     %% filter missing and noisy
     inc = sum(isnan(epoch_data),3)==0 & nanstd(epoch_data,[],3) < 5*nanmedian(nanstd(epoch_data,[],3)) ;
-    HRoutcome = epoch_data(inc,:,:);    
+    HRoutcome_all = epoch_data;  
+    HRoutcome_filtered = epoch_data(inc,:,:);   
+    HR_percen=((stats.Ntrials-stats.Ntrials_missing-stats.Ntrials_noisy)/stats.Ntrials)*100;
+    ind_na_HR = ~inc;
+    save(fullfile(output_folder, 'Data_Processed', ['subject_' name] , [name '_HR.mat']), 'HRoutcome_filtered','HRoutcome_all' ,'stats', 'HR', 'HR_percen', 'ind_na_HR','-v7.3')
     figure
-    plot(squeeze(mean(HRoutcome)))
+    plot(squeeze(mean(HRoutcome_filtered)))
 end

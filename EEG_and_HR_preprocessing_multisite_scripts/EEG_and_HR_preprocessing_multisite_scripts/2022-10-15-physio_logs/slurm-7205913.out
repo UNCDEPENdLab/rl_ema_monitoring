@@ -1,6 +1,0 @@
-540087
-{Index exceeds the number of array elements (0).
-
-Error in EEGanalysis_test (line 13)
-    db = sqlite(strcat(filename(1).folder,'/',filename(1).name));
-} 
