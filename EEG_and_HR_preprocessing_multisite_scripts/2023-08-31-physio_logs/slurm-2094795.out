@@ -1,0 +1,10 @@
+440523
+{Array indices must be positive integers or logical values.
+
+Error in epoch3 (line 16)
+        gap1 = times(ind1)-timings(i);
+
+Error in EEGanalysis_test (line 29)
+    [epoch_data_feedback,gap_feedback] = epoch3(EEG.times, EEG.data,
+    Trial.feedbackTimes, pre_window, post_window, sampling_rate,tol);
+} 

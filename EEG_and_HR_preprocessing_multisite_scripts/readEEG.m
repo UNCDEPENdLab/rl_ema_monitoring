@@ -84,10 +84,10 @@ else
         mn = nanmedian(EEG.data(indGood,channel)); %#ok<NANMEDIAN>
         sd = nanstd(EEG.data(indGood,channel)); %#ok<NANSTD>
         %nogood = EEG.data(:,channel) > mn + 10*sd | EEG.data(:,channel) < mn - 10*sd | EEG.data(:,channel)<=0 |  EEG.data(:,channel)<1650/20  |  EEG.data(:,channel)>19*1650/20;
-        nogood_10sd = EEG.data(:,channel)>mn+10*sd | EEG.data(:,channel) < mn-10*sd;
+        %nogood_10sd = EEG.data(:,channel)>mn+10*sd | EEG.data(:,channel) < mn-10*sd;
         nogood_neg = EEG.data(:,channel)<=0;
         nogood_range = EEG.data(:,channel)<1650/20 | EEG.data(:,channel)>19*1650/20;
-        EEG.remove(nogood_10sd,channel) = 1;
+        %EEG.remove(nogood_10sd,channel) = 1;
         EEG.remove(nogood_neg,channel) = 2;
         EEG.remove(nogood_range,channel) = 3;
         EEG.remove(~EEG.isgood(:,channel),channel) = 4; % 2022-10-20 AndyP

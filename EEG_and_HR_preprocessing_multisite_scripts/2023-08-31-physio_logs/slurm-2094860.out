@@ -1,0 +1,11 @@
+540003
+Found a total of 2352371 samples out of 2353140
+{Index exceeds the number of array elements (18054869).
+
+Error in epoch3 (line 25)
+            keep(times(ind) <= timings(i)-pre-tol) = 0;
+
+Error in EEGanalysis_test (line 30)
+    [epoch_data_stim,gap_stim] = epoch3(EEG.times, EEG.data, Trial.stimTimes,
+    pre_window, post_window, sampling_rate,tol);
+} 
