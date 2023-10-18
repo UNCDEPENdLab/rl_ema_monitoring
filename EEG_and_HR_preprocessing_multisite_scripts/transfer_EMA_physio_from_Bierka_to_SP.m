@@ -28,8 +28,8 @@ for iS = 1:nS
                 if ~exist(strcat(data_out,'/',subs(iS).name))
                     mkdir(strcat(data_out,'/',subs(iS).name));
                 end
-                %[status,msg] = copyfile(outcome_trials.name, strcat(data_out,'/',subs(iS).name));
-                %[status,msg] = copyfile(strcat(save_str{2},'_','EEG1.mat'),strcat(data_out,'/',subs(iS).name));
+                [status,msg] = copyfile(outcome_trials.name, strcat(data_out,'/',subs(iS).name));
+                [status,msg] = copyfile(strcat(save_str{2},'_','EEG1.mat'),strcat(data_out,'/',subs(iS).name));
                 %[status,msg] = copyfile(EEG.name,strcat(data_out,'/',subs(iS).name));
                 %[status,msg] = copyfile(strcat(save_str{2},'_','HR1.mat'),strcat(data_out,'/',subs(iS).name));
                 load(EEG.name);
