@@ -10,14 +10,15 @@ filename_EEG = dir(strcat(fullfile('/Users/andypapale/Momentum/',['subject_' nam
 if  ~isempty(filename_EEG)
 
     % feedback
-    load(strcat(filename_EEG(1).folder,'/',filename_EEG(1).name), 'epoch_data_feedback_filtered','gap_feedback_filtered')
-    feedback_time = (size(epoch_data_feedback_filtered,2)-1)/2; % assuming a centered window
+    load(strcat(filename_EEG(1).folder,'/',filename_EEG(1).name), 'epoch_data_feedback','gap_feedback')
+    feedback_time = (size(epoch_data_feedback,2)-1)/2; % assuming a centered window
     
 
-    left_temp = epoch_data_feedback_filtered(:,:,1);
-    TF_left_temp = EEGtimefreq_US(left_temp, sampling_rate);
-    TF_left_temp;
-    save(fullfile(output_folder, 'Data_Processed',['subject_' name] ,[name '_feedback_TF_left_temp']), 'TF_left_temp','sampling_rate','feedback_time', '-v7.3');
+    left_temp = epoch_data_feedback(:,:,1);
+    [TF_left_temp,freqs] = EEGtimefreq_US(left_temp, sampling_rate);
+    times = linspace(-1.5,1.5,size(left_temp,2)); %#ok<*NASGU>
+    TF_left_temp = squeeze(TF_left_temp);
+    save(fullfile(output_folder, 'Data_Processed',['subject_' name] ,[name '_feedback_TF_left_temp']), 'TF_left_temp','sampling_rate','feedback_time','freqs','times', '-v7.3');
     clear TF_left_temp left_temp
 
 %     left_front = epoch_data_feedback_filtered(:,:,2);
