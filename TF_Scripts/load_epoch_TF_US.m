@@ -1,14 +1,17 @@
 function load_epoch_TF_US(name)
 
 sampling_rate = 256.03;
-data_folder = '/Users/andypapale/Momentum/';
-output_folder = data_folder;
+data_folder = '/Volumes/bierka_root/datamesh/PROC/MMTM/Momentum_EMA/Data_Processed_Nov_23/Momentum_EMA_EEG_12_2023/';
+output_folder = '/Volumes/bierka_root/datamesh/PROC/MMTM/Momentum_EMA/';
 %output_folder = '/bgfs/adombrovski/DNPL_DataMesh/Data/Momentum_EMA';  
 
 %filename_EEG = dir(strcat(fullfile(data_folder,['subject_' name]),['\' name '_EEG1.mat']));
-filename_EEG = dir(strcat(fullfile('/Users/andypapale/Momentum/',['subject_' name]),['/' name '_EEG1.mat'])); % testing on Mac
+filename_EEG = dir(strcat(fullfile(data_folder,['subject_' name]),['/' name '_EEG1.mat'])); % testing on Mac
 if  ~isempty(filename_EEG)
-
+    
+    if ~exist(fullfile(output_folder, 'Data_Processed','TF_Analysis',['subject_' name]),'dir')
+        mkdir(fullfile(output_folder, 'Data_Processed','TF_Analysis',['subject_' name]))
+    end
     % feedback
     load(strcat(filename_EEG(1).folder,'/',filename_EEG(1).name), 'epoch_data_feedback','gap_feedback')
     feedback_time = (size(epoch_data_feedback,2)-1)/2; % assuming a centered window
@@ -18,7 +21,7 @@ if  ~isempty(filename_EEG)
     [TF_left_temp,freqs] = EEGtimefreq_US(left_temp, sampling_rate);
     times = linspace(-1.5,1.5,size(left_temp,2)); %#ok<*NASGU>
     TF_left_temp = squeeze(TF_left_temp);
-    save(fullfile(output_folder, 'Data_Processed',['subject_' name] ,[name '_feedback_TF_left_temp']), 'TF_left_temp','sampling_rate','feedback_time','freqs','times', '-v7.3');
+    save(fullfile(output_folder, 'Data_Processed','TF_Analysis',['subject_' name] ,[name '_feedback_TF_left_temp']), 'TF_left_temp','sampling_rate','feedback_time','freqs','times', '-v7.3');
     clear TF_left_temp left_temp
 
 %     left_front = epoch_data_feedback_filtered(:,:,2);
