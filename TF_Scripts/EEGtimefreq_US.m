@@ -10,7 +10,7 @@ function [TF,freqs] = EEGtimefreq_US(data, sampling_rate)
     %freqs = [0.44, 0.89];
     %freqs = sort(cat(2,linspace(0.88*(2/3),0.44*20*(2/3),15),linspace(0.44*(5/2),0.44*50*(5/2),15),linspace(0.44,0.44*250,20)));
     %freqs(freqs < 1) = [];
-    freqs = unique(sort(cat(2,0.5,0.75,1.5,2.5,3.5,4.5,5.5,6.5,7.5,8.5,9.5,round(cat(2,linspace(1,100,30),linspace(1,30,30))))));
+    freqs = cat(2,1,1.5,2,2.5,3,3.5,4,4.5,5,5.5,6,6.5,7,7.5,8,8.5,9,9.5,10,12,14,16,18,20,22,24,26,28,30,40);
     %freqs = 1:4:30; 
     ftdata.label = {'channel'};
     ftdata.fsample = sampling_rate;
@@ -33,7 +33,8 @@ function [TF,freqs] = EEGtimefreq_US(data, sampling_rate)
     cfg.t_ftimwin    = 3./cfg.foi;  
     cfg.toi          = 'all';            
     cfg.keeptrials = 'yes';
-
+    cfg.pad = 'nextpow2';
+    
     pow = ft_freqanalysis(cfg,ftdata);
     TF = pow.powspctrm;
     %TF.data = permute(pow.powspctrm, [1 2 4 3]);
