@@ -10,12 +10,12 @@ function [TF,freqs] = EEGtimefreq_US(data, sampling_rate)
     %freqs = [0.44, 0.89];
     %freqs = sort(cat(2,linspace(0.88*(2/3),0.44*20*(2/3),15),linspace(0.44*(5/2),0.44*50*(5/2),15),linspace(0.44,0.44*250,20)));
     %freqs(freqs < 1) = [];
-    freqs = unique(sort(round(cat(2,linspace(1,100,30),linspace(1,30,30)))));
+    freqs = unique(sort(cat(2,0.5,0.75,1.5,2.5,3.5,4.5,5.5,6.5,7.5,8.5,9.5,round(cat(2,linspace(1,100,30),linspace(1,30,30))))));
     %freqs = 1:4:30; 
     ftdata.label = {'channel'};
     ftdata.fsample = sampling_rate;
     ftdata.trial = cellfun(@(x)permute(x, [3 2 1]), mat2cell(data, ones(size(data,1),1),size(data,2), N_electrodes)','UniformOutput',false);
-    ftdata.time = mat2cell(repmat(linspace(-1.5,1.5,size(data,2)),[length(ftdata.trial),1]),ones(size(data,1),1),Nsamples)';
+    ftdata.time = mat2cell(repmat(linspace(-1.5,3,size(data,2)),[length(ftdata.trial),1]),ones(size(data,1),1),Nsamples)';
     ftdata.sampleinfo = [];
     if N_electrodes==1
         ftdata.label = {'EEG1'};

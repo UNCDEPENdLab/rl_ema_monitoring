@@ -18,9 +18,9 @@ if  ~isempty(filename_EEG)
     feedback_time = find(time_window==0);
     
 
-    left_temp = epoch_data_feedback(1:8705,:,1);
-    [TF_left_temp,freqs] = EEGtimefreq_US(left_temp, sampling_rate);
+    left_temp = epoch_data_feedback(:,:,1);
     times = time_window;
+    [TF_left_temp,freqs] = EEGtimefreq_US(left_temp, sampling_rate);
     TF_left_temp = squeeze(TF_left_temp);
     save(fullfile(output_folder, 'Data_Processed','TF_Analysis',['subject_' name] ,[name '_feedback_TF_left_temp']), 'TF_left_temp','sampling_rate','feedback_time','freqs','times', '-v7.3');
     clear TF_left_temp left_temp
