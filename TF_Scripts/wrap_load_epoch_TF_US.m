@@ -8,7 +8,7 @@ load('MomentumIDs226.mat','IDs');
 nD = length(IDs);
 
 parfor iD = 1:nD
-    name = IDs(iD,2);
+    name = mat2str(IDs(iD,2));
     disp(name);
     load_epoch_TF_US(name);
 end

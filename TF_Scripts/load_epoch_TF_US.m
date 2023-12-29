@@ -9,9 +9,11 @@ output_folder = '/Volumes/bierka_root/datamesh/PROC/MMTM/Momentum_EMA/';
 filename_EEG = dir(strcat(fullfile(data_folder,['subject_' name]),['/' name '_EEG1.mat'])); % testing on Mac
 if  ~isempty(filename_EEG)
     
-    if ~exist(fullfile(output_folder, 'Data_Processed','TF_Analysis',['subject_' name]),'dir')
-        mkdir(fullfile(output_folder, 'Data_Processed','TF_Analysis',['subject_' name]))
+    if ~exist(fullfile(output_folder,'TF_Analysis',['subject_' name]),'dir')
+        mkdir(fullfile(output_folder,'TF_Analysis',['subject_' name]))
     end
+    
+    disp(filename_EEG)
     
     % feedback
     load(strcat(filename_EEG(1).folder,'/',filename_EEG(1).name), 'epoch_data_feedback','time_window')
