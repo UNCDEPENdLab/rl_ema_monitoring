@@ -7,6 +7,8 @@ load('MomentumIDs226.mat','IDs');
 
 nD = length(IDs);
 
+ft_defaults
+
 parfor iD = 1:nD
     name = mat2str(IDs(iD,2));
     disp(name);
