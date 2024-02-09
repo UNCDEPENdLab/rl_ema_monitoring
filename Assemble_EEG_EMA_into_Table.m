@@ -29,7 +29,7 @@ best_two0 = [];
 times0 = [];
 stim10 = [];
 stim20 = [];
-for iS = 51:101
+for iS = 152:202
     if ~isempty(regexp(subs(iS).name,'subject_\d\d\d\d\d\d', 'once')) & isempty(regexp(subs(iS).name,'bug', 'once')) %#ok<AND2>
         disp(subs(iS).name);
         cd(subs(iS).name);
@@ -86,7 +86,7 @@ for iS = 51:101
                         EEG_percen_best_three0 = cat(1,EEG_percen_best_three0,repmat(EEG_percen_best_three,[nT,1]));
                         EEG_percen_best_two0 = cat(1,EEG_percen_best_two0,repmat(EEG_percen_best_two,[nT,1]));
                     else
-                        warning('nT=%d nT_EEG=%d subj %s',nT,nT_EEG,subj_str{1});
+                        warning('nT=%d nT_EEG=%d subj %s',nT,nT_EEG,subj_str{2});
                     end
                 end
             end
@@ -95,12 +95,12 @@ for iS = 51:101
     end
 end
 
-writetable(table(EEG_data1),'EEG1_batch2.csv');
-writetable(table(EEG_data2),'EEG2_batch2.csv');
-writetable(table(EEG_data3),'EEG3_batch2.csv');
-writetable(table(EEG_data4),'EEG4_batch2.csv');
-writetable(table(times0),'times_batch2.csv');
-writetable(table(trial_data),'trial_data_batch2.csv');
-writetable(table(subj),'subj_batch2.csv');
+writetable(table(EEG_data1),'EEG1_batch4.csv');
+writetable(table(EEG_data2),'EEG2_batch4.csv');
+writetable(table(EEG_data3),'EEG3_batch4.csv');
+writetable(table(EEG_data4),'EEG4_batch4.csv');
+writetable(table(times0),'times_batch4.csv');
+writetable(table(trial_data),'trial_data_batch4.csv');
+writetable(table(subj),'subj_batch4.csv');
 misc_stats = cat(2,EEG_percen_all0,EEG_percen_best_three0,EEG_percen_best_two0,rew_fb0, pun_fb0, neu_fb0);
-writetable(table(misc_stats),'misc_stats_batch2.csv');
+writetable(table(misc_stats),'misc_stats_batch4.csv');
