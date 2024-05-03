@@ -154,7 +154,6 @@ run_ema <- function(root=NULL, subjects="all", pull=FALSE, sched=TRUE, physio=FA
   time_stamp <- paste0(str_replace_all(as.Date(now()), '-', '_'))
   # create the output log file path
   dir.create(paste0(logOutput, '/', time_stamp))
-  
   # logger setup
   # by default, ensure that the logging level is at INFO
   if ((log_level %in% c(INFO, DEBUG, TRACE)) == FALSE) {
@@ -459,7 +458,7 @@ run_ema <- function(root=NULL, subjects="all", pull=FALSE, sched=TRUE, physio=FA
 #warning('Andrew is testing physio 2022-02-09')
 
 # (bea 11/20) rerun from cleanup: 
-run_ema(save_lite=FALSE, replot=TRUE, render=TRUE, push=TRUE, pull=FALSE, sched=FALSE, physio=FALSE, cleanup_data=TRUE, nthreads = 1, force_proc=TRUE, force_reload=TRUE, log_level=TRACE, sink_file=NULL)
+run_ema(save_lite=FALSE, replot=FALSE, render=FALSE, push=FALSE, pull=TRUE, sched=FALSE, physio=FALSE, cleanup_data=FALSE, nthreads = 1, force_proc=TRUE, force_reload=TRUE, log_level=TRACE, sink_file=NULL)
 
 # Run this line #
 #run_ema(save_lite=FALSE, replot=TRUE, render=TRUE, push=TRUE, pull=TRUE, sched=TRUE, physio=TRUE, cleanup_data=TRUE, nthreads = 21, force_proc=TRUE, force_reload=TRUE, sink_file='dashboard_run.txt')
