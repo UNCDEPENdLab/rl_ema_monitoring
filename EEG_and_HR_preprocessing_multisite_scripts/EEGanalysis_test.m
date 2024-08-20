@@ -22,7 +22,7 @@ function EEGanalysis_test(name)
     
 	tol = 4; % 4ms tolerance of alignment
 	pre_window = 1500; %1.5s
-	post_window = 1500; 
+	post_window = 3000; 
     %% read EEG and remove trials with NaN
     [EEG, sampling_rate] = readEEG(output_folder,name, site, 0);
     % raw data AndyP 2023-08-16

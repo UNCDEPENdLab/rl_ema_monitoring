@@ -1,9 +1,0 @@
-440420
-[Warning: Variable 'EEG' not found.] 
-[> In readEEG (line 6)
-In EEGanalysis_test (line 27)] 
-{Output argument "EEG" (and maybe others) not assigned during call to "readEEG".
-
-Error in EEGanalysis_test (line 27)
-    [EEG, sampling_rate] = readEEG(output_folder,name, site, 0);
-} 
