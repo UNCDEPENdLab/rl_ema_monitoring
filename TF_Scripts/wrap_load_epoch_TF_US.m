@@ -4,8 +4,12 @@
 
 
 load('MomentumIDs226.mat','IDs');
+ID1 = IDs(88,:);
+ID2 = IDs(61,:);
 
+IDs = cat(1,ID1,ID2);
 nD = length(IDs);
+
 
 ft_defaults
 
