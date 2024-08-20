@@ -1,0 +1,10 @@
+221518
+{Unrecognized function or variable 'gap_min'.
+
+Error in epoch3 (line 28)
+        if abs(gap_min) < tol % tolerance ~ 4ms
+
+Error in EEGanalysis_test (line 29)
+    [epoch_data_feedback,gap_feedback] = epoch3(EEG.times, EEG.data,
+    Trial.feedbackTimes, pre_window, post_window, sampling_rate,tol);
+} 

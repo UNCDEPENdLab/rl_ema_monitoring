@@ -1,0 +1,6 @@
+[Warning: Unable to load Toolbox Path Cache
+/ihome/adombrovski/dnplserv/.matlab/R2021a/toolbox_cache-9.10.0-826975706-glnxa64.xml.
+The cache file is not in the correct format. It will be regenerated upon
+quitting MATLAB.] 
+220256
+slurmstepd: error: *** JOB 3726017 ON htc-n25 CANCELLED AT 2024-07-17T17:05:54 ***

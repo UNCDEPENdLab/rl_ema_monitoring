@@ -1,0 +1,14 @@
+440523
+Found a total of 12888198 samples out of 13408788
+Found a total of 12888279 samples out of 13408788
+Found a total of 12888290 samples out of 13408788
+{Error using vertcat
+Dimensions of arrays being concatenated are not consistent.
+
+Error in epoch2 (line 16)
+        all_epoch_ind = vertcat(gap+1,subsequent_epoch_indices);
+
+Error in EEGanalysis_test (line 31)
+    epoch_data_feedback_filtered = epoch2(EEG.cleandata, EEG.data,
+    Trial.feedbackTimes, 1500, 1500, sampling_rate);
+} 

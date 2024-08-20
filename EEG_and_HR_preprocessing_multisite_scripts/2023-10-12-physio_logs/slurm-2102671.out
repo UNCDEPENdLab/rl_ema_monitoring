@@ -1,0 +1,3 @@
+221839
+Found a total of 6450372 samples out of 6708756
+slurmstepd: error: *** JOB 2102671 ON htc-1024-n0 CANCELLED AT 2023-09-04T20:41:02 DUE TO TIME LIMIT ***

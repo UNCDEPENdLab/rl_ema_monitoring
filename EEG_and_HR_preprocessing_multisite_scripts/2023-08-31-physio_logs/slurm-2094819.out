@@ -1,0 +1,12 @@
+440594
+Found a total of 6429577 samples out of 6708756
+{Unable to perform assignment because the size of the left side is 1-by-657 and
+the size of the right side is 713-by-1.
+
+Error in epoch3 (line 39)
+            edata(i,pre_pad+1:length(ind),1) = data(ind, 1);
+
+Error in EEGanalysis_test (line 30)
+    [epoch_data_stim,gap_stim] = epoch3(EEG.times, EEG.data, Trial.stimTimes,
+    pre_window, post_window, sampling_rate,tol);
+} 

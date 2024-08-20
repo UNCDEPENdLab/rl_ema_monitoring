@@ -1,0 +1,2 @@
+540016
+/var/spool/slurmd/job2094866/slurm_script: line 4: 44833 Killed                  matlab -nodisplay -nodesktop -nosplash -batch "subj=int2str(540016); disp(subj); trials_reward_pun(subj); EEGanalysis_test(subj); exit"

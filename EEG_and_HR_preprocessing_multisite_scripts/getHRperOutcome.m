@@ -1,7 +1,6 @@
-function [HRoutcome_filtered,HRoutcome_all ,stats, HR, HR_percen] = getHRperOutcome(output_folder, name, site)
-    if nargin<3
-       output_folder = '/bgfs/adombrovski/DNPL_DataMesh/Data/Momentum_EMA';
-    end
+function [HRoutcome_filtered,HRoutcome_all ,stats, HR, HR_percen] = getHRperOutcome(name)
+    output_folder = '/bgfs/adombrovski/DNPL_DataMesh/Data/Momentum_EMA';
+	site = 'pitt';
 	resetFlag = 1;    
 	%if nargin<4 || isempty(resetFlag); resetFlag = 0; end
 

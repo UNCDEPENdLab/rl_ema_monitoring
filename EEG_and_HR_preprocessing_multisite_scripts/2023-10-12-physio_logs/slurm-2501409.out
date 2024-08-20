@@ -1,0 +1,11 @@
+540015
+{Error using save
+Cannot create '540015_outcome_trials.mat' because
+'/bgfs/adombrovski/DNPL_DataMesh/Data/Momentum_EMA/Data_Processed/subject_540015'
+does not exist.
+
+Error in trials_reward_pun (line 24)
+save(fullfile(output_folder, 'Data_Processed', ['subject_' name], [name
+'_outcome_trials.mat']), 'reward_feedback_trials','pun_feedback_trials',
+'neu_feedback_trials', 'trial_block_outcome_feedback')
+} 

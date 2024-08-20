@@ -1,0 +1,15 @@
+440418
+Found a total of 373491 samples out of 373734
+Found a total of 373490 samples out of 373734
+Found a total of 373515 samples out of 373734
+Found a total of 0 samples out of 373734
+Found a total of 0 samples out of 373734
+Found a total of 0 samples out of 373734
+{Index in position 1 exceeds array bounds (must not exceed 486).
+
+Error in EEGanalysis_test (line 35)
+    ind_na_all_feedback =
+    any(any(isnan(epoch_data_feedback_filtered(333:693,:,:)),2),3); %feedback
+    appears at sample 385 and ends at sample 641, so trials with nan in the
+    range of [-0.2, +0.2] from feedback will be considered as noisy
+} 
