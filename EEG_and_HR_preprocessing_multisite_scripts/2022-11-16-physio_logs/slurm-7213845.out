@@ -1,6 +1,0 @@
-540074
-{Index exceeds the number of array elements (0).
-
-Error in trials_reward_pun (line 15)
-db = sqlite(strcat(filename(1).folder,'/',filename(1).name));
-} 
