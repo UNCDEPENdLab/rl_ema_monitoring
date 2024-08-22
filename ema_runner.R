@@ -131,14 +131,14 @@ run_ema <- function(root=NULL, subjects="all", pull=TRUE, sched=TRUE, physio=FAL
   #dataPath <- "/Users/shanebuckley/desktop/rl_ema_monitoring/data"
   dataPath <<- get_cfg_var_p(var="data")
   #print(dataPath)
-  videoPath <<- get_cfg_var_p(var="videos")
+  #videoPath <<- get_cfg_var_p(var="videos")
   videoURL <<- get_cfg_var_p(var="video_url")
   videoRclone <<- get_cfg_var_p(var="video_rclone")
   sitePath <<- get_cfg_var_p(var="site_path")
   sitePush <<- get_cfg_var_p(var="site_push")
   redcapCredPath <<- get_cfg_var_p(var="redcap")
   logOutput <<- get_cfg_var_p(var="log_output")
-  
+  videoPath <<- '/Users/dnplserv/Desktop/Momentum_Videos2'
   # get a timestamp for the day
   time_stamp <- paste0(str_replace_all(as.Date(now()), '-', '_'))
   # create the output log file path

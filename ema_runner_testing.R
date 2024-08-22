@@ -106,7 +106,7 @@ library("pacman")
 library("anytime")
 #library("ggplot2")
 pacman::p_load(reticulate, RSQLite, dplyr, tidyr, lubridate, rjson, R.utils, REDCapR, zoo, anytime, logger)
-
+setwd('~/rl_ema_monitoring/')
 setwd("dashboard/study_management")
 
 # source relevant R files and their functions
@@ -149,12 +149,11 @@ run_ema <- function(root=NULL, subjects="all", pull=FALSE, sched=TRUE, physio=FA
   sitePush <<- get_cfg_var_p(var="site_push")
   redcapCredPath <<- get_cfg_var_p(var="redcap")
   logOutput <<- get_cfg_var_p(var="log_output")
-  
+  videoPath <<- '/Users/dnplserv/Desktop/Momentum_Videos2'
   # get a timestamp for the day
   time_stamp <- paste0(str_replace_all(as.Date(now()), '-', '_'))
   # create the output log file path
   dir.create(paste0(logOutput, '/', time_stamp))
-  
   # logger setup
   # by default, ensure that the logging level is at INFO
   if ((log_level %in% c(INFO, DEBUG, TRACE)) == FALSE) {
@@ -210,15 +209,15 @@ run_ema <- function(root=NULL, subjects="all", pull=FALSE, sched=TRUE, physio=FA
 
   # mount the sharepoint with rclone if it is not mounted
   mount_str <<- system(paste0("df | awk '{print $9}' | grep -Ex '", videoPath, "'"), intern=TRUE)
-  if(length(mount_str) == 0) {
-    mount_str <<- ""
-  }
-
+  #if(length(mount_str) == 0) {
+  #  mount_str <<- ""
+  #}
   # if the mount was not found
   if(mount_str != videoPath) {
-    system(paste0("rclone cmount ", videoRclone, " ", videoPath, " --daemon --vfs-cache-mode full"), intern=TRUE)
+    #system(paste0("rclone cmount ", videoRclone, " ", videoPath, " --daemon --vfs-cache-mode full"), intern=TRUE)
+    system(paste0("rclone cmount ", videoRclone, " ", videoPath, " --daemon --vv --o local --vfs-cache-mode full"))
     print("Mounting the remote data storage:")
-    print(paste0("rclone cmount ", videoRclone, " ", videoPath, " --daemon --vfs-cache-mode full"))
+    #print(paste0("rclone cmount ", videoRclone, " ", videoPath, " --daemon --vfs-cache-mode full"))
     #exit()
   } else {
     print("Remote data storage was already mounted.")
@@ -457,7 +456,10 @@ run_ema <- function(root=NULL, subjects="all", pull=FALSE, sched=TRUE, physio=FA
 ### RUN LINES ###
 # Test with this line #
 #warning('Andrew is testing physio 2022-02-09')
-run_ema(save_lite=FALSE, replot=TRUE, render=FALSE, push=FALSE, pull=FALSE, sched=FALSE, physio=TRUE, cleanup_data=FALSE, nthreads = 1, force_proc=TRUE, force_reload=TRUE, log_level=TRACE, sink_file=NULL)
+
+
+run_ema(save_lite=FALSE, replot=FALSE, render=TRUE, push=TRUE, pull=FALSE, sched=TRUE, physio=FALSE, cleanup_data=TRUE, nthreads = 1, force_proc=FALSE, force_reload=FALSE, log_level=TRACE, sink_file=NULL)
+
 # Run this line #
 #run_ema(save_lite=FALSE, replot=TRUE, render=TRUE, push=TRUE, pull=TRUE, sched=TRUE, physio=TRUE, cleanup_data=TRUE, nthreads = 21, force_proc=TRUE, force_reload=TRUE, sink_file='dashboard_run.txt')
 #################

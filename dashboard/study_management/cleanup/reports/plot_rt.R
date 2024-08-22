@@ -19,9 +19,11 @@ try({
   
   if (exists("blocks_with_poor_performance")){
     if (length(blocks_with_poor_performance)==1){
-      if (!isempty(blocks_with_poor_performance$poor_blocks)) {
-        if (!any(is.na(blocks_with_poor_performance$poor_blocks))){
-          rt_graph <- rt_graph + geom_point(data=blocks_with_poor_performance, aes(x=poor_blocks, y=1400), color="darkorchid1", size=2.2, inherit.aes = F)
+      if (all(!is.na(blocks_with_poor_performance))){
+        if (!isempty(blocks_with_poor_performance$poor_blocks)) {
+          if (!any(is.na(blocks_with_poor_performance$poor_blocks))){
+            rt_graph <- rt_graph + geom_point(data=blocks_with_poor_performance, aes(x=poor_blocks, y=1400), color="darkorchid1", size=2.2, inherit.aes = F)
+          }
         }
       }
     }

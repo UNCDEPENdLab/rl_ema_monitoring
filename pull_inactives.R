@@ -5,7 +5,7 @@ library("pacman")
 library("anytime")
 pacman::p_load(reticulate, RSQLite, dplyr, tidyr, lubridate, rjson, R.utils, REDCapR, zoo, anytime)
 
-setwd("dashboard/study_management")
+setwd("~/rl_ema_monitoring/dashboard/study_management")
 
 # source relevant R files and their functions
 ## Currently set to load dependent function from the same directory ##
@@ -13,7 +13,8 @@ source("data_management_functions.R")
 source("dashboard_aggregate.R")
 
 dataPath <<- get_cfg_var_p(var="data")
-videoPath <<- get_cfg_var_p(var="videos")
+#videoPath <<- get_cfg_var_p(var="videos")
+videoPath <- '~/Desktop/Momentum_Videos2'
 videoURL <<- get_cfg_var_p(var="video_url")
 videoRclone <<- get_cfg_var_p(var="video_rclone")
 sitePath <<- get_cfg_var_p(var="site_path")
@@ -37,11 +38,11 @@ if(mount_str != videoPath) {
 
 # ensure that the mount point is mounted (as to not accidentally save locally)
 post_mount_str <<- system(paste0("df | awk '{print $9}' | grep -Ex '", videoPath, "'"), intern=TRUE)
-if(post_mount_str != videoPath) {
-  print(paste0("Looking for: ", videoPath))
-  print(paste0("Found: ", post_mount_str))
-  stop("The mount point was not established successfully...terminating.")
-}
+# if(post_mount_str != videoPath) {
+#   print(paste0("Looking for: ", videoPath))
+#   print(paste0("Found: ", post_mount_str))
+#   stop("The mount point was not established successfully...terminating.")
+# }
 
 # Currently overrides root to be rl_ema_monitoring
 #root <- "rl_ema_monitoring"
