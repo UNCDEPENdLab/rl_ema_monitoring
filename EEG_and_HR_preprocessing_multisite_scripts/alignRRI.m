@@ -13,7 +13,7 @@ function [alignedRRI,timings] = alignRRI(pathToPhysioFile, pathToScheduleFile,sa
     % alignedRRI - [Table] Contains the aligned trials.
     % timings - [Cell Array] Contains the timings or deltas corresponding
     %           to the feedback time as time zero.
-
+    
     if nargin<3
         savePath = [];
     end
@@ -26,8 +26,8 @@ function [alignedRRI,timings] = alignRRI(pathToPhysioFile, pathToScheduleFile,sa
     feedbackEventTimes = getFeedbackTimings(pathToScheduleFile);
     
     %% Align the RRI
-    [alignedRRI,timings] = getAlignedTrials(RRI,feedbackEventTimes,'linear');
-    
+    [alignedRRI,timings] = getAlignedTrials(RRI,feedbackEventTimes,'spline');
+
     %% Save the data
     % Check if save_path is provided, not empty, and is a valid directory
     if ~isempty(savePath) && isfolder(fileparts(savePath))
@@ -262,8 +262,8 @@ function [alignedRRI, timings]= getAlignedTrials(RRI,events,interpolation_method
     extended_pre_duration = pre_duration + buffer_time;
     extended_post_duration = post_duration + buffer_time;
 
-    newSamplingRate = 1; %millisecond resolution
-    newSamplingRateDuration = seconds(newSamplingRate*1e-3);
+    newSamplingRate = 10; % Hz
+    newSamplingStep = seconds(1/newSamplingRate);
     
     %Initialize array to gather aligned trials
     alignedRRI = cell(length(events), 1);  % Initialize a cell array to hold interpolated RRIs
@@ -282,11 +282,11 @@ function [alignedRRI, timings]= getAlignedTrials(RRI,events,interpolation_method
             relevant_rris = RRI.RRI(indices);
 
             % Define new times at which to interpolate
-            new_times = event_time - pre_duration:newSamplingRateDuration:event_time + post_duration;
+            new_times = event_time - pre_duration:newSamplingStep:event_time + post_duration;
 
             % Interpolate RRI data at new times
             try
-                interpolated_rris = interp1(relevant_times, double(relevant_rris), new_times, interpolation_method);                
+                interpolated_rris = interp1(relevant_times, double(relevant_rris), new_times, interpolation_method); 
                 alignedRRI{i} = interpolated_rris;
             catch ex
                 disp(ex.message);
@@ -295,7 +295,7 @@ function [alignedRRI, timings]= getAlignedTrials(RRI,events,interpolation_method
     end
 
     alignedRRI = alignedRRI(~cellfun('isempty', alignedRRI));  % Removes any empty cells resulting from the try-catch block
-    timings =  - pre_duration:newSamplingRateDuration: post_duration;
+    timings =  - pre_duration:newSamplingStep: post_duration;
     
     % Convert to mat
     alignedRRI = cell2mat(alignedRRI);
