@@ -1,10 +1,10 @@
-function [alignedRRI,timings] = alignRRI(pathToPhysioFile, pathToScheduleFile,savePath)
+function [alignedRRI,timings] = alignRRI(pathToPhysioFiles,pathToScheduleFile,savePath)
     % Processes the ECG of a merged file containing all the sessions of a
     % participant. Computes the RRI timeseries and aligns it with the
     % feedback times. Optionally saves the resulting array.
     %
     % Parameters:
-    % pathToPhysioFile   - [String] Path to the database file containing the merged physio sessions
+    % pathToPhysioFiles   - [String] Path to the database file containing the physio sessions
     % pathToScheduleFile - [String] Path to where the schedule file is located 
     % savePath - [String] Path to where the alignedRRI will be saved, if
     %               empty no data is saved.
@@ -14,28 +14,29 @@ function [alignedRRI,timings] = alignRRI(pathToPhysioFile, pathToScheduleFile,sa
     % timings - [Cell Array] Contains the timings or deltas corresponding
     %           to the feedback time as time zero.
     
-    if nargin<3
-        savePath = [];
-    end
-
-    %% Process the RRI
-    [~,RRI] = readSession(pathToPhysioFile,false,false,false);
+    %% Generate paths
+    % [pathToPhysioFiles, pathToScheduleFile, savePath] = generatePaths(base_path, participantId);
 
     %% Process the schedule file
     participantId = extractParticipantId(pathToScheduleFile);
     feedbackEventTimes = getFeedbackTimings(pathToScheduleFile);
+
+    %% Merge the physiofiles
+    tempDbFile = createTemporalMergedDatabase(pathToPhysioFiles);
+
+    %% Process the RRI
+    [~,RRI] = readSession(tempDbFile,false,false,false);
     
+    % Delete the temporary database file
+    if exist(tempDbFile, 'file')
+        delete(tempDbFile);
+    end
+
     %% Align the RRI
     [alignedRRI,timings] = getAlignedTrials(RRI,feedbackEventTimes,'spline');
-
+    
     %% Save the data
-    % Check if save_path is provided, not empty, and is a valid directory
-    if ~isempty(savePath) && isfolder(fileparts(savePath))
-        fileSavePath = sprintf('%s_alignedRRI.mat',participantId);
-        fileSavePath = fullfile(savePath,fileSavePath);
-        % Save the data if save_path is specified and valid
-        save(fileSavePath, 'alignedRRI');
-    end
+    saveAlignedRRI(savePath, participantId, alignedRRI);
 end
 
 function datetime_array = convert_to_datetime(datenum_array_ms)
@@ -52,6 +53,87 @@ function datetime_array = convert_to_datetime(datenum_array_ms)
     
     datetime_array = double(datenum_array_ms)/1000; % Convert to seconds
     datetime_array = datetime(datetime_array, 'ConvertFrom', 'posixtime', 'Format', 'dd-MMM-yyyy HH:mm:ss.SSSSSSSSS', 'TimeZone', 'America/New_York');
+end
+
+function tempDbFile = createTemporalMergedDatabase(pathToPhysioFile)
+    % Creates a temporary SQLite database by merging specific tables from multiple database files
+    % 
+    % Parameters:
+    % pathToPhysioFile - [String] Path to database files
+    % 
+    % Returns:
+    %   tempDbFile - [String] Path to the temporary merged database file
+    
+    % Generate a list of all database files
+    physioFiles = findDatabaseFiles(pathToPhysioFile);
+
+    % Generate a unique temporary file name for the SQLite database
+    tempDbFile = [tempname, '.db'];
+
+    % Open a connection to the temporary database
+    db = sqlite(tempDbFile, 'create');
+    
+    % For older versions of matlab
+    % Create the 'Polar_heartrate' table with desired columns
+    createTableQuery = ['CREATE TABLE Polar_heartrate (' ...
+                        'time_ms INTEGER, ' ...
+                        'heartrate INTEGER, ' ...
+                        'rr_intervals TEXT, ' ...
+                        'contact INTEGER);'];
+    exec(db, createTableQuery);
+    
+    % Create the 'Polar_ECG' table with desired columns
+    createTableQuery = ['CREATE TABLE Polar_ECG (' ...
+                        'time_ms INTEGER, ' ...
+                        'polar_timestamp INTEGER, ' ...
+                        'ECG REAL);'];
+    exec(db, createTableQuery);
+
+    % Loop through each file in physioFiles to read and merge the data
+    for i = 1:length(physioFiles)
+
+        % Open each database file individually
+        newdb = sqlite(physioFiles{i}, 'connect');
+        
+         try
+            % Fetch available tables
+            tables = fetch(newdb, 'SELECT name FROM sqlite_master WHERE type="table" AND name IN ("Polar_heartrate", "Polar_ECG")');
+
+            for t = 1:height(tables)
+                
+                % Fetch the data 
+                table_name = tables{t,:};
+                fetch_str = sprintf('SELECT * FROM %s',table_name);
+                data = fetch(newdb, fetch_str);
+                
+                % Check if there is data
+                if ~isempty(data)
+                     % Determine the action based on MATLAB version
+                    if verLessThan('matlab', '9.11')  % Check if MATLAB version is older than 9.11
+                        % Define column names based on the table name
+                        if strcmp(table_name, 'Polar_heartrate')
+                            colnames = {'time_ms', 'heartrate', 'rr_intervals', 'contact'};
+                        elseif strcmp(table_name, 'Polar_ECG')
+                            colnames = {'time_ms', 'polar_timestamp', 'ECG'};
+                        else
+                            error('Unknown table. Cannot determine column names.');
+                        end
+            
+                        % Perform the insert operation with the specified column names
+                        insert(db, table_name, colnames, data);
+                    else
+                        % Use sqlwrite for newer MATLAB versions
+                        sqlwrite(db, table_name, data);
+                    end
+                end
+            end
+        catch ME 
+            fprintf('An error occurred while fetching tables in file %s: %s\n',physioFiles{i}, ME.message);
+        end
+        newdb.close();
+    end
+    db.close();
+
 end
 
 function dataTable = extractAndConcatenateDataTable(processed_session, ecg)
@@ -159,6 +241,29 @@ function endIdx = findEndIdx(times, i, currentIdx)
     end
 end
 
+function dbFiles = findDatabaseFiles(directory)
+    % Returns a list of all database files in the specified directory.
+    % Parameters:
+    % directory - [String] The directory to search
+    % 
+    % Returns:
+    % dbFiles - [Cell Array] Contains all paths found to database files
+
+    % Validate if the input is a directory
+    if ~isfolder(directory)
+        error('The provided path is not a valid directory.');
+    end
+
+    % Get a list of all '.db' files in the directory
+    filePattern = fullfile(directory, '*.db');
+    files = dir(filePattern);
+
+    % Extract the names and create full paths
+    dbFiles = {files.name};
+    dbFiles = cellfun(@(x) fullfile(directory, x), dbFiles, 'UniformOutput', false);
+
+end
+
 function [t_flat,rri_flat] = flattenTimeAndRri(timestamps,rri)
     % Flattens arrays of timestamps and corresponding RRI (R-R Interval) data,
     % handling irregularities such as empty cells.
@@ -203,6 +308,33 @@ function [t_flat,rri_flat] = flattenTimeAndRri(timestamps,rri)
     rri_flat = rri_flat';
     t_flat = t_flat';
 
+end
+
+function [pathToPhysioFiles, pathToScheduleFile, savePath] = generatePaths(base_path, participantId)
+    % Generates paths similar to a shell script for a given subject
+    % 
+    % Parameters:
+    %   base_path - [String] Base directory for data paths
+    %   participantId - [String] Participant identifier as a string
+    %
+    % Returns:
+    %   pathToPhysioFiles - Path to the physio files for the subject
+    %   pathToScheduleFile - Path to the schedule file for the subject
+    %   savePath - Path to save processed data for the subject
+
+    % Path to physio files
+    pathToPhysioFiles = fullfile(base_path, 'Data_Raw', participantId, 'physio');
+
+    % Path to schedule file
+    subj_dir = fullfile(base_path, 'Data_Raw', participantId, 'schedule');
+    files = dir(fullfile(subj_dir, ['*_' participantId '_schedule.db']));
+    if isempty(files)
+        error('No schedule file found for subject %s in directory %s', participantId, subj_dir);
+    end
+    pathToScheduleFile = fullfile(files(1).folder, files(1).name);
+
+    % Path for saving processed data
+    savePath = fullfile(base_path, 'Data_Processed');
 end
 
 function rri_accum = getAccumulatedRRI(rri)
@@ -418,8 +550,13 @@ function timings = getFeedbackTimings(filePath)
     db = sqlite(filePath);
     feedbackTimeTable = fetch(db,'SELECT feedback_time, stim_time, choice_time, feedback, block FROM trials WHERE choice_time IS NOT NULL AND stim1>=0 AND stim2>=-1000 ORDER BY choice_time ASC');
     db.close();
-
-    timings = convert_to_datetime(feedbackTimeTable.feedback_time);
+    if strcmp(class(feedbackTimeTable),'table')
+        feedbackTimes = feedbackTimeTable.feedback_time;
+    elseif strcmp(class(feedbackTimeTable),'cell')
+        feedbackTimes = feedbackTimeTable(:,1);
+        feedbackTimes = cell2mat(feedbackTimes);
+    end
+    timings = convert_to_datetime(feedbackTimes);
 end
 
 function [interpolated_interval] = getInterpolatedIntervals(datapoints_per_timestamp,fs)
@@ -493,9 +630,17 @@ function sessions = getSeparatedSessions(filepath,ecg)
     end
 
     db.close();
-    
+    %% Make sure it's in table format
+    if iscell(sessionData)
+        colNames = {'time_ms','polar_timestamp','ECG'};
+        sessionData = cell2table(sessionData, 'VariableNames', colNames);
+    end
+
     %% Sort the table by timestamps first
-    sessionData = sortrows(sessionData,'time_ms');
+    [~, idx] = unique(sessionData(:, {'polar_timestamp', 'ECG'}), 'rows', 'stable'); % Sometimes the phone records the exact same packet twice
+    sessionData = sessionData(idx, :);
+
+    sessionData = sortrows(sessionData,{'time_ms','polar_timestamp'});
 
     %% Check differences 
     timestamps = sessionData.time_ms;
@@ -749,7 +894,7 @@ function [ECG,RRI] = readSession(filepath,optimized_alignment,save_processed,ver
     % from the raw ECG, or extracted from the streamed RRI. 
     %
     % Parameters:
-    % filepath - Path to the session or merged physio file.
+    % filepath - [String] Path to the session or merged physio file.
     % optimized_alignment - [Logical] Determines whether optimized Timestamp alignment is used (default: false).
     % save_processed - [Logical] Determines whether to save processed data (default: false).
     % verbose - [Logical] Controls the display of the waitbar (default: false).
@@ -808,3 +953,33 @@ function data = removeDuplicates(data)
     [~, ia, ~] = unique(data.Timestamp, 'stable');  % Get indices of unique timestamps
     data = data(ia, :);  % Filter the table with only unique timestamps
 end 
+
+function saveAlignedRRI(savePath, participantId, alignedRRI)
+    % saveAlignedRRI Saves data to a specified path under participant-specific folders
+    %
+    % Inputs:
+    %   savePath - String, base directory where data should be saved
+    %   participantId - String, identifier for the participant, used to create subdirectory
+    %   alignedRRI - Data to be saved, typically a structure or array
+    %
+    % This function checks if the provided savePath is valid and not empty,
+    % creates a participant-specific subdirectory if it does not exist, and saves
+    % the alignedRRI data into a MAT-file named after the participantId.
+
+    % Check if savePath is provided and not empty
+    if ~isempty(savePath)
+        % Build the full directory path including participantId
+        participantDirectory = fullfile(savePath, participantId);
+
+        % Check if the directory exists, if not, create it
+        if ~isfolder(participantDirectory)
+            mkdir(participantDirectory);  % Create the directory if it does not exist
+        end
+
+        % Create the full file path for saving the data
+        fileSavePath = fullfile(participantDirectory, sprintf('%s_alignedRRI.mat', participantId));
+
+        % Save the data using the MATLAB save function
+        save(fileSavePath, 'alignedRRI');    
+    end
+end
