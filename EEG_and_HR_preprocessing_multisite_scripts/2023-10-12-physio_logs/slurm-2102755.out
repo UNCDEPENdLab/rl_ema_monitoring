@@ -1,0 +1,7 @@
+440581
+Found a total of 6450372 samples out of 6708756
+Found a total of 6450372 samples out of 6708756
+Found a total of 6450372 samples out of 6708756
+Found a total of 6450372 samples out of 6708756
+Found a total of 6450372 samples out of 6708756
+/var/spool/slurmd/job2102755/slurm_script: line 4: 41888 Killed                  matlab -nodisplay -nodesktop -nosplash -batch "subj=int2str(440581); disp(subj); EEGanalysis_test(subj); exit"

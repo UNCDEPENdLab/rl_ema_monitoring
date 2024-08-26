@@ -1,0 +1,13 @@
+440754
+{Error using sqlite/fetch
+Received exception upon attempting an operation. Exception: [The database
+440754_physio_20230819173720.db is corrupt. (database disk image is
+malformed)]. Details: [SELECT name FROM sqlite_master WHERE type=='table'].
+
+Error in Utilities.mergeDatabases (line 119)
+                tables = fetch(newdb,'SELECT name FROM sqlite_master WHERE
+                type==''table''');
+
+Error in delete_duplicates_and_merge_physio (line 24)
+        Utilities.mergeDatabases(output_folder, path, name, 'physio');
+} 

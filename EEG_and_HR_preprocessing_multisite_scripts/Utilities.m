@@ -117,11 +117,11 @@ classdef Utilities < handle
                 newdb = sqlite(files(f).name, 'connect');
                 cd(homedir);
                 try
-                    tables = fetch(newdb,'SELECT sql FROM sqlite_master WHERE type==''table''');
-                    %tables(strcmp(tables,'android_metadata'))=[];
+                    tables = fetch(newdb,'SELECT name FROM sqlite_master WHERE type==''table''');
+                    tables(strcmp(tables,'android_metadata'))=[];
                     
                     for t = 1:length(tables)
-                        if strcmp(tables{t},'EEG_muse')
+                        if (regexp(tables{t},'EEG_muse')>0)
                             fetch_str = sprintf('SELECT sql FROM sqlite_master WHERE tbl_name = ''%s'' AND type = ''table''',tables{t});
                             str = fetch(newdb,fetch_str);
                             str = regexprep(str, 'CREATE TABLE', 'CREATE TABLE IF NOT EXISTS');
