@@ -458,7 +458,7 @@ run_ema <- function(root=NULL, subjects="all", pull=FALSE, sched=TRUE, physio=FA
 #warning('Andrew is testing physio 2022-02-09')
 
 
-run_ema(save_lite=FALSE, replot=FALSE, render=TRUE, push=TRUE, pull=FALSE, sched=TRUE, physio=FALSE, cleanup_data=TRUE, nthreads = 1, force_proc=FALSE, force_reload=FALSE, log_level=TRACE, sink_file=NULL)
+run_ema(save_lite=FALSE, replot=TRUE, render=TRUE, push=TRUE, pull=FALSE, sched=TRUE, physio=FALSE, cleanup_data=TRUE, nthreads = 1, force_proc=FALSE, force_reload=FALSE, log_level=TRACE, sink_file=NULL)
 
 # Run this line #
 #run_ema(save_lite=FALSE, replot=TRUE, render=TRUE, push=TRUE, pull=TRUE, sched=TRUE, physio=TRUE, cleanup_data=TRUE, nthreads = 21, force_proc=TRUE, force_reload=TRUE, sink_file='dashboard_run.txt')
