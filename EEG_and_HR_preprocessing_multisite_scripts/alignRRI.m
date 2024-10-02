@@ -33,7 +33,8 @@ function [alignedRRI,timings] = alignRRI(pathToPhysioFiles,pathToScheduleFile,sa
     end
 
     %% Align the RRI
-    [alignedRRI,timings] = getAlignedTrials(RRI,feedbackEventTimes,'spline');
+    % [alignedRRI,timings] = getAlignedTrials(RRI,feedbackEventTimes,'spline'); % Interpolate
+    [alignedRRI,timings] = getAlignedTrials(RRI,feedbackEventTimes,[]); % Fill with nans
     
     %% Save the data
     saveAlignedRRI(savePath, participantId, alignedRRI);
@@ -186,6 +187,32 @@ function participantId = extractParticipantId(filePath)
         participantId = '';
         warning('No participantId found in the given file path.');
     end
+end
+
+function idxArray = findClosestIndices(longArray, rawArray)
+    % Returns the indices of the longArray where each element of the
+    % rawArray is closest to.
+    % 
+    % Parameters:
+    % longArray - [Array] Where the elements will be searched 
+    % rawArray - [Array] The elements to search 
+    %
+    % Returns:
+    % idxArray - [Array] Contains the indices where the values were found
+    
+    % Ensure both arrays are sorted
+    longArray = sort(longArray);
+    rawArray = sort(rawArray);
+    
+    % Calculate the differences matrix
+    differences = rawArray - longArray;
+    
+    % Create a mask where differences are non-positive (second date is before or at the first date)
+    validMask = differences <= 0;
+    
+    % Find the first value where the rawArray was negative and return the indices
+    [~, idxArray] = max(validMask, [], 2);
+    
 end
 
 function filteredECG = filterECG(ecgData, fs)
@@ -404,24 +431,43 @@ function [alignedRRI, timings]= getAlignedTrials(RRI,events,interpolation_method
 
         event_time = events(i);
 
-        % Find RRI data around the event within the specified window
-        indices = find(RRI.Timestamp >= event_time - extended_pre_duration & RRI.Timestamp <= event_time + extended_post_duration);
+        % Define new times 
+        new_times = event_time - pre_duration:newSamplingStep:event_time + post_duration;
+        
+        % If it's empty then just fill the timebins with NaN values
+        if isempty(interpolation_method)
+            % Find the RRI data in the specified window
+            indices = find(RRI.Timestamp >= event_time - pre_duration & RRI.Timestamp <= event_time + post_duration);
+            
+            % Get the indices closest to the new times
+            idxArray = findClosestIndices(new_times, RRI.Timestamp(indices));
+            
+            % Create a new array with nans
+            result = NaN(size(new_times,2), 1);
+            
+            % Fill in the RRI values
+            result(idxArray) = RRI.RRI(indices);
 
-        % If data was found between the bounds
-        if size(indices,1)>1
+            % Append the result
+            alignedRRI{i} = result';
 
-            relevant_times = RRI.Timestamp(indices);
-            relevant_rris = RRI.RRI(indices);
-
-            % Define new times at which to interpolate
-            new_times = event_time - pre_duration:newSamplingStep:event_time + post_duration;
-
-            % Interpolate RRI data at new times
-            try
-                interpolated_rris = interp1(relevant_times, double(relevant_rris), new_times, interpolation_method); 
-                alignedRRI{i} = interpolated_rris;
-            catch ex
-                disp(ex.message);
+        else
+            % Find RRI data around the event within the specified window
+            indices = find(RRI.Timestamp >= event_time - extended_pre_duration & RRI.Timestamp <= event_time + extended_post_duration);
+        
+            % If data was found between the bounds
+            if size(indices,1)>1
+    
+                relevant_times = RRI.Timestamp(indices);
+                relevant_rris = RRI.RRI(indices);
+                
+                % Interpolate RRI data at new times
+                try
+                    interpolated_rris = interp1(relevant_times, double(relevant_rris), new_times, interpolation_method); 
+                    alignedRRI{i} = interpolated_rris;
+                catch ex
+                    disp(ex.message);
+                end
             end
         end
     end
@@ -526,7 +572,7 @@ function ECG = getECG(raw_data,optimized_alignment)
     % Detect peaks
     [~, ind_locs] = findpeaks(ECG.ecg_data.ECG,  ... % Only using the datapoints with no reference to return the peak indices
                                'MinPeakDistance',50,...
-                               'MinPeakHeight', 120, ...
+                               'MinPeakHeight', 100, ...
                                'MinPeakProminence',10);
 
     locs = ECG.ecg_data.Timestamp(ind_locs); % Using the indices to get the actual locations
@@ -650,7 +696,7 @@ function sessions = getSeparatedSessions(filepath,ecg)
     timeDiffs = [seconds(diff(timestamps)); 0]; % Append a zero for the last element to maintain array size
     
     % Identify splits when time difference is greater than x seconds
-    splitPoints = find(timeDiffs > 5);
+    splitPoints = find(timeDiffs > 3);
     
     % Split data at these points
     sessions = {};
