@@ -26,6 +26,11 @@ function [TFdata] = EEGanalysis_test_Validation(name,rootDir)
     %       |
     % Biosemi raw data:    
     %       |->BIOSEMI_bdf->{name}-{sessionNb}.bdf             
+    
+    % Open eeglab to load plugins, Note: running eeglab nogui; won't load them
+    eeglab; 
+    close;
+    ft_defaults; % Load defaults
 
     epochWindow = [-1.500, 3];  % Time window around the event, in s
     TFwindow = [-1000,2500];
@@ -139,12 +144,28 @@ function feedbackEvents = alignCameraWithTTL(feedbackEvents,biosemiSamplingRate,
     % Convert the biosemi latencies to s
     biosemiLatencies_s = double(feedbackEvents.latencies)/biosemiSamplingRate;
     
-    % Verify that sizes match and correct if there are discontinuities
-    if size(cameraTTLPulse,1)~= size(biosemiLatencies_s,1)
-        
-        % Check both
+    % Verify that sizes match and correct if there are repeated points
+    if size(cameraTTLPulse, 1) ~= size(biosemiLatencies_s, 1)
+        % Check and correct pulse continuity
         cameraTTLPulse = correctPulseContinuity(cameraTTLPulse);
         biosemiLatencies_s = correctPulseContinuity(biosemiLatencies_s);
+        
+        % Retry with a different slicing if sizes still don't match
+        if size(cameraTTLPulse, 1) ~= size(biosemiLatencies_s, 1)
+            cameraTTLPulse = feedbackEvents.cameraTimestamps(84:84:end);
+            
+            % Check and correct again after changing the slicing index
+            if size(cameraTTLPulse, 1) ~= size(biosemiLatencies_s, 1)
+                cameraTTLPulse = correctPulseContinuity(cameraTTLPulse);
+                biosemiLatencies_s = correctPulseContinuity(biosemiLatencies_s);
+    
+                % Final adjustment if sizes still do not match
+                if size(cameraTTLPulse, 1) ~= size(biosemiLatencies_s, 1)
+                    x = size(cameraTTLPulse, 1) - size(biosemiLatencies_s, 1) + 1;
+                    cameraTTLPulse = cameraTTLPulse(x:end);
+                end
+            end
+        end
     end
 
     % Check for best TTL pulses, remove outliers
@@ -827,7 +848,7 @@ function EEG = preprocessBiosemiStage1(fullFilePath,subjectId)
     [folderPath, fileName, extension] = fileparts(fullFilePath);
     currentDir = pwd;  % Save current directory
     cd(folderPath);
-    fullFileName = convertStringsToChars(fileName+extension);
+    fullFileName = convertStringsToChars(string(fileName)+string(extension));
     EEG = pop_biosig(fullFileName);
     % EEG = pop_loadset(fullFileName); % Used when loading an EEG  object
 
