@@ -1,4 +1,4 @@
-function [TFdata] = EEGanalysis_test_Validation(name,rootDir)
+function [TFdata] = EEGanalysis_test_Validation(name,rootDir,saveAlignmentVarsOnly)
     % Full pipeline for preprocessing Muse and Biosemi data.
     % For Muse: Imports and merges the data.
     %           Corrects the EEG timestamps.
@@ -14,6 +14,10 @@ function [TFdata] = EEGanalysis_test_Validation(name,rootDir)
     % name -        [char] Participant Id
     % rootDir -     [string] Directory where the raw data will be taken from.
     %
+    % saveAlignmentVarsOnly - [bool] Optional - if True then saves the
+    %                           intermediate variables, skips the Muse and TF
+    %                           analysis
+    %
     % Returns -     [struct] Contains the time-frequency analysis results
     %               for the muse and 4 biosemi sessions.
     %
@@ -27,6 +31,11 @@ function [TFdata] = EEGanalysis_test_Validation(name,rootDir)
     % Biosemi raw data:    
     %       |->BIOSEMI_bdf->{name}-{sessionNb}.bdf             
     
+    % Set up optional parameters
+    if nargin<3
+        saveAlignmentVarsOnly = false;
+    end
+
     % Open eeglab to load plugins, Note: running eeglab nogui; won't load them
     eeglab; 
     close;
@@ -35,21 +44,23 @@ function [TFdata] = EEGanalysis_test_Validation(name,rootDir)
     epochWindow = [-1.500, 3];  % Time window around the event, in s
     TFwindow = [-1000,2500];
     TFdata = struct();
-
-    %% MUSE: 
-    % Preprocess, align and segment data
-    EEGData.muse = preprocessMuseData(name,epochWindow,rootDir);
-
-    % TF analysis
-    scenario = 'feedback';
-    TFdata.muse = prepareTFAnalysis(EEGData.muse, 'muse', scenario,TFwindow);
-    museChannelNames = {'left_temp', 'left_front', 'right_front', 'right_temp'};
-
-    % Save the processed data
-    saveTFData(TFdata.muse, rootDir, name, 'muse', museChannelNames, scenario, EEGData.muse.sampling_rate)
-
-    % Clear workspace
-    clear 'EEGData' 'TFdata'
+    
+    if ~saveAlignmentVarsOnly
+        %% MUSE: 
+        % Preprocess, align and segment data
+        EEGData.muse = preprocessMuseData(name,epochWindow,rootDir);
+    
+        % TF analysis
+        scenario = 'feedback';
+        TFdata.muse = prepareTFAnalysis(EEGData.muse, 'muse', scenario,TFwindow);
+        museChannelNames = {'left_temp', 'left_front', 'right_front', 'right_temp'};
+    
+        % Save the processed data
+        saveTFData(TFdata.muse, rootDir, name, 'muse', museChannelNames, scenario, EEGData.muse.sampling_rate)
+    
+        % Clear workspace
+        clear 'EEGData' 'TFdata'
+    end
 
     %% BIOSEMI : 
     % Preprocess and align data
@@ -58,36 +69,54 @@ function [TFdata] = EEGanalysis_test_Validation(name,rootDir)
     scheduleData = readScheduleFile(name,rootDir);
     scenario = 'feedback';
     
+    % Directory to save alignment variables for analysis
+    
+    if saveAlignmentVarsOnly 
+        saveDir = fullfile(rootDir,'AlignmentVariables',name);
+        if ~exist(saveDir,'dir')
+            mkdir(saveDir);
+        end
+    end
+
     for sessionNb = 1:numBiosemiSessions 
 
         % Camera timestamps and frames of interest
         blockNumber = getBlockNumber(str2double(name), sessionNb);
         sessionScheduleData = filterByBlock(scheduleData,blockNumber);
         
-        % Align phone timestamps to camera timestamps
+        % Prepare to save the alignment variables
         feedbackEvents = getPhoneCameraScoredTimestamps(name,rootDir,sessionNb,sessionScheduleData);
-        feedbackEvents = alignPhoneToCameraTimestamps(feedbackEvents);
+        if saveAlignmentVarsOnly
+            saveName = fullfile(saveDir,sprintf('%s_BSsession_%i_PhoneToCameraCorrection',name,sessionNb));
+        else
+            saveName = '';
+        end
+
+        % Align phone timestamps to camera timestamps
+        feedbackEvents = alignPhoneToCameraTimestamps(feedbackEvents,saveName);
         
         % Preprocess EEG data and align camera timestamps to biosemi 
-        [alignedEEG, feedbackEvents] = preprocessBiosemiData(name, rootDir, sessionNb, feedbackEvents, epochWindow);
-        
-        % Run TF analysis
-        TFdata.biosemi{sessionNb} = prepareTFAnalysis(alignedEEG, 'biosemi', scenario, TFwindow);
-
-        % Add the missing trials as NaNs
-        TFdata.biosemi{sessionNb}.data = addMissingTrials(TFdata.biosemi{sessionNb}.data, feedbackEvents.validIndices);
-
+        [alignedEEG, feedbackEvents] = preprocessBiosemiData(name, rootDir, sessionNb, feedbackEvents, epochWindow,saveDir);
+        if ~saveAlignmentVarsOnly
+            % Run TF analysis
+            TFdata.biosemi{sessionNb} = prepareTFAnalysis(alignedEEG, 'biosemi', scenario, TFwindow);
+    
+            % Add the missing trials as NaNs
+            TFdata.biosemi{sessionNb}.data = addMissingTrials(TFdata.biosemi{sessionNb}.data, feedbackEvents.validIndices);
+        end
     end
+    if ~saveAlignmentVarsOnly
+        % Concatenate sessions together
+        TFdata = concatenateBiosemiSessions(TFdata);
     
-    % Concatenate sessions together
-    TFdata = concatenateBiosemiSessions(TFdata);
-
-    % Define the channel names
-    biosemiChannelNames = arrayfun(@(x) x.labels, alignedEEG.chanlocs, 'UniformOutput', false); % Recover the channel names from any of the sessions
-    
-    % Save the processed data
-    saveTFData(TFdata, rootDir, name, 'biosemi', biosemiChannelNames, scenario, alignedEEG.srate);
-
+        % Define the channel names
+        biosemiChannelNames = arrayfun(@(x) x.labels, alignedEEG.chanlocs, 'UniformOutput', false); % Recover the channel names from any of the sessions
+        
+        % Save the processed data
+        saveTFData(TFdata, rootDir, name, 'biosemi', biosemiChannelNames, scenario, alignedEEG.srate);
+    else
+        TFdata = [];
+    end
 end
 
 function updatedTFData = addMissingTrials(TFdata, validIndices)
@@ -125,19 +154,25 @@ function updatedTFData = addMissingTrials(TFdata, validIndices)
     end
 end
 
-function feedbackEvents = alignCameraWithTTL(feedbackEvents,biosemiSamplingRate,biosemiTimes)
+function feedbackEvents = alignCameraWithTTL(feedbackEvents,biosemiSamplingRate,biosemiTimes,saveName)
     % Map the feedback events from the camera time to the biosemi scale
     % 
     % Parameters:
     % feedbackEvents - [struct] Contains the feedback times in the camera scale
     % biosemiSamplingRate - [numeric] The biosemi sampling rate
     % biosemiTimes - [Array of double] The array of biosemi timestamps 
+    % saveName - [string] Optional: if not empty, saves the time drift slope and bias
+    %                       under that directory
     %
     % Returns:
     % feedbackEvents - [struct] Contains the feedback times in the camera scale
     %                           and now also the datapoints in biosemi where the
     %                            feedback events happened
     
+    if nargin<4
+        saveName = '';
+    end
+
     % Recover the camera TTL pulse 
     cameraTTLPulse = feedbackEvents.cameraTimestamps(80:80:end);
     
@@ -161,6 +196,9 @@ function feedbackEvents = alignCameraWithTTL(feedbackEvents,biosemiSamplingRate,
     
                 % Final adjustment if sizes still do not match
                 if size(cameraTTLPulse, 1) ~= size(biosemiLatencies_s, 1)
+                    if size(cameraTTLPulse,1)<size(biosemiLatencies_s,1)
+                        cameraTTLPulse = feedbackEvents.cameraTimestamps(80:80:end);
+                    end
                     x = size(cameraTTLPulse, 1) - size(biosemiLatencies_s, 1) + 1;
                     cameraTTLPulse = cameraTTLPulse(x:end);
                 end
@@ -178,6 +216,11 @@ function feedbackEvents = alignCameraWithTTL(feedbackEvents,biosemiSamplingRate,
 
     % Fit a linear curve
     p = polyfit(cameraTTLPulse(~outlierLogic),biosemiLatencies_s(~outlierLogic),1);
+    
+    % Save if needed
+    if ~isempty(saveName)
+        save(saveName,'p');
+    end
 
     % Get the feedback times in biosemi time scale
     alignedBiosemiEventTimes = polyval(p,feedbackEvents.alignedCameraTimestamps);
@@ -232,7 +275,7 @@ function feedbackEvents = alignCameraWithTTL(feedbackEvents,biosemiSamplingRate,
     feedbackEvents.alignedBiosemiEvents= biosemiFeedbackEvents;
 end
 
-function feedbackEvents = alignPhoneToCameraTimestamps(feedbackEvents)
+function feedbackEvents = alignPhoneToCameraTimestamps(feedbackEvents,saveName)
     % Corrects the manually scored feedback times to times which are closer to the phone timestamps.
     %
     % Parameters:
@@ -242,10 +285,14 @@ function feedbackEvents = alignPhoneToCameraTimestamps(feedbackEvents)
     %                           will be corrected.
     %                           Contains the full array with camera
     %                           timestamps.
-    % 
+    % saveName - [string] Optional: if not empty, saves the alignment correction 
+    %
     % Returns:
     % feedbackEvents - [struct] Same object but now containing the
     %                           corrected timestamps
+    if nargin<2
+        saveName = '';
+    end
 
     % Get the minimal shift 
     [tau_opt, ~] = optimizeAlignment(feedbackEvents.scoredFeedbackTimes,feedbackEvents.phoneFeedbackTimes);
@@ -265,6 +312,10 @@ function feedbackEvents = alignPhoneToCameraTimestamps(feedbackEvents)
     %%
     % Feedback events relative to camera timestamps 
     feedbackEvents.alignedCameraTimestamps = alignedCameraTimestamps;
+    
+    if ~isempty(saveName)
+        save(saveName,'tau_opt');
+    end
 
 end
 
@@ -795,7 +846,7 @@ function [TFdata] = prepareTFAnalysis(EEG, eegSource, scenario,TFwindow)
 
 end
 
-function [EEG,feedbackEvents] = preprocessBiosemiData(name,rootDir,sessionNb,feedbackEvents,epochWindow)
+function [EEG,feedbackEvents] = preprocessBiosemiData(name,rootDir,sessionNb,feedbackEvents,epochWindow,saveDir)
     % Preprocess the biosemi data
     % 
     % Parameters:
@@ -805,10 +856,15 @@ function [EEG,feedbackEvents] = preprocessBiosemiData(name,rootDir,sessionNb,fee
     % feedbackEvents - [struct] Contains the feedback events 
     % epochWindow - [array size 1x2] time to segment before and after
     %                               feedback event in seconds
+    % saveDir - [string] Optional: if not empty, saves the alignment correction 
     %
     % Returns:
     % EEG - [struct] EEGLAB data structure
-   
+    
+    if nargin<6
+        saveName = '';
+    end
+
     %% Prepare path
     rawDir = fullfile(rootDir, 'BIOSEMI_bdf', name);
     rawFilePath = [name '-' num2str(sessionNb) '.bdf'];
@@ -822,8 +878,10 @@ function [EEG,feedbackEvents] = preprocessBiosemiData(name,rootDir,sessionNb,fee
     
     % Get the feedback events in biosemi scale
     % Send the biosemi times as seconds
-    % feedbackEvents.alignedBiosemiEvents = alignCameraWithTTL(feedbackEvents,EEG.srate,EEG.times'/1000);
-    feedbackEvents = alignCameraWithTTL(feedbackEvents,EEG.srate,EEG.times'/1000);
+    if ~isempty(saveDir)
+        saveName = fullfile(saveDir,sprintf('%s_BSsession_%i_LinearRegressionParameters',name,sessionNb));
+    end
+    feedbackEvents = alignCameraWithTTL(feedbackEvents,EEG.srate,EEG.times'/1000,saveName);
     EEG.event = buildEEGevent(feedbackEvents);
     biosemiTimes_rel = double(feedbackEvents.alignedBiosemiEvents)/EEG.srate;
     biosemiTimes_rel = biosemiTimes_rel- biosemiTimes_rel(1);

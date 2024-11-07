@@ -1,25 +1,26 @@
-function [alignedRRI,timings] = alignRRI(pathToPhysioFiles,pathToScheduleFile,savePath)
+function [alignedRRI,timings] = alignRRI(pathToPhysioFiles,pathToScheduleFile,eventType,savePath)
     % Processes the ECG of a merged file containing all the sessions of a
     % participant. Computes the RRI timeseries and aligns it with the
-    % feedback times. Optionally saves the resulting array.
+    % specified event times. Optionally saves the resulting array.
     %
     % Parameters:
     % pathToPhysioFiles   - [String] Path to the database file containing the physio sessions
     % pathToScheduleFile - [String] Path to where the schedule file is located 
+    % eventType - [String] The event to which the signal will be aligned {'feedback','stim','choice'}
     % savePath - [String] Path to where the alignedRRI will be saved, if
     %               empty no data is saved.
     % 
     % Returns:
     % alignedRRI - [Table] Contains the aligned trials.
     % timings - [Cell Array] Contains the timings or deltas corresponding
-    %           to the feedback time as time zero.
+    %           to the event time as time zero.
     
     %% Generate paths
     % [pathToPhysioFiles, pathToScheduleFile, savePath] = generatePaths(base_path, participantId);
 
     %% Process the schedule file
     participantId = extractParticipantId(pathToScheduleFile);
-    feedbackEventTimes = getFeedbackTimings(pathToScheduleFile);
+    eventTimes = getEventTimings(pathToScheduleFile,eventType);
 
     %% Merge the physiofiles
     tempDbFile = createTemporalMergedDatabase(pathToPhysioFiles);
@@ -33,11 +34,11 @@ function [alignedRRI,timings] = alignRRI(pathToPhysioFiles,pathToScheduleFile,sa
     end
 
     %% Align the RRI
-    % [alignedRRI,timings] = getAlignedTrials(RRI,feedbackEventTimes,'spline'); % Interpolate
-    [alignedRRI,timings] = getAlignedTrials(RRI,feedbackEventTimes,[]); % Fill with nans
+    % [alignedRRI,timings] = getAlignedTrials(RRI,eventTimes,'spline'); % Interpolate
+    [alignedRRI,timings] = getAlignedTrials(RRI,eventTimes,[]); % Fill with nans
     
     %% Save the data
-    saveAlignedRRI(savePath, participantId, alignedRRI);
+    saveAlignedRRI(savePath, participantId, alignedRRI, eventType);
 end
 
 function datetime_array = convert_to_datetime(datenum_array_ms)
@@ -403,7 +404,7 @@ function [alignedRRI, timings]= getAlignedTrials(RRI,events,interpolation_method
     % Returns:
     % alignedRRI - [Numeric Array] Contains the aligned trials.
     % timings - [Cell Array] Contains the timings or deltas corresponding
-    %               to the feedback time as time zero.
+    %               to the event time as time zero.
 
     % Make sure there are no duplicated rows
     % disp(height(RRI));
@@ -584,25 +585,50 @@ function ECG = getECG(raw_data,optimized_alignment)
     
 end
 
-function timings = getFeedbackTimings(filePath)
-    % Obtain the feedback times 
+function timings = getEventTimings(filePath, eventType)
+    % Obtain the event times based on the specified event type
     %
     % Parameters:
     % filepath - [String] Path to the schedule file
+    % eventType - [String] The event to which the signal will be aligned {'feedback', 'stim', 'choice'}
     %
     % Returns:
-    % timings - [Cell Array] Contains the feedback times as datetime object
+    % timings - [Cell Array] Contains the event times as datetime objects
 
-    db = sqlite(filePath);
-    feedbackTimeTable = fetch(db,'SELECT feedback_time, stim_time, choice_time, feedback, block FROM trials WHERE choice_time IS NOT NULL AND stim1>=0 AND stim2>=-1000 ORDER BY choice_time ASC');
-    db.close();
-    if strcmp(class(feedbackTimeTable),'table')
-        feedbackTimes = feedbackTimeTable.feedback_time;
-    elseif strcmp(class(feedbackTimeTable),'cell')
-        feedbackTimes = feedbackTimeTable(:,1);
-        feedbackTimes = cell2mat(feedbackTimes);
+    % Validate eventType
+    validEvents = {'feedback', 'stim', 'choice'};
+    if ~ismember(eventType, validEvents)
+        error('Invalid eventType. Choose from ''feedback'', ''stim'', or ''choice''.');
     end
-    timings = convert_to_datetime(feedbackTimes);
+
+    % Connect to SQLite database
+    db = sqlite(filePath);
+    
+    % Fetch data from database
+    query = sprintf('SELECT feedback_time, stim_time, choice_time, feedback, block FROM trials WHERE choice_time IS NOT NULL AND stim1>=0 AND stim2>=-1000 ORDER BY choice_time ASC');
+    scheduleTimeTable = fetch(db, query);
+    db.close();
+
+    % Extract the correct column based on eventType
+    if strcmp(class(scheduleTimeTable), 'table')
+        switch eventType
+            case 'feedback'
+                eventTimes = scheduleTimeTable.feedback_time;
+            case 'stim'
+                eventTimes = scheduleTimeTable.stim_time;
+            case 'choice'
+                eventTimes = scheduleTimeTable.choice_time;
+            otherwise
+                error('Unexpected eventType. This should not happen.');
+        end
+    elseif strcmp(class(scheduleTimeTable), 'cell')
+        columnIndex = find(strcmp(validEvents, eventType));  % Assuming order in SELECT matches 'feedback', 'stim', 'choice'
+        eventTimes = scheduleTimeTable(:, columnIndex);
+        eventTimes = cell2mat(eventTimes);
+    end
+
+    % Convert to datetime
+    timings = convert_to_datetime(eventTimes);
 end
 
 function [interpolated_interval] = getInterpolatedIntervals(datapoints_per_timestamp,fs)
@@ -1000,18 +1026,15 @@ function data = removeDuplicates(data)
     data = data(ia, :);  % Filter the table with only unique timestamps
 end 
 
-function saveAlignedRRI(savePath, participantId, alignedRRI)
-    % saveAlignedRRI Saves data to a specified path under participant-specific folders
+function saveAlignedRRI(savePath, participantId, alignedRRI,eventType)
+    % Saves data to a specified path under participant-specific folders
     %
-    % Inputs:
-    %   savePath - String, base directory where data should be saved
-    %   participantId - String, identifier for the participant, used to create subdirectory
-    %   alignedRRI - Data to be saved, typically a structure or array
-    %
-    % This function checks if the provided savePath is valid and not empty,
-    % creates a participant-specific subdirectory if it does not exist, and saves
-    % the alignedRRI data into a MAT-file named after the participantId.
-
+    % Parameters:
+    % savePath - [String], base directory where data should be saved
+    % participantId - [String], identifier for the participant, used to create subdirectory
+    % alignedRRI - [Table] Data to be saved
+    % eventType - [String] The event to which the signal will be aligned {'feedback','stim','choice'}
+    
     % Check if savePath is provided and not empty
     if ~isempty(savePath)
         % Build the full directory path including participantId
@@ -1023,7 +1046,7 @@ function saveAlignedRRI(savePath, participantId, alignedRRI)
         end
 
         % Create the full file path for saving the data
-        fileSavePath = fullfile(participantDirectory, sprintf('%s_alignedRRI.mat', participantId));
+        fileSavePath = fullfile(participantDirectory, sprintf('%s_%s_alignedRRI.mat', participantId,eventType));
 
         % Save the data using the MATLAB save function
         save(fileSavePath, 'alignedRRI');    
