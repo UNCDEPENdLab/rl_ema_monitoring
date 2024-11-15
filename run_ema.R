@@ -8,4 +8,4 @@ library("optparse")
 
 # load ema_runner.R
 ## Needs to be properly configured into a package later ##
-load("ema_runner.R")
+load("ema_runner.R") 
