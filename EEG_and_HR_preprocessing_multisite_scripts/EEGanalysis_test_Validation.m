@@ -244,7 +244,7 @@ function feedbackEvents = alignCameraWithTTL(feedbackEvents,biosemiSamplingRate,
     % and mark them as NaNs
     biosemiFeedbackEvents(biosemiFeedbackEvents < 0) = NaN;  % Set NaN where indices are negative
     biosemiFeedbackEvents(biosemiFeedbackEvents > length(biosemiTimes)) = NaN;  % Set NaN where indices are outside the maximum
-    feedbackEvents.validIndices = feedbackEvents.validIndices ~= isnan(biosemiFeedbackEvents);
+    feedbackEvents.validIndices  = updateValidIndices(feedbackEvents.validIndices, find(isnan(biosemiFeedbackEvents)));
 
     %% Method 2: Finding closest TTL pulse and using its difference
     % Get the differences matrix between pulse and event times
@@ -648,9 +648,7 @@ function fullPathToFile = findFileByParticipantId(participantId, rootDir, extens
 
     % Define the directory path based on the integer
     % directoryPath = fullfile(rootDir,'Data_Raw',participantId);
-    %directoryPath = fullfile(rootDir,'mat_files_csv_and_MUSE_db',participantId);
-    tempDir = ""; %OSiller: path containing the mat,csv files as subdirs of each participant
-    directoryPath = fullfile(tempDir,participantId);
+    directoryPath = fullfile(rootDir,'mat_files_csv_and_MUSE_db',participantId);
     
     % Construct the file name based on the presence of an optional modifier
     fileName = strjoin([num2str(participantId), '-', sessionNb, '.', extension],'');
@@ -1350,9 +1348,8 @@ function data = readScheduleFile(name,rootDir)
     % Parameters:
     % data - [Table] Table containing the schedule file feedback events
 
-    %filename = dir(strcat(fullfile(rootDir,'mat_files_csv_and_MUSE_db',name),'/*schedule.db'));
-    pathToSched = '';% OSiller path to dir with participants subdirs with the sched file
-    filename = dir(strcat(fullfile(rootDir,pathToSched,name),'/*schedule.db'));
+    filename = dir(strcat(fullfile(rootDir,'mat_files_csv_and_MUSE_db',name),'/*schedule.db'));
+
     
     if length(filename) > 1
         error(sprintf('multiple schedule files found for subject',name,'%s'));
