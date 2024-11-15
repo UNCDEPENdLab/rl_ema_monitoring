@@ -53,7 +53,7 @@ function [TFdata] = EEGanalysis_test_Validation(name,rootDir,saveAlignmentVarsOn
         % TF analysis
         scenario = 'feedback';
         TFdata.muse = prepareTFAnalysis(EEGData.muse, 'muse', scenario,TFwindow);
-        museChannelNames = {'left_temp', 'left_front', 'right_front', 'right_temp'};
+        museChannelNames = {'left_temp', 'left_front', 'right_front', 'right_temp'}; % Confirmed order on physio files
     
         % Save the processed data
         saveTFData(TFdata.muse, rootDir, name, 'muse', museChannelNames, scenario, EEGData.muse.sampling_rate)
@@ -120,6 +120,19 @@ function [TFdata] = EEGanalysis_test_Validation(name,rootDir,saveAlignmentVarsOn
 end
 
 function updatedTFData = addMissingTrials(TFdata, validIndices)
+    % Takes the Time Frequency data array and fills missing, unprocessed or ignored
+    % trials with NaNs. 
+    %
+    % Parameters:
+    % TFdata - [4D array] Processed TF data with dimensions: 
+    %                     Trials x frequency bins x Timepoints x Channels
+    % validIndices - [array] Contains 1's where the trials were filled and
+    %                        0's where they were invalid. 
+    % 
+    % Returns:
+    % updatedTFdata - [4D array] an array with NaN values where the trials
+    %                   were missing based on the validIndices array.
+
     % Check if there are any zeros in validIndices
     if all(validIndices == 1)
         % If there are no zeros, just return the original data
@@ -185,23 +198,22 @@ function feedbackEvents = alignCameraWithTTL(feedbackEvents,biosemiSamplingRate,
         cameraTTLPulse = correctPulseContinuity(cameraTTLPulse);
         biosemiLatencies_s = correctPulseContinuity(biosemiLatencies_s);
         
+
         % Retry with a different slicing if sizes still don't match
         if size(cameraTTLPulse, 1) ~= size(biosemiLatencies_s, 1)
-            cameraTTLPulse = feedbackEvents.cameraTimestamps(84:84:end);
             
-            % Check and correct again after changing the slicing index
-            if size(cameraTTLPulse, 1) ~= size(biosemiLatencies_s, 1)
-                cameraTTLPulse = correctPulseContinuity(cameraTTLPulse);
-                biosemiLatencies_s = correctPulseContinuity(biosemiLatencies_s);
-    
-                % Final adjustment if sizes still do not match
-                if size(cameraTTLPulse, 1) ~= size(biosemiLatencies_s, 1)
-                    if size(cameraTTLPulse,1)<size(biosemiLatencies_s,1)
-                        cameraTTLPulse = feedbackEvents.cameraTimestamps(80:80:end);
-                    end
-                    x = size(cameraTTLPulse, 1) - size(biosemiLatencies_s, 1) + 1;
-                    cameraTTLPulse = cameraTTLPulse(x:end);
-                end
+            [bestSlicingInd,bestDelay] = findBestSlicingAndDelay(feedbackEvents.cameraTimestamps,biosemiLatencies_s);
+            
+            cameraTTLPulse = feedbackEvents.cameraTimestamps(bestSlicingInd:bestSlicingInd:end);
+            cameraTTLLength = length(cameraTTLPulse);
+            biosemiTTLLength = length(biosemiLatencies_s);
+
+            % Determine which array is smaller and which is larger and
+            % correct it
+            if cameraTTLLength > biosemiTTLLength
+                cameraTTLPulse = cameraTTLPulse(bestDelay:biosemiTTLLength+bestDelay-1);
+            else
+                biosemiLatencies_s = biosemiLatencies_s(bestDelay:cameraTTLLength+bestDelay-1);
             end
         end
     end
@@ -226,11 +238,14 @@ function feedbackEvents = alignCameraWithTTL(feedbackEvents,biosemiSamplingRate,
     alignedBiosemiEventTimes = polyval(p,feedbackEvents.alignedCameraTimestamps);
 
     % Get the biosemi indices of the events
-    bsSampleIndices = round(alignedBiosemiEventTimes * biosemiSamplingRate);
+    biosemiFeedbackEvents = round(alignedBiosemiEventTimes * biosemiSamplingRate);
 
-    % Ensure indices are within valid range
-    biosemiFeedbackEvents = max(1, min(length(biosemiTimes), bsSampleIndices));
-    
+    % Collect the computed event times which don't fit in the timestamps
+    % and mark them as NaNs
+    biosemiFeedbackEvents(biosemiFeedbackEvents < 0) = NaN;  % Set NaN where indices are negative
+    biosemiFeedbackEvents(biosemiFeedbackEvents > length(biosemiTimes)) = NaN;  % Set NaN where indices are outside the maximum
+    feedbackEvents.validIndices = feedbackEvents.validIndices ~= isnan(biosemiFeedbackEvents);
+
     %% Method 2: Finding closest TTL pulse and using its difference
     % Get the differences matrix between pulse and event times
     % differencesTTLEvent = feedbackEvents.alignedCameraTimestamps - cameraTTLPulse';
@@ -379,12 +394,25 @@ function eegEvent = buildEEGevent(feedbackEvents)
     eventTypes = repmat({0}, length(feedbackEvents.feedbackType), 1); 
     eventTypes(feedbackEvents.feedbackType==1) = {1}; 
 
+    % Keep track of the missing trials (marked with NaNs)
+    nanTrials = isnan(feedbackEvents.alignedBiosemiEvents);
+    eventTypes(nanTrials) = {-1}; % Will get deleted but are still flagged 
+    
     % Build the struct for the biosemi using the aligned events
     eegEvent = struct('type', eventTypes, 'latency', num2cell(feedbackEvents.alignedBiosemiEvents), 'duration', num2cell(0*ones(size(feedbackEvents.alignedBiosemiEvents))));
 
 end
 
 function TFdataConcatenated = concatenateBiosemiSessions(TFdata)
+    % Concatenates the biosemi sessions into a single array across the time
+    % dimension
+    %
+    % Parameters:
+    % TFdata - [cell array] Contains the biosemi sessions in separate cells
+    %
+    % Returns:
+    % TFdataConcatenated - [4D array] Contains all the concatenated
+    %                       sessions
     
     TFdataConcatenated = TFdata.biosemi{1}; % All sessions share the same fields except the data
     TFdataConcatenated = rmfield(TFdataConcatenated, 'data');
@@ -527,6 +555,45 @@ function filteredTable = filterByBlock(inputTable,targetBlock)
     filteredTable = inputTable(rowIndices, :);
 end
 
+function [bestSlicingInd,bestMinInd] = findBestSlicingAndDelay(cameraTimestamps,biosemiLatencies_s)
+    % Finds the best way to slice the camera TTL pulse array to match it to
+    % the received biosemi array. It tries different slicing indices and
+    % with the extracted signal finds the shift that best matches both
+    % pulses.
+    % 
+    % Parameters:
+    % cameraTimestamps - [Array] The raw camera timestamps.
+    % biosemiLatencies_s - [Array] The recorded biosemi events in seconds
+    %
+    % Returns: 
+    % bestSlicingInd - [scalar] The value of the camera slicing index that has the
+    %                       best match to the biosemi.
+    % bestMinInd - [scalar] The position or delay to shift the small array
+    %           forward to best match the larger array in the slicing index.
+    %           Note: a value of 1 indicates no shift. 
+
+    % Initialize arrays to store the results
+    slicingInds = 75:85;
+    numSlices = length(slicingInds);
+    minVals = zeros(1, numSlices);
+    minInds = zeros(1, numSlices);
+    
+    for idx = 1:numSlices
+        slicingInd = slicingInds(idx);
+        cameraTTLPulse = cameraTimestamps(slicingInd:slicingInd:end);
+        [minVal, minInd] = findMinimalDelay(cameraTTLPulse, biosemiLatencies_s);
+        
+        % Accumulate the minVal and minInd
+        minVals(idx) = minVal;
+        minInds(idx) = minInd;
+    end
+    
+    % Find the slicingInd with the smallest minVal
+    [overallMinVal, minIdx] = min(minVals);
+    bestSlicingInd = slicingInds(minIdx);
+    bestMinInd = minInds(minIdx);
+end
+
 function closestIndex = findClosestValue(targetValue, searchArray)
     % Find the corresponding index in the array nearest to targetvalue
     % 
@@ -601,6 +668,57 @@ function fullPathToFile = findFileByParticipantId(participantId, rootDir, extens
         disp('No file found matching the criteria.');
         fullPathToFile = [];
     end
+end
+
+function [minVal, minInd] = findMinimalDelay(array1, array2)
+    % Takes 2 arrays' differences and finds the shift the smaller array needs to fit 
+    %  inside the longer array to minimize the euclidean distance. It's
+    %  similar to a correlation where it finds the best delay one of the
+    %  array needs to make the best match, except is not in absolute values
+    %  but in the distance between consecutive datapoints.
+    %
+    % Parameters: 
+    % array1 and array2 - [array] Arrays to be matched
+    %
+    % Returns:
+    % minVal - [scalar] The value of the lowest norm found
+    % minInd - [scalar] The position or delay to shift the small array
+    %           forward to best match the larger array. Note: a value of 1 indicates
+    %           no shift.
+    
+    % Ensure input arrays are column vectors
+    array1 = array1(:);
+    array2 = array2(:);
+
+    % Determine which array is smaller and which is larger
+    if length(array1) < length(array2)
+        smallArray = array1;
+        bigArray = array2;
+    else
+        smallArray = array2;
+        bigArray = array1;
+    end
+
+    n_s = length(smallArray);
+    n_b = length(bigArray);
+    possibleDelays = n_b - n_s + 1;
+
+    % Precompute differences
+    diffSmall = diff(smallArray); % (n_s - 1) x 1
+    diffBig = diff(bigArray);     % (n_b - 1) x 1
+
+    % Generate indices for vectorized extraction
+    indices = bsxfun(@plus, (1:n_s - 1)', 0:possibleDelays - 1);
+
+    % Extract windows and compute differences
+    D = diffBig(indices);         % (n_s - 1) x possibleDelays
+    E = D - diffSmall;            % Broadcasting diffSmall across columns
+
+    % Compute norms for each possible delay
+    norms = sqrt(sum(E.^2, 1));   % 1 x possibleDelays
+
+    % Find the minimum norm and its index
+    [minVal, minInd] = min(norms);
 end
 
 function  blockNumber = getBlockNumber(participantId, sessionNb)
@@ -791,8 +909,8 @@ function [TFdata] = prepareTFAnalysis(EEG, eegSource, scenario,TFwindow)
     %                        time-frequency analysis
     %
     % Returns:
-    % TFdataCollection - [Cell array] The TF analysis results for each
-    %                               channel of the EEG
+    % TFdataCollection - [array] The TF analysis results for each
+    %                               channel of the EEG Dimensions: Trials x frequency bins x Timepoints x Channels
     
     if strcmp(eegSource,'muse')
         % Define channels and sampling rate
@@ -883,21 +1001,26 @@ function [EEG,feedbackEvents] = preprocessBiosemiData(name,rootDir,sessionNb,fee
     end
     feedbackEvents = alignCameraWithTTL(feedbackEvents,EEG.srate,EEG.times'/1000,saveName);
     EEG.event = buildEEGevent(feedbackEvents);
-    biosemiTimes_rel = double(feedbackEvents.alignedBiosemiEvents)/EEG.srate;
-    biosemiTimes_rel = biosemiTimes_rel- biosemiTimes_rel(1);
-    biosemiTimes_diff = diff(biosemiTimes_rel);
-    phoneTimes_diff = diff(feedbackEvents.phoneFeedbackTimes);
-    feedbackEvents.biosemiTimes_diff = biosemiTimes_diff;
-    feedbackEvents.phoneTimes_diff = phoneTimes_diff;
+    
+    % For troubleshooting
+    % biosemiTimes_rel = double(feedbackEvents.alignedBiosemiEvents)/EEG.srate;
+    % biosemiTimes_rel = biosemiTimes_rel- biosemiTimes_rel(1);
+    % biosemiTimes_diff = diff(biosemiTimes_rel);
+    % phoneTimes_diff = diff(feedbackEvents.phoneFeedbackTimes);
+    % feedbackEvents.biosemiTimes_diff = biosemiTimes_diff;
+    % feedbackEvents.phoneTimes_diff = phoneTimes_diff;
     
     %% Stage 2 - ICA
     % EEG = preprocessBiosemiStage2(EEG);
     
     %% Stage 3 - EOGcalcs, Epoching, ArtDet, NoBCorr
-    EEG = preprocessBiosemiStage3(EEG,epochWindow);
-    
+    [EEG,omittedTrials] = preprocessBiosemiStage3(EEG,epochWindow);
+    % feedbackEvents.validIndices(omittedTrials)=0;
+    feedbackEvents.validIndices = updateValidIndices(feedbackEvents.validIndices, omittedTrials); % If the resampling step rejects trials due to nan values, then pop_epoch will return the wrong index of the omitted trials. This function takes care of that.
+
     %% Stage 4 - ICA removal, Final ArtifactReview
     % EEG = preprocessBiosemiStage4(EEG);
+
 end
 
 function EEG = preprocessBiosemiStage1(fullFilePath,subjectId)
@@ -948,7 +1071,7 @@ function EEG = preprocessBiosemiStage2(EEG)
     % EEG = pop_saveset( EEG,  'filename', [subjectId 'ICA.set']); % save ICA file
 end
 
-function EEG = preprocessBiosemiStage3(EEG,epochWindow)
+function [EEG,omittedTrials] = preprocessBiosemiStage3(EEG,epochWindow)
     % Resamples to 512Hz. 
     % Filter EOG channels
     % Epoching to the desired window 
@@ -960,6 +1083,10 @@ function EEG = preprocessBiosemiStage3(EEG,epochWindow)
     % 
     % Returns: 
     % EEG - [EEGLab object] Object after the steps mentioned above
+    % omittedTrials - [array] Contains the trial indices ignored during the
+    %                           epoching. Note that other trials ignored
+    %                           during resampling are not accounted for and
+    %                           indices may change.
     
     %% Stage 3
    
@@ -999,7 +1126,9 @@ function EEG = preprocessBiosemiStage3(EEG,epochWindow)
     % Epoching
     EEG = pop_creabasiceventlist( EEG ,'AlphanumericCleaning', 'on', 'BoundaryNumeric', { -99 }, 'BoundaryString', { 'boundary' }, 'Warning', 'off' );
     EEG.EVENTLIST.INFO=INFOHOLD ;% Re-add EEG.EVENTLIST.INFO (is wiped by ERPLAB)
-    EEG = pop_epoch( EEG, {},epochWindow);
+    nbOriginalEvents = size(EEG.event,2);
+    [EEG,acceptedEventIndices] = pop_epoch( EEG, {},epochWindow);
+    omittedTrials = setdiff((1:nbOriginalEvents),acceptedEventIndices); % Collect which trials were ignored during epoching
 
     % Overview: Runs artifact detection on Eye blinks and Eye movements using only
     % the new bipolar VEOG and HEOG channels 
@@ -1269,7 +1398,17 @@ function [cleanData, outlierLogic] = removeOutliers(data)
 end
 
 function saveTFData(TFdata, rootDir, participantId, eegSource, channelNames, scenario, samplingRate)
-    
+    % Saves the processed TF data in a directory dependent of the source.
+    %
+    % Parameters:
+    % TFdata - [4D array] The data to be saved.
+    % participantId - [string] The id of the participant being processed
+    % eegSource - [string] The device source of the data {muse,biosemi}
+    % channelNames - [array] The name of the channels 
+    % scenario - [string] The epoch being processed {feedback, choice, stim}
+    % sampligRate - [scalar] The sampling rate of the signal
+   
+
     % Prepare additional information about the data
     freqs = TFdata.freqs;
     times = TFdata.times;
@@ -1297,4 +1436,29 @@ function saveTFData(TFdata, rootDir, participantId, eegSource, channelNames, sce
         % Save the data
         save(fullFilePath, 'data', 'samplingRate', 'scenarioTime', 'freqs', 'times', '-v7.3');
     end
+end
+
+function newValidIndices = updateValidIndices(validIndices, omittedTrials)
+    % Updates the validIndices array by setting to zero
+    % the elements corresponding to omittedTrials after accounting for
+    % the zeros (invalid indices) that were removed before processing.
+    %
+    % Parameters:
+    %   validIndices - [array] Original array of 0's and 1's 
+    %   omittedTrials - [array] Indices of trials omitted by the function after zeros were removed
+    %
+    % Returns:
+    %   newValidIndices - [array] Updated array of valid indices 
+
+    % Find the indices of valid (non-zero) entries
+    indicesOfOnes = find(validIndices == 1);
+    
+    % Map omittedTrials back to indices in the original validIndices array
+    indicesToSetZero = indicesOfOnes(omittedTrials);
+    
+    % Create a copy of validIndices to update
+    newValidIndices = validIndices;
+    
+    % Set the corresponding indices to zero
+    newValidIndices(indicesToSetZero) = 0;
 end
