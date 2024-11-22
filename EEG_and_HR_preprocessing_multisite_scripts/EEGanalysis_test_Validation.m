@@ -1,4 +1,4 @@
-function [TFdata] = EEGanalysis_test_Validation(name,rootDir,saveAlignmentVarsOnly)
+function [TFdata] = EEGanalysis_test_Validation(name,rootDir,saveEEGOnly, saveAlignmentVarsOnly)
     % Full pipeline for preprocessing Muse and Biosemi data.
     % For Muse: Imports and merges the data.
     %           Corrects the EEG timestamps.
@@ -13,8 +13,10 @@ function [TFdata] = EEGanalysis_test_Validation(name,rootDir,saveAlignmentVarsOn
     % Parameters:
     % name -        [char] Participant Id
     % rootDir -     [string] Directory where the raw data will be taken from.
-    %
-    % saveAlignmentVarsOnly - [bool] Optional - if True then saves the
+    % saveEEGOnly - [logical] Optional - if true, saves the EEG only and
+    %               skips the TF analysis. Only works if
+    %               saveAlignmentVarsOnly is set to false
+    % saveAlignmentVarsOnly - [logical] Optional - if True then saves the
     %                           intermediate variables, skips the Muse and TF
     %                           analysis
     %
@@ -33,7 +35,29 @@ function [TFdata] = EEGanalysis_test_Validation(name,rootDir,saveAlignmentVarsOn
     
     % Set up optional parameters
     if nargin<3
+        saveEEGOnly = false;
+    end
+
+    if nargin<4
         saveAlignmentVarsOnly = false;
+    end
+    
+    %% Directories to save the data
+    % Directory to save alignment variables for analysis
+    if saveAlignmentVarsOnly 
+        saveDir = fullfile(rootDir,'AlignmentVariables',name);
+        if ~exist(saveDir,'dir')
+            mkdir(saveDir);
+        end
+    else
+        saveDir = '';
+    end
+    % Directory to save EEG Data only 
+    if saveEEGOnly
+        saveEEGDir = fullfile(rootDir,'EEGData',name);
+        if ~exist(saveEEGDir,'dir')
+            mkdir(saveEEGDir);
+        end
     end
 
     % Open eeglab to load plugins, Note: running eeglab nogui; won't load them
@@ -41,43 +65,47 @@ function [TFdata] = EEGanalysis_test_Validation(name,rootDir,saveAlignmentVarsOn
     close;
     ft_defaults; % Load defaults
 
-    epochWindow = [-1.500, 3];  % Time window around the event, in s
+    % epochWindow = [-1.500, 3];  % Time window around the event, in s
+    epochWindow = [-1.600, 3];  % Time window around the event, in s
     TFwindow = [-1000,2500];
     TFdata = struct();
     
     if ~saveAlignmentVarsOnly
+
         %% MUSE: 
         % Preprocess, align and segment data
         EEGData.muse = preprocessMuseData(name,epochWindow,rootDir);
-    
-        % TF analysis
-        scenario = 'feedback';
-        TFdata.muse = prepareTFAnalysis(EEGData.muse, 'muse', scenario,TFwindow);
-        museChannelNames = {'left_temp', 'left_front', 'right_front', 'right_temp'}; % Confirmed order on physio files
-    
-        % Save the processed data
-        saveTFData(TFdata.muse, rootDir, name, 'muse', museChannelNames, scenario, EEGData.muse.sampling_rate)
-    
+
+        if saveEEGOnly
+            % Save the EEGdata and continue without the TF Analysis
+            EEGMuse = EEGData.muse;
+            saveName = fullfile(saveEEGDir,'museEEG.mat');
+            save(saveName,'EEGMuse','-v7.3');
+            clear 'EEGMuse'
+        else
+            % TF analysis
+            scenario = 'feedback';
+            TFdata.muse = prepareTFAnalysis(EEGData.muse, 'muse', scenario,TFwindow);
+            museChannelNames = {'left_temp', 'left_front', 'right_front', 'right_temp'}; % Confirmed order on physio files
+
+            % Save the processed data
+            saveTFData(TFdata.muse, rootDir, name, 'muse', museChannelNames, scenario, EEGData.muse.sampling_rate)
+
+            % Clear workspace
+            clear 'TFdata'
+        end
         % Clear workspace
-        clear 'EEGData' 'TFdata'
+        clear 'EEGData'
     end
 
     %% BIOSEMI : 
     % Preprocess and align data
     eeglab nogui;
     numBiosemiSessions = 4;
+    EEGBiosemi = cell(numBiosemiSessions,1); % Only used if collecting the EEG
     scheduleData = readScheduleFile(name,rootDir);
     scenario = 'feedback';
     
-    % Directory to save alignment variables for analysis
-    
-    if saveAlignmentVarsOnly 
-        saveDir = fullfile(rootDir,'AlignmentVariables',name);
-        if ~exist(saveDir,'dir')
-            mkdir(saveDir);
-        end
-    end
-
     for sessionNb = 1:numBiosemiSessions 
 
         % Camera timestamps and frames of interest
@@ -97,15 +125,20 @@ function [TFdata] = EEGanalysis_test_Validation(name,rootDir,saveAlignmentVarsOn
         
         % Preprocess EEG data and align camera timestamps to biosemi 
         [alignedEEG, feedbackEvents] = preprocessBiosemiData(name, rootDir, sessionNb, feedbackEvents, epochWindow,saveDir);
-        if ~saveAlignmentVarsOnly
+        
+        if ~saveAlignmentVarsOnly && ~saveEEGOnly
             % Run TF analysis
             TFdata.biosemi{sessionNb} = prepareTFAnalysis(alignedEEG, 'biosemi', scenario, TFwindow);
     
             % Add the missing trials as NaNs
             TFdata.biosemi{sessionNb}.data = addMissingTrials(TFdata.biosemi{sessionNb}.data, feedbackEvents.validIndices);
+        elseif saveEEGOnly
+
+            EEGBiosemi{sessionNb} = addMissingTrials(alignedEEG.data, feedbackEvents.validIndices);
         end
     end
-    if ~saveAlignmentVarsOnly
+    
+    if ~saveAlignmentVarsOnly && ~saveEEGOnly
         % Concatenate sessions together
         TFdata = concatenateBiosemiSessions(TFdata);
     
@@ -114,58 +147,61 @@ function [TFdata] = EEGanalysis_test_Validation(name,rootDir,saveAlignmentVarsOn
         
         % Save the processed data
         saveTFData(TFdata, rootDir, name, 'biosemi', biosemiChannelNames, scenario, alignedEEG.srate);
+    elseif saveEEGOnly
+        % Concatenate the EEG in biosemi and save
+        EEGBiosemi = cat(3,EEGBiosemi{:}); % Concatenate along the trial dimension before saving
+        saveName = fullfile(saveEEGDir,'biosemiEEG.mat');
+        save(saveName,'EEGBiosemi','-v7.3');
     else
         TFdata = [];
     end
 end
 
-function updatedTFData = addMissingTrials(TFdata, validIndices)
-    % Takes the Time Frequency data array and fills missing, unprocessed or ignored
-    % trials with NaNs. 
+function updatedData = addMissingTrials(data, validIndices)
+    % Function to fill missing, unprocessed or ignored trials with NaNs
+    % for both TF and EEG data arrays.
     %
     % Parameters:
-    % TFdata - [4D array] Processed TF data with dimensions: 
-    %                     Trials x frequency bins x Timepoints x Channels
-    % validIndices - [array] Contains 1's where the trials were filled and
-    %                        0's where they were invalid. 
-    % 
+    % data - [array] Processed data with dimensions:
+    %        TF Data: Trials x Frequency Bins x Time Points x Channels
+    %        EEG Data: Channels x Time Points x Trials
+    % validIndices - [array] Contains 1's where the trials were valid and
+    %                0's where they were invalid.
+    %
     % Returns:
-    % updatedTFdata - [4D array] an array with NaN values where the trials
-    %                   were missing based on the validIndices array.
+    % updatedData - [array] An array with NaN values where the trials
+    %               were missing based on the validIndices array.
+
+    % Determine the number of dimensions of the input data
+    dataDims = ndims(data);
 
     % Check if there are any zeros in validIndices
     if all(validIndices == 1)
-        % If there are no zeros, just return the original data
-        updatedTFData = TFdata;
+        updatedData = data;
         return;
     end
 
-    % Get the number of channels, frequency bins, and time points
-    [numTrials, numFrequencyBins, numTimepoints, numChannels] = size(TFdata);
-    
-    % Determine the total number of trials (including missing ones)
+    % Get the size of the data and prepare updatedData with NaNs
+    dataSize = size(data);
     totalTrials = length(validIndices);
     
-    % Initialize the updated data array with NaNs for missing values
-    updatedTFData = NaN(totalTrials, numFrequencyBins, numTimepoints, numChannels);
+    % Adjust the size of updatedData to include all trials
+    dataSize(end) = totalTrials;  % Update number of trials dimension
+    updatedData = NaN(dataSize);  % Initialize with NaNs
     
-    % Process each channel
-    for chan = 1:numChannels
-        % Extract the data for this channel
-        currentData = TFdata(:,:,:,chan);
-        
-        % Counter for the currentData index
-        currentIndex = 1;
-        
-        % Fill in the data, skipping the trials that are missing
-        for trial = 1:totalTrials
-            if validIndices(trial) == 1
-                updatedTFData(trial, :, :, chan) = currentData(currentIndex, :, :);
-                currentIndex = currentIndex + 1;
-            end
-        end
+    % Find indices of the valid trials
+    validTrialIndices = find(validIndices);
+
+    if dataDims == 4  % TF Data
+        % Fill valid trials with existing data
+        updatedData(validTrialIndices, :, :, :) = data(1:length(validTrialIndices), :, :, :);
+    elseif dataDims == 3  % EEG Data
+        % Fill valid trials with existing data
+        updatedData(:, :, validTrialIndices) = data(:, :, 1:length(validTrialIndices));
+        updatedData = single(updatedData);
     end
 end
+
 
 function feedbackEvents = alignCameraWithTTL(feedbackEvents,biosemiSamplingRate,biosemiTimes,saveName)
     % Map the feedback events from the camera time to the biosemi scale
@@ -998,6 +1034,8 @@ function [EEG,feedbackEvents] = preprocessBiosemiData(name,rootDir,sessionNb,fee
     % Send the biosemi times as seconds
     if ~isempty(saveDir)
         saveName = fullfile(saveDir,sprintf('%s_BSsession_%i_LinearRegressionParameters',name,sessionNb));
+    else
+        saveName = '';
     end
     feedbackEvents = alignCameraWithTTL(feedbackEvents,EEG.srate,EEG.times'/1000,saveName);
     EEG.event = buildEEGevent(feedbackEvents);
