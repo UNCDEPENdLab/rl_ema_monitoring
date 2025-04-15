@@ -429,7 +429,7 @@ function EEG = applyChannelOps(EEG, type, mastoidReference)
         error('mastoidReference must be one of: %s', strjoin(validRefs, ', '));
     end
 
-    % List of new channel labels in your dataset (1-based indexing):
+    % List of new channel labels in the dataset (1-based indexing):
     labels = { ...
         'Fp1','AF7','AF3','F1','F3','F5','F7','FT7','FC5','FC3','FC1', ...
         'C1','C3','C5','T7','TP7','CP5','CP3','CP1','P1','P3','P5','P7', ...
@@ -494,7 +494,7 @@ function EEG = applyChannelOps(EEG, type, mastoidReference)
         % + add bipolars for VEOG and HEOG
         cmd = cell(1, numel(labels) + 2);
 
-        % Label each channel according to our list
+        % Label each channel according to the list
         for i = 1:numel(labels)
             cmd{i} = sprintf('nch%d = ch%d Label %s', i, i, labels{i});
         end
@@ -1212,14 +1212,14 @@ function [EEG,feedbackEvents] = preprocessBiosemiSession(name,rootDir,sessionNb,
     % feedbackEvents.phoneTimes_diff = phoneTimes_diff;
     
     %% Stage 2 - ICA
-    % EEG = preprocessBiosemiStage2(EEG);
+    EEG = preprocessBiosemiStage2(EEG);
    
     %% Stage 3 - EOGcalcs, Epoching, ArtDet, NoBCorr
     [EEG,omittedTrials] = preprocessBiosemiStage3(EEG,epochWindow);
     feedbackEvents.validIndices = updateValidIndices(feedbackEvents.validIndices, omittedTrials); % If the resampling step rejects trials due to nan values, then pop_epoch will return the wrong index of the omitted trials. This function takes care of that.
 
     %% Stage 4 - ICA removal, Final ArtifactReview
-    % EEG = preprocessBiosemiStage4(EEG);
+    EEG = preprocessBiosemiStage4(EEG);
 
     %% Stage 5 - Artifact removal
     % EEG = preprocessBiosemiArtifactRemoval(EEG);
@@ -1332,6 +1332,7 @@ function [EEG,omittedTrials] = preprocessBiosemiStage3(EEG,epochWindow)
     EEG = pop_creabasiceventlist( EEG ,'AlphanumericCleaning', 'on', 'BoundaryNumeric', { -99 }, 'BoundaryString', { 'boundary' }, 'Warning', 'off' );
     EEG.EVENTLIST.INFO=INFOHOLD ;% Re-add EEG.EVENTLIST.INFO (is wiped by ERPLAB)
     nbOriginalEvents = size(EEG.event,2);
+    
     %% Using EEGLab's function
     [EEG,acceptedEventIndices] = pop_epoch( EEG, {},epochWindow);
     omittedTrials = setdiff((1:nbOriginalEvents),acceptedEventIndices); % Collect which trials were ignored during epoching
