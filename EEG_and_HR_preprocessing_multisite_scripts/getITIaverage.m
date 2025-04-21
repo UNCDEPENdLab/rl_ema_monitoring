@@ -1,21 +1,33 @@
-function getITIaverage(participantDir,processedDir)
-    % Preprocess Muse validation data. Merges the physio files into a
-    % temporary database, corrects the timestamps, aligns the data to the
-    % stim events and segments it with a window before the event corresponding to the ITI.
+function getITIaverage(participantDir,processedDir,preprocessedEEGDir)
+    % Preprocess Muse validation data. If it receives a preprocessedEEGDir it uses that mat data.
+    % Otherwise merges the physio files into one which is deleted at the
+    % end. Extracts the stimulus and feedback times from the schedule file. 
+    % Computes the ITI as the period after the last trial's figure faded and the stimulation time. 
+    % The last trial's figure fade time is 1s after the feedback time. 
+    % The ITIs longer than 3s are clipped for cases when there was a missed trial. 
+    % The minimum duration of an ITI is 2s (for example for the first trial). Matches the times of ITI to the
+    % EEG and computes the TF analysis and saves the data for all trials,
+    % all channels and all frequencies by taking the mean over the time domain. 
     % 
     % Parameters:
     % participantDir - [string] Directory where the raw data is for this
     %                           participant
     % processedDir - [string] Path to save the intermediate files and the
     %                           final results
-    
+    % preprocessedEEGDir - [string] Path to preprocessed EEG (merged physio
+    %                      files). 
+
+    if nargin<3
+        preprocessedEEGDir = [];
+    end
+
     %% Load libraries
     eeglab;
     close;
     ft_defaults;    
 
     %% Read and preprocess EEG
-    EEG = prepareEEG(participantDir,processedDir);
+    EEG = prepareEEG(participantDir,processedDir,preprocessedEEGDir);
 
     %% Read and preprocess schedule file
     upperLimit = seconds(3);
@@ -455,7 +467,7 @@ function [TF, freqs] = performTFAnalysis(EEG)
     TF = pow.powspctrm;
 end
 
-function EEG = prepareEEG(participantDir,processedDir)
+function EEG = prepareEEG(participantDir,processedDir,preprocessedEEGDir)
     % Merges all the physio files into one, preprocesses the final file, 
     % and builds an EEGLab object.
     %
@@ -465,40 +477,57 @@ function EEG = prepareEEG(participantDir,processedDir)
     % processedDir - [string] Path to save the intermediate files and the
     %                           final results
     %
+    % preprocessedEEGDir - [string] Path to preprocessed EEG (merged physio
+    %                      files). 
+    %
     % Returns:
     % EEG - [EEGLab object] Struct containing all the EEG data for this
     %                       participant
-
-    disp("Merging databases");
-
-    %% Merge the validation data and move it to processed directory temporarily
-    pathToPhysioFiles = fullfile(participantDir,'physio'); % Directory where to look for the raw data/physio files.
-    tempDbFile = createTemporalMergedDatabase(pathToPhysioFiles);
-    
-    % Move it to the relevant directory
-    [~, participantID] = fileparts(participantDir);
-    dirForReadEEG = fullfile(processedDir, "ITI_average","Data_Processed","subject_"+participantID); % ReadEEG needs this path and has to find just one file
-    newDbFileName = participantID +"_merged_physio.db";
-    fullDbFilePath = fullfile(dirForReadEEG,newDbFileName);
-    
-    % Check if the directory exists, and create it if it does not
-    if ~exist(dirForReadEEG, 'dir')
-        mkdir(dirForReadEEG);
-    end
-    movefile(tempDbFile,fullDbFilePath);
-    
-    %% Preprocess the data
-    disp("Preprocessing EEG");
     site = 'Pitt';
-    [EEG, ~] = readEEG(fullfile(processedDir,"ITI_average"),char(participantID),site,0);
+    [~, participantID] = fileparts(participantDir);
+
+    if isempty(preprocessedEEGDir)
+        % If the directory is not passed then merge the databases and
+        % preprocess the EEG with readEEG.m
+
+        disp("Merging databases");
+    
+        %% Merge the validation data and move it to processed directory temporarily
+        pathToPhysioFiles = fullfile(participantDir,'physio'); % Directory where to look for the raw data/physio files.
+        tempDbFile = createTemporalMergedDatabase(pathToPhysioFiles);
+        
+        % Move it to the relevant directory
+        dirForReadEEG = fullfile(processedDir, "ITI_average","Data_Processed","subject_"+participantID); % ReadEEG needs this path and has to find just one file
+        newDbFileName = participantID +"_merged_physio.db";
+        fullDbFilePath = fullfile(dirForReadEEG,newDbFileName);
+        
+        % Check if the directory exists, and create it if it does not
+        if ~exist(dirForReadEEG, 'dir')
+            mkdir(dirForReadEEG);
+        end
+        movefile(tempDbFile,fullDbFilePath);
+        
+        %% Preprocess the data
+        disp("Preprocessing EEG");
+        [EEG, ~] = readEEG(fullfile(processedDir,"ITI_average"),char(participantID),site,0);
+    else
+        % Otherwise just load the preprocessed EEGDir
+        dirForReadEEG =[];
+        %% Preprocess the data
+        disp("Preprocessing EEG");
+        [EEG, ~] = readEEG(preprocessedEEGDir,char(participantID),site,0);
+    end
+
     EEG.times = convert_to_datetime(EEG.times);
     
     % Move into eeglab
     disp("Building EEGLab struct");
     EEG = buildEEGLabStruct(EEG,participantID);
 
-    %% Clean merged physio 
-    rmdir(dirForReadEEG, 's');
+    if ~isempty(dirForReadEEG)
+        %% Clean merged physio 
+        rmdir(dirForReadEEG, 's');
+    end
 end
 
 function Trial = prepareScheduleFile(participantDir,upperLimit)
@@ -551,10 +580,12 @@ function data = readScheduleFile(name,rootDir)
     % Returns:
     % data - [Table] Table containing the schedule file feedback events
     
-    filename = dir(strcat(fullfile(rootDir),'\schedule\','*schedule.db'));
+    filename = dir(fullfile(rootDir,"schedule","*schedule.db"));
 
     if length(filename) > 1
         error(sprintf('multiple schedule files found for subject',name,'%s'));
+    elseif length(filename)<1
+        error(sprintf('No schedule files found in ',rootDir,'%s'));
     end
     
     db = sqlite(strcat(filename(1).folder,'/',filename(1).name));
@@ -564,7 +595,7 @@ function data = readScheduleFile(name,rootDir)
 
     % For compatibility 
     if strcmp(class(data),'cell')
-        data = cell2table(data,"VariableNames",["feedback_time" "stim_time" "choice_time"]);
+        data = cell2table(data,"VariableNames",["feedback_time" "stim_time" "choice_time","scheduled_time"]);
     end
     
 end
@@ -593,13 +624,20 @@ function saveMeanITITF(TF,participantID,processedDir)
     % processedDir - [string] Path to where the results will be saved
     
     % Take the mean across time
-    meanTF = mean(TF,4);
+    meanTF = nanmean(TF,4);
 
     saveDir = fullfile(processedDir, "ITI_average");
     if ~exist(saveDir, 'dir')
         mkdir(saveDir);
     end
-    save(fullfile(saveDir,participantID+"_averageITIPower"),"meanTF");
+    save(fullfile(saveDir,participantID+"_averageITIPower"),"meanTF","-v7.3");
+
+    % Save the full TF
+    %saveDir = fullfile(processedDir, "ITI_average","FullTF");
+    %if ~exist(saveDir, 'dir')
+    %    mkdir(saveDir);
+    %end
+    %save(fullfile(saveDir, participantID+"_ITI_TF"), "TF", "-v7.3");
 end
 
 function dataOut = vectorizedFilter(dataIn, sampling_rate)
