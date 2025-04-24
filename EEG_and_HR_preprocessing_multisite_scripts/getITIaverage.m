@@ -460,11 +460,7 @@ function [TF, freqs] = performTFAnalysis(EEG)
     cfg.keeptrials   = 'yes';         % Retain individual trial data
     cfg.pad          = 'nextpow2';    % Zero-pad to next power of 2 for efficient FFT
     
-    % Perform time-frequency analysis
-    pow = ft_freqanalysis(cfg, ftdata);
-    
-    % Extract the power spectrum from the results
-    TF = pow.powspctrm;
+    TF = runFrequencyAnalysisWithNaNs(cfg,ftdata);
 end
 
 function EEG = prepareEEG(participantDir,processedDir,preprocessedEEGDir)
@@ -485,7 +481,7 @@ function EEG = prepareEEG(participantDir,processedDir,preprocessedEEGDir)
     %                       participant
     site = 'Pitt';
     [~, participantID] = fileparts(participantDir);
-
+        
     if isempty(preprocessedEEGDir)
         % If the directory is not passed then merge the databases and
         % preprocess the EEG with readEEG.m
@@ -521,7 +517,7 @@ function EEG = prepareEEG(participantDir,processedDir,preprocessedEEGDir)
     EEG.times = convert_to_datetime(EEG.times);
     
     % Move into eeglab
-    disp("Building EEGLab struct");
+    fprintf("Building EEGLab struct for %s \n",participantID);
     EEG = buildEEGLabStruct(EEG,participantID);
 
     if ~isempty(dirForReadEEG)
@@ -611,6 +607,39 @@ function arrayOut = removeNaN(arrayIn)
 
     nanIndices = any(isnan(arrayIn), 1);
     arrayOut = arrayIn(:, ~nanIndices);
+end
+
+function TF = runFrequencyAnalysisWithNaNs(cfg, ftdata)
+    % Run the frequency analysis, taking care of empty trials
+    %
+    % Parameters:
+    % cfg - [struct] Configuration for the time frequency analysis
+    % ftdata - [struct] Contains the data, times and channel labels for the
+    %                   time frequency analysis
+    %
+    % Returns
+    % TF     - [Array] Time-frequency power spectrum [events x frequencies x time]
+
+    % Identify non-empty trials
+    num_trials = length(ftdata.trial);
+    non_empty_idx = cellfun(@(x) size(x,2)>0, ftdata.trial);
+
+    % Save original trial count and prepare cleaned data
+    original_trial_count = num_trials;
+    ftdata_clean = ftdata;
+    ftdata_clean.trial = ftdata.trial(non_empty_idx);
+    ftdata_clean.time = ftdata.time(non_empty_idx);
+
+    % Run frequency analysis
+    pow = ft_freqanalysis(cfg, ftdata_clean);
+
+    % Get TF data and trial dimensions
+    TFclean = pow.powspctrm; % dimensions: trials x channels x frequencies x times
+    [n_clean_trials, nchan, nfreq, ntime] = size(TFclean);
+
+    % Create full TF array with NaNs for empty trials
+    TF = NaN(original_trial_count, nchan, nfreq, ntime);
+    TF(non_empty_idx, :, :, :) = TFclean;
 end
 
 function saveMeanITITF(TF,participantID,processedDir)

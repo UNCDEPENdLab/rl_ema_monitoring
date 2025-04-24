@@ -18,6 +18,13 @@ fi
 # Get the list of files
 participant_list=$(find $base_path -mindepth 1 -maxdepth 1 -type d)
 
+# For running individual participants
+# ids=(440485 440523 440612 540091 540341)
+# participant_list=""
+# for id in "${ids[@]}"; do
+#     participant_list+=" $base_path/$id"
+# done
+
 # Initialize a counter
 # counter=0
 
@@ -30,6 +37,7 @@ for file in $participant_list; do
     # if [ $counter -gt 1 ]; then
     #     break  # Exit the loop after processing the first participant
     # fi
+
    echo "Processing participant $file"
 
    # Submit a batch job with SLURM
@@ -43,3 +51,4 @@ for file in $participant_list; do
     exit\""
 
 done
+
