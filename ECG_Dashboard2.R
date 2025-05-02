@@ -25,32 +25,32 @@ Rcpp::sourceCpp("/Users/dnplserv/rl_ema_monitoring/data_utils/timings2samples_bl
 if(FALSE) {
   HRstep <- 10
   sample_rate <- 100
-
+  
   behavior = dbConnect(SQLite(), "123_schedule.db")
   trials = dbGetQuery(behavior, "SELECT * FROM trials")
   ## remove blocks that have not been played yet
   if (length(which(is.na(trials$choice)))!=0){
     trials=trials[-c(which(is.na(trials$choice))),]}
   fbt <- trials$feedback_time
-
+  
   ECG = dbConnect(SQLite(), "123_physio.db")
   ECGd = dbGetQuery(ECG,"SELECT time_ms, rr_intervals, heartrate, contact FROM Polar_heartrate ORDER BY time_ms ASC")
-
+  
 }
 
 correctTimings <- function(times, intervals) {
   # correct timings
-
+  
   #mismatch function
   mismatch <- function(shift=0, x, y){
     y <- y + shift #apply shift to one series
     z <- sum( ((x-y) > 1000) * (x-y-1000) + (x-y < 0) * (y-x))
     return(z)
   }
-
+  
   times <- as.matrix(times)
   intervals <- as.matrix(intervals)
-
+  
   nz1 <- which(intervals != 0)[1]
   if (is.na(nz1)){
     timings <- NULL
@@ -81,7 +81,7 @@ correctTimings <- function(times, intervals) {
     timings <- timings + mean(shft)
     wiggleroom <- length(shft)
   }
-
+  
   return(timings)
 }
 
@@ -111,13 +111,13 @@ load_ECG <- function(ECGd = NULL, HRstep = 10, sample_rate = 100) { # ,fbt,pre=1
   # [] indicates a blank RR -> converted to NA
   # [number, number] indicates multiple events within a time interval -> expanded to elements of intervals
   # [number] is a single interval -> expanded to one element of intervals
-
+  
   rr_parse <- gsub("^$", "0", ECGd$rr_intervals) #empty rows become 0
   rr_parse <- gsub("[]", "0", rr_parse, fixed=TRUE) #blank RRs become 0 2022-03-08 AndyP consistent with Matlab
   rr_parse <- gsub("[\\[\\]]", "", rr_parse, perl=TRUE) #delete [ and ] from all strings to split
   rr_list <- strsplit(rr_parse, "\\s*,\\s*", perl=TRUE) #split elements on comma
   n_times <- sapply(rr_list, length) #count numbers in each rr_interval for replicating heartrate and time_ms
-
+  
   #not sure why we need a one-column data.frame as opposed to just a vector, but leaving as-is
   #consider changing intervals, hr1, hrt1 to vectors for simplicity?
   intervals <- data.frame(intervals=type.convert(unlist(rr_list), na.strings = "NA",as.is=TRUE))
@@ -158,11 +158,11 @@ load_ECG <- function(ECGd = NULL, HRstep = 10, sample_rate = 100) { # ,fbt,pre=1
   isplit <- which(abs(deviations)>1000)+1
   isplit <- ilast[isplit]
   minseg <- 10
-
+  
   hr1 <- as.matrix(hr1)
   hrt1 <- as.matrix(hrt1)
   intervals <- as.matrix(intervals)
-
+  
   while (length(isplit)>0 & isplit[1] < minseg){
     hrt1 <- hrt1[-c(1:(isplit[1]-1))]
     hr1 <- hr1[-c(1:(isplit[1]-1))]
@@ -172,13 +172,13 @@ load_ECG <- function(ECGd = NULL, HRstep = 10, sample_rate = 100) { # ,fbt,pre=1
   }
   todelete <- NULL
   iC <- 1
-
+  
   ####ISSUE!!!!!#####
   ####Special case for the dataset "123"
   ##If isplit is of lenght of zero, the it will stop...
   ###The syntax also wouldn't allow for isplit == 1, because i in 1:0 is not gonna work.
   ###################
-
+  
   if (length(isplit)>0){
     todelete <- NULL
     iC <- 1
@@ -189,7 +189,7 @@ load_ECG <- function(ECGd = NULL, HRstep = 10, sample_rate = 100) { # ,fbt,pre=1
       }
     }
   }
-
+  
   if ((length(isplit)>0 & length(todelete) > 0)){ # 2022-10-13 AndyP
     for (i in 1:length(todelete)){
       inds <- isplit[(todelete[i]-1)]:(isplit[todelete[i]]-1) # 2022-03-08 AndyP there is a bug here, there needed to be parentheses around the :(isplit[todelte[i]]-1)
@@ -201,7 +201,7 @@ load_ECG <- function(ECGd = NULL, HRstep = 10, sample_rate = 100) { # ,fbt,pre=1
       todelete <- todelete-1
     }
   }
-
+  
   if (length(isplit)>1){ # 2022-03-23 AndyP need isplit[i+1], was returning NaN
     I0 <- NULL
     HRsplit <- matrix(list(),length(isplit)+1,2)
@@ -222,27 +222,27 @@ load_ECG <- function(ECGd = NULL, HRstep = 10, sample_rate = 100) { # ,fbt,pre=1
     }
   }
   
-# merge sections
-if (!nosplit){
-  wiggleroom <- NULL
-  beattimes <- matrix(list(),nrow(HRsplit),1)
-  times1 <- matrix(list(),nrow(HRsplit),1)
-  intervals1 <- matrix(list(),nrow(HRsplit),1)
-  rate1 <- matrix(list(),nrow(HRsplit),1)
-  iD <- 1;
-  for (i in 1:nrow(HRsplit)){
-    if ((sum(HRsplit[[i,2]]>0)>=2) & !nosplit){
-      timings <- correctTimings(HRsplit[[i,1]],HRsplit[[i,2]])
-      beattimes[[iD,1]] <- timings
-      output <- timings2samples_block_cpp(timings,HRstep=10)
-      #output <- timings2samples(timings,HRstep=10)
-      times1[[iD,1]] <- output[,1]
-      intervals1[[iD,1]] <- output[,2]
-      rate1[[iD,1]] <- output[,3]
-      iD <- iD+1;
+  # merge sections
+  if (!nosplit){
+    wiggleroom <- NULL
+    beattimes <- matrix(list(),nrow(HRsplit),1)
+    times1 <- matrix(list(),nrow(HRsplit),1)
+    intervals1 <- matrix(list(),nrow(HRsplit),1)
+    rate1 <- matrix(list(),nrow(HRsplit),1)
+    iD <- 1;
+    for (i in 1:nrow(HRsplit)){
+      if ((sum(HRsplit[[i,2]]>0)>=2) & !nosplit){
+        timings <- correctTimings(HRsplit[[i,1]],HRsplit[[i,2]])
+        beattimes[[iD,1]] <- timings
+        output <- timings2samples_block_cpp(timings,HRstep=10)
+        #output <- timings2samples(timings,HRstep=10)
+        times1[[iD,1]] <- output[,1]
+        intervals1[[iD,1]] <- output[,2]
+        rate1[[iD,1]] <- output[,3]
+        iD <- iD+1;
+      }
     }
   }
-}
   if ((sum(I0>0)>=2) & nosplit){
     beattimes <- matrix(list(),length(t0),1)
     timings <- correctTimings(t0,I0)
@@ -259,11 +259,17 @@ if (!nosplit){
   
   # merge data
   if (!nosplit){
-    times2 <- as.vector(times1[[1,1]])
+    if (length(times1[[1,1]]) == 0) {
+      times2 <- as.vector(times1[[2,1]])
+      tstart = 3
+    } else {
+      times2 <- as.vector(times1[[1,1]])
+      tstart = 2
+    }
     intervals2 <- as.vector(intervals1[[1,1]])
     rate2 <- as.vector(rate1[[1,1]])
     beattimes2 <- as.vector(beattimes[[1,1]])
-    for (i in 2:length(beattimes)){
+    for (i in tstart:length(beattimes)){
       if (length(times1[[i,1]]) > 0){
         nanHRsteps <- ((times1[[i,1]][1] - times2[length(times2)]) / HRstep) - 1
         if (nanHRsteps > 0){
@@ -303,22 +309,22 @@ if (!nosplit){
         rate2[(length(rate2)+1):(length(rate2)+length(temp_rate))] <- temp_rate
       }
     }
-
+    
   }
-
+  
   ECG_data <- data.frame(times=times2,rate=rate2)
   return(ECG_data)
 }
 
 # get epochs around feedback +/- 500ms
 ecg_epochs_around_feedback <- function(ECG_data,fbt,pre=1000,post=10000,sample_rate=100){
-
+  
   #library(parallel)
   #library(foreach)
-
+  
   Ch1 <- ECG_data$rate
   rrt <- ECG_data$times
-
+  
   ch1_a2f <- matrix(NA,nrow=length(fbt),ncol=round(pre/10)+round(post/10)+1);
   for (i in 1:length(fbt)){
     if ((i %% 10)==0){
@@ -329,7 +335,7 @@ ecg_epochs_around_feedback <- function(ECG_data,fbt,pre=1000,post=10000,sample_r
       indx <- (fb0-round(pre/10)):(fb0+round(post/10))
       indx[indx<1 | indx > length(rrt)] <- NA
       ch1_a2f[i,] <- Ch1[indx]
-
+      
       if (fbt[i] > min(rrt)-10000+1){
         Ch1 <- Ch1[rrt > fbt[i]-10000]
         rrt <- rrt[rrt > fbt[i]-10000]
@@ -338,7 +344,7 @@ ecg_epochs_around_feedback <- function(ECG_data,fbt,pre=1000,post=10000,sample_r
     }
   }
   ch1_a2f <- as.data.frame(ch1_a2f)
-
+  
   return(ch1_a2f) # rows = number of trials, columns = number of timestamps
 }
 
@@ -366,7 +372,7 @@ ecg_epochs_around_feedback2 <- function(ECG_data,fbt,pre=1000,post=10000,sample_
     return(ax)
   }))
   parallel::stopCluster(cl)
-
+  
   return(ch1_a2f) # rows = number of trials, columns = number of timestamps
 }
 
@@ -409,4 +415,3 @@ get_good_ECG <- function(blocks,ch1_a2f){
   Ngood_df <- dplyr::tibble(per_Good=perGood,block=nbl)
   return(Ngood_df)
 }
-

@@ -35,7 +35,7 @@ if (FALSE) {
   })
   names(path_info) <- c("schedule","physio","video")
   #########END########
-
+  
   #example for proc_schedule:
   output <- proc_schedule(schedule_df = path_info$schedule,tz=Sys.timezone(),days_limit=60,force_reproc=T)
   ##Output a list of :
@@ -44,14 +44,14 @@ if (FALSE) {
   output$sample_info_df #is a dataframe wtih a row number equal to the number of subejcts, include sample level information on compliance .
   output$subj_performance # is a list with a length equal to the number of subjects, include subject information on performance
   output$sample_performance #is a dataframe wtih a row number equal to the number of subejcts, include subject level information on performance.
-
+  
   #example for proc_physio:
   ##!!!!Must first proc the schedule data as physio uses the trial level data to generate percentage;
   output_physio <- proc_physio(physio_df = path_info$physio, tz="EST",thread=4,
                                force_reload=FALSE,force_reproc=FALSE,save_lite=F,
                                eeg_sample_rate=256.03, sd_times=10, eeg_pre=500,eeg_post=1500, #EEG options
                                ecg_sample_rate = 100, HRstep = 10, ecg_pre=1000,ecg_post=10000 #ECG options
-                               )
+  )
   names(output_physio)
   save(output,output_physio,file = "aggregate_output.rdata")
   #list: two data sets: EEG & ECG
@@ -77,7 +77,7 @@ load_db <- function(dbpath,table_names=NULL) {
     all_table_names <- dbListTables(dbdata)
     return(dbdata)
   }
-
+  
   copy_to_HD <- function(dbpath){
     file.copy(dbpath,'~/Desktop/temp',overwrite=FALSE)
     tempstr <- str_split(dbpath,'/')
@@ -201,11 +201,11 @@ proc_schedule <- function(schedule_df = NULL,days_limit=35,task_limit=56,force_r
   overall_info <- subj_agg %>% full_join(raw_agg, by="ID")
   #overall_info<-cbind(aggregate(compliance ~ ID,data = sample_info[which(sample_info$scheduled_time <= Sys.Date()),],FUN = mean),do.call(plyr::rbind.fill,lapply(raw_data,`[[`,"subject")))
   #overall_info$completed_session <- aggregate(session_number ~ ID,data = sample_info[!is.na(sample_info$completed_time),],FUN = max)$session_number
-
+  
   pr_info_subjwise <-  do.call(rbind,lapply(proc_data,`[[`,"performance_overall"))
   q_summary <-  do.call(rbind,lapply(proc_data,`[[`,"form_summary"))
   
-
+  
   return(list(proc_data=proc_data,newdata_IDs=sapply(proc_data,`[[`,"ID",USE.NAMES = F)[sapply(proc_data,`[[`,"new_data")],
               subj_info = sp_info_sq,sample_info_df=overall_info,
               subj_performance = performance_info, sample_performance = pr_info_subjwise,
@@ -231,17 +231,17 @@ calcu_accuracy<- function(trials_1,stimuli) {
   }
   trials_1$relative_accuracy=NA
   index=which(!is.nan(trials_1$relative_stim1)&!is.nan(trials_1$relative_stim2))
-
+  
   #accuracy according to experienced probabilities (differences of less than 10% between probabilties are omitted)
   for (i in index){
     trials_1$relative_accuracy[i]=((trials_1$relative_stim1[i]>trials_1$relative_stim2[i]+0.1)&&(trials_1$choice[i]==0)||(trials_1$relative_stim1[i]+0.1<trials_1$relative_stim2[i])&&(trials_1$choice[i]==1))
     if (((abs(trials_1$relative_stim1[i]-trials_1$relative_stim2[i])<0.1)&&(abs(trials_1$relative_stim2[i]-trials_1$relative_stim1[i]))<0.1))
       trials_1$relative_accuracy[i]=NA
   }
-
-
+  
+  
   return(trials_1)
-
+  
 }
 
 #function to get start_time for game once split into individual session
@@ -341,19 +341,19 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
     s <- paste0("Processing schedule file for: ", raw_single$ID)
     message(s)
     log_info(s)
-
+    
     raw_games <- raw_single$trials
     raw_questionnaires <- raw_single$questionnaires
-
+    
     log_debug(paste0("Getting the trial data for Subject: ", raw_single$ID))
     ###Part I: Trial
     time_vars <- c("scheduled_time","stim_time","choice_time","feedback_time")
     for (tx in time_vars) {
       raw_single$trials[[tx]] <- ms_to_date(raw_single$trials[[tx]],timezone = tz)
     }
-
+    
     trials_df<-calcu_accuracy(trials_1=raw_single$trials,stimuli=raw_single$stimuli)
-
+    
     log_debug(paste0("Getting the RT for Subject: ", raw_single$ID))
     #get RT
     trials_df$rt <- as.numeric(difftime(trials_df$choice_time,trials_df$stim_time,units = "secs"))
@@ -379,8 +379,8 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
                        relative_accuracy_nofeed = mean(as.numeric(ix[which(ix$feedback==0),]$relative_accuracy),na.rm = T),
                        earning = sum(ix$outcome * 0.15,na.rm = T),
                        stringsAsFactors = F)
-
-
+      
+      
       return(list(compliance=rx,performance=px))
     })
     log_debug(paste0("Getting the RT for Subject: ", raw_single$ID))
@@ -396,18 +396,18 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
     trial_info_df<-merge(raw_single$sessions,tr_info_by_block,by = "block",all = T)
     trial_info_df<-trial_info_df[,-grep("_ms",names(trial_info_df))]
     trial_info_df$spec <-unlist(apply(trial_info_df[c("block","start_trial","last_trial")],1,list),recursive = F)
-
+    
     trial_info_df<-trial_info_df[c("scheduled_time","start_time","completed_time","duration","delay","spec")]
     trial_info_df$type <- "trials"
-
-
-
+    
+    
+    
     if (max(trials_df$block)>14){
       pr_info_by_block$bad <- NA
       pr_info_by_block$bad[6:nrow(pr_info_by_block)] <- (pr_info_by_block$relative_accuracy_feed<0.7)[6:nrow(pr_info_by_block)]
       percentage_last_ten<-as.numeric(which(pr_info_by_block$bad[(nrow(pr_info_by_block)-9):nrow(pr_info_by_block)])*10)
       percentage_last_ten<-ifelse(length(percentage_last_ten)<1,0,percentage_last_ten)
-
+      
       if (percentage_last_ten>20){
         mean_RT_low_performance=mean(pr_info_by_block$mean_rt[which(pr_info_by_block$bad & c(rep(FALSE,(nrow(pr_info_by_block)-10)),rep(TRUE,10)))])
         mean_side_bias_low_performance=mean(pr_info_by_block$IDe_bias[which(pr_info_by_block$bad & c(rep(FALSE,(nrow(pr_info_by_block)-10)),rep(TRUE,10)))])
@@ -428,9 +428,9 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
                              abs_accurate_nofeed = mean(pr_info_by_block$abs_accurate_nofeed,na.rm = T),
                              relative_accuracy_nofeed = mean(pr_info_by_block$relative_accuracy_nofeed,na.rm = T),
                              stringsAsFactors = F)
-                              #percentage_last_ten=percentage_last_ten,
-                              #mean_RT_low_performance=mean_RT_low_performance,
-                              #mean_side_bias_low_performance=mean_side_bias_low_performance,
+    #percentage_last_ten=percentage_last_ten,
+    #mean_RT_low_performance=mean_RT_low_performance,
+    #mean_side_bias_low_performance=mean_side_bias_low_performance,
     log_debug(paste0("Processing the questionnaires for Subject: ", raw_single$ID))
     ##Part II: questionnaires:
     time_vars <- c("scheduled_time","start_time","completed_time")
@@ -438,7 +438,7 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
       raw_single$questionnaires[[tx]] <- ms_to_date(raw_single$questionnaires[[tx]],timezone = tz)
     }
     raw_single$answers$answer_time <- ms_to_date(raw_single$answers$answer_time,timezone = tz)
-
+    
     raw_single$questionnaires$session_number<-sapply(raw_single$questionnaires$scheduled_time,function(x){
       dx<-difftime(x,trial_info_df$scheduled_time,units = "mins")
       dx[abs(dx)>30] <- NA
@@ -448,7 +448,7 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
         return(NA)
       }
     },USE.NAMES = F)
-
+    
     log_debug(paste0("Assigning the sessions for Subject: ", raw_single$ID))
     ##Part 0: Session Assignment:
     #### Session information data frame ####
@@ -460,7 +460,7 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
     session_info_df<-session_info_df[c("scheduled_time","start_time","completed_time","duration","delay","spec")]
     #session_info_df['spec'] <- unlist(session_info_df['spec'])
     session_info_df$type <- "questionnaires"
-
+    
     #######Info session##########
     #######DEPRECATED############
     # # replace w/A's code starting here #
@@ -506,7 +506,7 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
     #   return(ifp)
     # })))
     #######DEPRECATED############
-
+    
     log_debug(paste0("Getting the game data for Subject: ", raw_single$ID))
     #######Get info_df###########
     # get the game data
@@ -540,7 +540,7 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
       mutate(weekday = weekdays(scheduled_time)) %>% # get the weekday
       mutate(meridiem = lubridate::am(scheduled_time) %>% sapply(get_meridiem)) %>% # get the meridiem
       mutate(type = paste0(type, ' ', meridiem)) # rename the games to include time
-
+    
     # get the start date, NOTE: this is actually the day before to ensure accessing all element, decremented by 1 later
     start_date <- games_by_block %>% filter(block == 0) %>% '$'(scheduled_time) %>% '-'(lubridate::days())
     
@@ -561,7 +561,7 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
       mutate(type = description) %>% # rename description
       mutate(start_date = start_date) %>%
       mutate(days = lubridate::day(scheduled_time) - lubridate::day(start_date) - 1)
-
+    
     # End get the datetime of the most recent game session
     # If completed, then end of experiment questionnaire time
     # It's the earlier date of the two cases to work for all participants.
@@ -575,19 +575,19 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
     # filter out any contents after the drop date from the games and questionnaires
     questionnaires_by_session <- questionnaires_by_session %>% filter(scheduled_time < drop_after)
     games_by_block <- games_by_block %>% filter(scheduled_time < drop_after)
-
+    
     # get the EMA day each task is on
     questionnaires_by_session <- questionnaires_by_session %>% mutate(days = round(difftime(scheduled_time, start_date, units='days') - 1,0))
     games_by_block <- games_by_block %>% mutate(days = round(difftime(scheduled_time, start_date, units='days') - 1,0))
-
+    
     # add a block column to the questionnaire (just set all to -1...blocks are useful to keep for eeg data)
     #questionnaires_by_session <- questionnaires_by_session%>% mutate(block = -1)
-
+    
     log_debug(paste0("Getting the games by session for Subject: ", raw_single$ID))
     # squish the games to have AM and PM be a single item
     games_by_session <- games_by_block %>% group_split(type,days)
     games_by_session <- do.call(rbind, lapply(games_by_session, get_game_session))
-
+    
     log_debug(paste0("Getting the games by block for Subject: ", raw_single$ID))
     # get the info df (merge of games_by_session and questionnaires_by_session), concert this back to a base dataframe to match J's
     merge_items <- c('start_time', 'scheduled_time', 'completed_time', 'ID', 'days', 'weekday', 'meridiem', 'duration', 'delay', 'missing', 'completed', 'type') # , 'block'
@@ -599,7 +599,7 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
     # convertv back to base dataframe from tibble
     info_df <- as.data.frame(info_df)
     #######Get info_df###########
-
+    
     #update answer DF as well"
     raw_single$answers$session_number<-session_info_df$session_number[match(round(as.numeric(raw_single$answers$answer_time,0)),round(as.numeric(session_info_df$completed_time),0))]
     ##Part II: proc answer df:
@@ -607,7 +607,7 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
     #Find answer:
     form_data <- raw_single$answers
     form_data <- form_data[form_data$answer!="",]
-
+    
     if(nrow(raw_single$sleep)>0) {
       tk <- form_data[rep(1,nrow(raw_single$sleep)),]
       tk$questionnaire_type <- NA
@@ -621,10 +621,10 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
       }
       form_data <- rbind(form_data,tk)
     }
-
+    
     form_data$answer_prog <- text_proc(form_data$answer)
     fdata_sp <- split(form_data,form_data$questionnaire_name)
-
+    
     ## REWRITE form_proc: FROM HERE ##
     #proc all the other first
     # form_proc <- lapply(fdata_sp,function(tkd){
@@ -675,7 +675,7 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
     #   return(tkf)
     # })
     ## REWRITE form_proc: TO HERE ##
-
+    
     # form_proc$`Mood Questionnaire`$v_a_distance <- sqrt((as.numeric(form_proc$`Mood Questionnaire`$Valence)^2) + (as.numeric(form_proc$`Mood Questionnaire`$Arousal)^2) )
     # form_proc$`Sleep Diary`$did_not_sleep<-is.na(form_proc$`Sleep Diary`$questionnaire_type)
     # if(!is.null(form_proc$`End questionnaire`)) {
@@ -683,7 +683,7 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
     #   form_proc$`End questionnaire`$event_df <- NULL
     #   form_proc$`End questionnaire`$number_of_events <- NULL
     # }
-
+    
     clean_daily_recording <- function(fdata_sp, subj_id) {
       # run the cleaning
       fdata_sp$`Daily recording` <- fdata_sp$`Daily recording` %>%
@@ -696,7 +696,7 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
       # return the updated object
       return(fdata_sp)
     }
-
+    
     clean_end_questionnaire <- function(fdata_sp, subj_id) {
       # if the end questionnaire has not been completed yet
       end_q_complete = "End questionnaire" %in% names(fdata_sp)
@@ -729,7 +729,7 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
       # return the updated object
       return(fdata_sp)
     }
-
+    
     clean_mood_post_task <- function(fdata_sp, subj_id) {
       # get the answer list
       answer_list <- fdata_sp$`Mood post task`$answer_prog
@@ -753,7 +753,7 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
       # return the updated object
       return(fdata_sp)
     }
-
+    
     clean_mood_questionnaire <- function(fdata_sp, subj_id) {
       # get the answer list
       mood_answers <- fdata_sp$`Mood Questionnaire`$answer_prog
@@ -778,7 +778,7 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
       #'   B: Anxious, Elated, Sad, Irritable, Energetic (1)
       #'   C: events/thoughts (2)
       #' Next bit of logic is to separate A+B and C into separate entities
-
+      
       # get the ema data
       #' Here, the data is split by staggered in order of valence-arousal and
       #' emotional like so:
@@ -856,7 +856,7 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
       #' Note that this implementation does not have the redundant event_df naming.
       #' This likely shouldn't hurt anything.
     }
-
+    
     clean_sleep_diary <- function(fdata_sp, subj_id) {
       # get the answer list
       sleep_answers <- fdata_sp$`Sleep Diary`$answer_prog
@@ -928,7 +928,7 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
         )
       # run a sub-function to reduce the dream logs to be NA if there is no
       # dream log and move the sleep log back one in the order otherwise
-
+      
       # nested function to check is an item is zero (used to drop 0s in reindex_dream_log)
       is.zero <- function(item) {
         tryCatch({
@@ -997,17 +997,17 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
       fdata_sp$`Sleep Diary`$number_of_events <- sapply(fdata_sp$`Sleep Diary`$event_df, nrow)
       # set any null items in the 'number_of_events' to zero
       fdata_sp$`Sleep Diary`$number_of_events <- sapply(fdata_sp$`Sleep Diary`$number_of_events,
-        function(x) { # nested function to correct the number of events data item
-          # if the value is an integer
-          if(is.number(x)) {
-            # return the value
-            return(x)
-          # otherwise
-          } else {
-            # it should be set to 0
-            return(0)
-          }
-        }
+                                                        function(x) { # nested function to correct the number of events data item
+                                                          # if the value is an integer
+                                                          if(is.number(x)) {
+                                                            # return the value
+                                                            return(x)
+                                                            # otherwise
+                                                          } else {
+                                                            # it should be set to 0
+                                                            return(0)
+                                                          }
+                                                        }
       )
       
       # add did_not_sleep
@@ -1023,7 +1023,7 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
       #' list and not a dataframe, hoping this won't break anything later on
       #' but there's a good chance to break in cleanup layer.
     }
-
+    
     create_form_proc <- function(fdata_sp, subj_id, to_run=list('clean_daily_recording', 'clean_end_questionnaire', 'clean_mood_post_task', 'clean_mood_questionnaire', 'clean_sleep_diary')) {
       # basically provide a list of function that take the fdata_sp object and subj_id as input and run them within a try-catch
       # initialize form proc
@@ -1053,9 +1053,9 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
       # return the overall result
       return(form_proc)
     }
-
+    
     form_proc <- create_form_proc(fdata_sp, raw_single$ID)
-
+    
     log_info(paste0("Base data cleaning finished"))
     
     ##summary stats for how much they answered
@@ -1073,14 +1073,14 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
     q_sum$num_no_sleep <- length(which(form_proc$`Sleep Diary`$did_not_sleep))
     q_sum$val_emo_cor <- cor(apply(form_proc$`Mood Questionnaire`[c("Anxious","Elated","Sad","Irritable","Energetic")],1,function(x){mean(as.numeric(x),na.rm = T)}),form_proc$`Mood Questionnaire`$v_a_distance)
     ###return proc_answer object###########
-
+    
     log_info("Beginning payment, completion, and performance calculations...")
     
     # get the current schedule file
     cur_sched_file <- grep("*.db", list.files(paste0(dataPath, '/Subjects/', raw_single$ID, '/schedule')), value=TRUE)
     # append the path
     cur_sched_file <- paste(paste0(dataPath, '/Subjects/', raw_single$ID, '/schedule/', cur_sched_file))
-
+    
     # METADATA FETCHING (site, initials, group)
     on_server <- function(cur_sched_file){
       data = dbConnect(SQLite(), cur_sched_file)
@@ -1109,11 +1109,11 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
     questionnaire_1 <- dbGetQuery(data, "SELECT * FROM questionnaires")
     group <- participant_info$study_group
     site <- case_when(participant_info$state == "PA" ~"Pitt", participant_info$state == "NC" ~"UNC")
-
+    
     log_info("Metadata was fetched")
     #print(trials_1)
     #print(questionnaire_1)
-
+    
     # COMPLETENESS CALCULATIONS (calendar day, ema day)
     completeness_table <- function(games_input, questionnaires_input, participant_status) {
       # if(raw_single$ID == '440278') {
@@ -1270,14 +1270,14 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
     # the "completeness_table" function can be run with 'participant_status' set
     # to inactive to generate a final report, but that is not implemented here.
     task_completeness <- completeness_table(
-                              games_input = trials_1,
-                              questionnaires_input = questionnaire_1,
-                              participant_status = 'active')
-
+      games_input = trials_1,
+      questionnaires_input = questionnaire_1,
+      participant_status = 'active')
+    
     log_info("Completeness was calculated")
-
+    
     # PAYMENT INFORMATION
-
+    
     payment_df <- function(completeness_perc, games_input) {
       log_debug("START: Getting the payment_df.")
       log_trace("START: Loading completeness_perc and mutating to include cal_week.")
@@ -1337,16 +1337,16 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
       return(payment_table)
     }
     payment <- payment_df(
-                completeness_perc = task_completeness$completeness_table,
-                games_input = trials_1)
-
+      completeness_perc = task_completeness$completeness_table,
+      games_input = trials_1)
+    
     log_info("Payment was calculated")
     
     log_info("Completed payment, completion, and performance calculations.")
-
+    
     pr_info_by_block$ID <- raw_single$ID
     raw_single$trials <- trials_df
-
+    
     output <- list(raw_data=raw_single,
                    info_df = info_df,
                    performance_info=pr_info_by_block,performance_overall=px_overall,
@@ -1358,7 +1358,7 @@ proc_schedule_single <- function(raw_single,days_limit=60,force_reproc=FALSE,tz=
                    payment=payment,
                    task_completeness=task_completeness)
     save(output, file = output_path)
-
+    
     return(list(raw_data=raw_single, new_data=TRUE,
                 info_df = info_df,
                 performance_info=pr_info_by_block,performance_overall=px_overall,
@@ -1395,8 +1395,8 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
   # modify physio_df to have physio_df$file_path include the file name
   par_cl <- parallel::makeCluster(spec = thread,type = "FORK")
   exp_out<-parallel::parLapply(par_cl,unique(physio_df$subject_id),function(IDx){
-  #IDx = '540133'  
-  physio_files_new <- physio_df$file_path[physio_df$subject_id==IDx]
+    #IDx = '540470'  
+    physio_files_new <- physio_df$file_path[physio_df$subject_id==IDx]
     physio_rawcache_file <- file.path(unique(dirname(physio_df$file_path[physio_df$subject_id==IDx])),paste(IDx,"_physio_raw.rdata",sep = ""))
     physio_proc_file <- file.path(unique(dirname(physio_df$file_path[physio_df$subject_id==IDx])),paste(IDx,"_physio_proc.rdata",sep = ""))
     physio_concat <- NULL
@@ -1428,7 +1428,7 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
       return(output)
     } else {
     }
-
+    
     ##### Quickly grabbing .db schedule file for physio, uncoupling physio from schedule file processing
     ##### 2021-11-22 AndyP
     #####
@@ -1556,7 +1556,7 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
       ecg_times1 <- ecg_raw$times[ecg_raw$times!=-1000]
       rm(ecg_raw)
       ecg_raw <- tibble(rate=ecg_rate1,times=ecg_times1)
-
+      
       ecg_fb <- ecg_epochs_around_feedback(ECG_data = ecg_raw,fbt = fbt,
                                            pre = ecg_pre,post = ecg_post,sample_rate = ecg_sample_rate)
       # fbt1 <- fbt
@@ -1582,7 +1582,7 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
       error=function(e){
         message(paste0('error for overall ecg subject ',IDx, ' this is not used anymore anyway'))
       })
-
+      
       path_to_physio <- paste0(dataPath,'/Subjects/',IDx,'/physio')
       physio_proc <- list.files(path_to_physio,pattern=paste0(IDx,'_physio_proc.rdata'))
       if (length(physio_proc)==1 && !force_reload){
@@ -1618,7 +1618,7 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
                      eeg_proc = eeg_raw,eeg_fb = eeg_fb, eeg_summary = eeg_summary, eeg_ov = eeg_ov, eeg_missing = eeg_missing, eeg_rawsum = eeg_rawsum,
                      ecg_proc = ecg_raw,ecg_fb = ecg_fb, ecg_summary = ecg_summary, ecg_ov = ecg_ov, trial_df = trial_df)
       save(output,file = physio_proc_file)
-
+      
     } else { # load physio_proc.rdata
       path_to_physio <- paste0(dataPath,'/Subjects/',IDx,'/physio')
       physio_proc <- list.files(path_to_physio,pattern=paste0(IDx,'_physio_proc.rdata'))
@@ -1626,17 +1626,20 @@ proc_physio <- function(physio_df = NULL,sch_pro_output=NULL, tz="EST", thread=4
         load(paste0(path_to_physio,'/',physio_proc)) # loads a variable called output into global environment
       }
     }
-
+    
     if(save_lite) {
       output <- list(new_data=TRUE,ID=IDx,lite=T,
                      eeg_fb = eeg_fb,eeg_summary = eeg_summary, eeg_ov = eeg_ov,eeg_missing = eeg_missing, eeg_rawsum = eeg_rawsum,
                      ecg_fb = ecg_fb,ecg_summary = ecg_summary, ecg_ov = ecg_ov, ecg_missing = NA, ecg_rawsum = NA, trial_df = trial_df)
-
+      
       return(output)
     } else {
       return(output)
     }
-})
+    
+    
+    
+  })
   parallel::stopCluster(par_cl)
   # if(save_lite) {
   #   nax <- c("fb","summary", "missing", "rawsum")
@@ -1695,7 +1698,7 @@ text_proc <- function(input_text = NULL) {
   type_indx[grepl(", ",input_text,fixed = T)] <- "tx2"
   type_indx[grepl("\n",input_text,fixed = T)] <- "ls1"
   type_indx[grepl("category=",input_text,fixed = T)] <-"ls2"
-
+  
   output_ls[type_indx=="single_digit"]<-as.numeric(input_text[type_indx=="single_digit"])
   output_ls[type_indx=="video"]<-sapply(input_text[type_indx=="video"],list,USE.NAMES = F)
   output_ls[type_indx=="tx1"]<-lapply(strsplit(input_text[type_indx=="tx1"],"\t"),split_n_name)
@@ -1715,7 +1718,7 @@ text_proc <- function(input_text = NULL) {
         }
         x <- x[-xi]
       }
-
+      
       split_n_name(x)
     })
   })
