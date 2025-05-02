@@ -21,26 +21,60 @@ else
         db = sqlite(strcat(filename(1).folder,'/',filename(1).name));
     end
     
-    DATA = fetch(db, 'SELECT recording_time,EEG1,EEG2,EEG3,EEG4 FROM EEG_muse ORDER BY recording_time ASC');
-    
+    % DATA = fetch(db, 'SELECT recording_time,EEG1,EEG2,EEG3,EEG4 FROM EEG_muse ORDER BY recording_time ASC');
+    DATA = fetch(db, 'SELECT * FROM EEG_muse ORDER BY recording_time ASC');
     db.close();
-    if any(ischar(DATA{1,1})); EEG.times = cellfun(@str2double,DATA(:,1));
+    
+    % Added for compatibility 
+    if istable(DATA)
+        % Extract the time column (first column)
+        col1 = DATA{:,1};
+        % Handle text or numeric time columns
+        if iscellstr(col1) || isstring(col1)
+            % If the data are in a cell array of character vectors or string array,
+            % convert each element to a double.
+            EEG.times = cellfun(@str2double, cellstr(col1));
+        else
+            EEG.times = double(col1);
+        end
+    
+        % Process columns 2 to 5 for EEG.data
+        for colIdx = 2:5
+            currCol = DATA{:,colIdx};
+            if iscellstr(currCol) || isstring(currCol)
+                % Convert using str2double
+                EEG.data(:,colIdx-1) = cellfun(@str2double, cellstr(currCol));
+            else
+                EEG.data(:,colIdx-1) = double(currCol);
+            end
+        end
+    
+        % Process columns 6 to 9 for EEG.isgood
+        for colIdx = 6:9
+            currCol = DATA{:,colIdx};
+            if iscellstr(currCol) || isstring(currCol)
+                EEG.isgood(:,colIdx-5) = cellfun(@str2double, cellstr(currCol));
+            else
+                EEG.isgood(:,colIdx-5) = double(currCol);
+            end
+        end
+    
     else
-        EEG.times = cellfun(@double,DATA(:,1));
+        % Assume DATA is a cell array
+        if any(ischar(DATA{1,1}))
+            EEG.times = cellfun(@str2double, DATA(:,1));
+        else
+            EEG.times = cellfun(@double, DATA(:,1));
+        end
+        EEG.data(:,1) = cellfun(@str2double, DATA(:,2));
+        EEG.data(:,2) = cellfun(@str2double, DATA(:,3));
+        EEG.data(:,3) = cellfun(@str2double, DATA(:,4));
+        EEG.data(:,4) = cellfun(@str2double, DATA(:,5));
+        EEG.isgood(:,1) = cellfun(@str2double, DATA(:,6));
+        EEG.isgood(:,2) = cellfun(@str2double, DATA(:,7));
+        EEG.isgood(:,3) = cellfun(@str2double, DATA(:,8));
+        EEG.isgood(:,4) = cellfun(@str2double, DATA(:,9));
     end
-    EEG.data(:,1) =  cellfun(@str2double,DATA(:,2));
-    EEG.data(:,2) =  cellfun(@str2double,DATA(:,3));
-    EEG.data(:,3) =  cellfun(@str2double,DATA(:,4));
-    EEG.data(:,4) =  cellfun(@str2double,DATA(:,5));
-    clear DATA
-    
-    db = sqlite(strcat(filename(1).folder,'/',filename(1).name));
-    DATA = fetch(db, 'SELECT recording_time, ISGOOD1,ISGOOD2,ISGOOD3,ISGOOD4 FROM EEG_muse ORDER BY recording_time ASC');
-    db.close();
-    EEG.isgood(:,1) = cellfun(@str2double,DATA(:,2)); % 2022-10-05 AndyP: I believe the first index is recording time
-    EEG.isgood(:,2) = cellfun(@str2double,DATA(:,3));
-    EEG.isgood(:,3) = cellfun(@str2double,DATA(:,4));
-    EEG.isgood(:,4) = cellfun(@str2double,DATA(:,5));
     clear DATA
     
     

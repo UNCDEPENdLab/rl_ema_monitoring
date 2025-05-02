@@ -1,4 +1,4 @@
-function [TFdata] = EEGanalysis_test_Validation(name,rootDir,saveAlignmentVarsOnly)
+function [TFdata] = EEGanalysis_test_Validation(name,rootDir,itemsToSave)
     % Full pipeline for preprocessing Muse and Biosemi data.
     % For Muse: Imports and merges the data.
     %           Corrects the EEG timestamps.
@@ -13,11 +13,9 @@ function [TFdata] = EEGanalysis_test_Validation(name,rootDir,saveAlignmentVarsOn
     % Parameters:
     % name -        [char] Participant Id
     % rootDir -     [string] Directory where the raw data will be taken from.
-    %
-    % saveAlignmentVarsOnly - [bool] Optional - if True then saves the
-    %                           intermediate variables, skips the Muse and TF
-    %                           analysis
-    %
+    % itemsToSave - [string array] Contains the strings of the steps to run
+    %               and save. Can contain any of: {"EEG","alignment","TF"}
+    % 
     % Returns -     [struct] Contains the time-frequency analysis results
     %               for the muse and 4 biosemi sessions.
     %
@@ -33,51 +31,56 @@ function [TFdata] = EEGanalysis_test_Validation(name,rootDir,saveAlignmentVarsOn
     
     % Set up optional parameters
     if nargin<3
-        saveAlignmentVarsOnly = false;
+        itemsToSave = ['TF'];
     end
-
+    
     % Open eeglab to load plugins, Note: running eeglab nogui; won't load them
     eeglab; 
     close;
     ft_defaults; % Load defaults
 
-    epochWindow = [-1.500, 3];  % Time window around the event, in s
+    % epochWindow = [-1.500, 3];  % Time window around the event, in s
+    epochWindow = [-1.600, 3];  % Time window around the event, in s
     TFwindow = [-1000,2500];
-    TFdata = struct();
-    
-    if ~saveAlignmentVarsOnly
-        %% MUSE: 
-        % Preprocess, align and segment data
-        EEGData.muse = preprocessMuseData(name,epochWindow,rootDir);
-    
-        % TF analysis
-        scenario = 'feedback';
-        TFdata.muse = prepareTFAnalysis(EEGData.muse, 'muse', scenario,TFwindow);
-        museChannelNames = {'left_temp', 'left_front', 'right_front', 'right_temp'};
-    
-        % Save the processed data
-        saveTFData(TFdata.muse, rootDir, name, 'muse', museChannelNames, scenario, EEGData.muse.sampling_rate)
-    
-        % Clear workspace
-        clear 'EEGData' 'TFdata'
-    end
+    scenario = 'feedback';
 
-    %% BIOSEMI : 
+    %% MUSE: 
+    runMuseAnalysis(name,rootDir,scenario,epochWindow,TFwindow,itemsToSave);
+ 
+    %% BIOSEMI :
     % Preprocess and align data
     eeglab nogui;
-    numBiosemiSessions = 4;
-    scheduleData = readScheduleFile(name,rootDir);
-    scenario = 'feedback';
-    
+    [TFdata.biosemi,alignedEEG] = runAllBiosemiSessions(name,rootDir,scenario, epochWindow,TFwindow, itemsToSave);
+
+end
+
+function saveEEGDir = makeEEGSaveDir(name,rootDir)
+    % Directory to save EEG Data only 
+    saveEEGDir = fullfile(rootDir,'EEGData',name);
+    if ~exist(saveEEGDir,'dir')
+        mkdir(saveEEGDir);
+    end
+end
+
+function [TFdata,alignedEEG] = runAllBiosemiSessions(name,rootDir,scenario, epochWindow,TFwindow,itemsToSave)
+    TFdata = [];
+
+    %% Directories to save the data
     % Directory to save alignment variables for analysis
-    
-    if saveAlignmentVarsOnly 
+    if any(strcmp('alignment', itemsToSave))
         saveDir = fullfile(rootDir,'AlignmentVariables',name);
         if ~exist(saveDir,'dir')
             mkdir(saveDir);
         end
+    else
+        saveDir = '';
     end
 
+    %% Preprocessing
+    numBiosemiSessions = 4;
+    EEGBiosemi = cell(numBiosemiSessions,1); % Only used if collecting the EEG
+    scheduleData = readScheduleFile(name,rootDir);
+    
     for sessionNb = 1:numBiosemiSessions 
 
         % Camera timestamps and frames of interest
@@ -86,7 +89,7 @@ function [TFdata] = EEGanalysis_test_Validation(name,rootDir,saveAlignmentVarsOn
         
         % Prepare to save the alignment variables
         feedbackEvents = getPhoneCameraScoredTimestamps(name,rootDir,sessionNb,sessionScheduleData);
-        if saveAlignmentVarsOnly
+        if any(strcmp('alignment', itemsToSave))
             saveName = fullfile(saveDir,sprintf('%s_BSsession_%i_PhoneToCameraCorrection',name,sessionNb));
         else
             saveName = '';
@@ -96,16 +99,22 @@ function [TFdata] = EEGanalysis_test_Validation(name,rootDir,saveAlignmentVarsOn
         feedbackEvents = alignPhoneToCameraTimestamps(feedbackEvents,saveName);
         
         % Preprocess EEG data and align camera timestamps to biosemi 
-        [alignedEEG, feedbackEvents] = preprocessBiosemiData(name, rootDir, sessionNb, feedbackEvents, epochWindow,saveDir);
-        if ~saveAlignmentVarsOnly
+        [alignedEEG, feedbackEvents] = preprocessBiosemiSession(name, rootDir, sessionNb, feedbackEvents, epochWindow,saveDir);
+        
+        if any(strcmp('TF', itemsToSave))
             % Run TF analysis
-            TFdata.biosemi{sessionNb} = prepareTFAnalysis(alignedEEG, 'biosemi', scenario, TFwindow);
+            TFdata{sessionNb} = prepareTFAnalysis(alignedEEG, 'biosemi', scenario, TFwindow);
     
             % Add the missing trials as NaNs
-            TFdata.biosemi{sessionNb}.data = addMissingTrials(TFdata.biosemi{sessionNb}.data, feedbackEvents.validIndices);
+            TFdata{sessionNb}.data = addMissingTrials(TFdata{sessionNb}.data, feedbackEvents.validIndices);
+        end
+
+        if any(strcmp('EEG', itemsToSave))
+            EEGBiosemi{sessionNb} = addMissingTrials(alignedEEG.data, feedbackEvents.validIndices);
         end
     end
-    if ~saveAlignmentVarsOnly
+
+    if any(strcmp('TF', itemsToSave))
         % Concatenate sessions together
         TFdata = concatenateBiosemiSessions(TFdata);
     
@@ -114,43 +123,61 @@ function [TFdata] = EEGanalysis_test_Validation(name,rootDir,saveAlignmentVarsOn
         
         % Save the processed data
         saveTFData(TFdata, rootDir, name, 'biosemi', biosemiChannelNames, scenario, alignedEEG.srate);
-    else
-        TFdata = [];
+    end
+
+    if any(strcmp('EEG', itemsToSave))
+        
+        saveEEGDir = makeEEGSaveDir(name,rootDir);
+
+        % Concatenate the EEG in biosemi and save
+        EEGBiosemi = cat(3,EEGBiosemi{:}); % Concatenate along the trial dimension before saving
+        saveName = fullfile(saveEEGDir,'biosemiEEG.mat');
+        save(saveName,'EEGBiosemi','-v7.3');
     end
 end
 
-function updatedTFData = addMissingTrials(TFdata, validIndices)
+function updatedData = addMissingTrials(data, validIndices)
+    % Function to fill missing, unprocessed or ignored trials with NaNs
+    % for both TF and EEG data arrays.
+    %
+    % Parameters:
+    % data - [array] Processed data with dimensions:
+    %        TF Data: Trials x Frequency Bins x Time Points x Channels
+    %        EEG Data: Channels x Time Points x Trials
+    % validIndices - [array] Contains 1's where the trials were valid and
+    %                0's where they were invalid.
+    %
+    % Returns:
+    % updatedData - [array] An array with NaN values where the trials
+    %               were missing based on the validIndices array.
+
+    % Determine the number of dimensions of the input data
+    dataDims = ndims(data);
+
     % Check if there are any zeros in validIndices
     if all(validIndices == 1)
-        % If there are no zeros, just return the original data
-        updatedTFData = TFdata;
+        updatedData = data;
         return;
     end
 
-    % Get the number of channels, frequency bins, and time points
-    [numTrials, numFrequencyBins, numTimepoints, numChannels] = size(TFdata);
-    
-    % Determine the total number of trials (including missing ones)
+    % Get the size of the data and prepare updatedData with NaNs
+    dataSize = size(data);
     totalTrials = length(validIndices);
     
-    % Initialize the updated data array with NaNs for missing values
-    updatedTFData = NaN(totalTrials, numFrequencyBins, numTimepoints, numChannels);
+    % Adjust the size of updatedData to include all trials
+    dataSize(end) = totalTrials;  % Update number of trials dimension
+    updatedData = NaN(dataSize);  % Initialize with NaNs
     
-    % Process each channel
-    for chan = 1:numChannels
-        % Extract the data for this channel
-        currentData = TFdata(:,:,:,chan);
-        
-        % Counter for the currentData index
-        currentIndex = 1;
-        
-        % Fill in the data, skipping the trials that are missing
-        for trial = 1:totalTrials
-            if validIndices(trial) == 1
-                updatedTFData(trial, :, :, chan) = currentData(currentIndex, :, :);
-                currentIndex = currentIndex + 1;
-            end
-        end
+    % Find indices of the valid trials
+    validTrialIndices = find(validIndices);
+
+    if dataDims == 4  % TF Data
+        % Fill valid trials with existing data
+        updatedData(validTrialIndices, :, :, :) = data(1:length(validTrialIndices), :, :, :);
+    elseif dataDims == 3  % EEG Data
+        % Fill valid trials with existing data
+        updatedData(:, :, validTrialIndices) = data(:, :, 1:length(validTrialIndices));
+        updatedData = single(updatedData);
     end
 end
 
@@ -185,23 +212,22 @@ function feedbackEvents = alignCameraWithTTL(feedbackEvents,biosemiSamplingRate,
         cameraTTLPulse = correctPulseContinuity(cameraTTLPulse);
         biosemiLatencies_s = correctPulseContinuity(biosemiLatencies_s);
         
+
         % Retry with a different slicing if sizes still don't match
         if size(cameraTTLPulse, 1) ~= size(biosemiLatencies_s, 1)
-            cameraTTLPulse = feedbackEvents.cameraTimestamps(84:84:end);
             
-            % Check and correct again after changing the slicing index
-            if size(cameraTTLPulse, 1) ~= size(biosemiLatencies_s, 1)
-                cameraTTLPulse = correctPulseContinuity(cameraTTLPulse);
-                biosemiLatencies_s = correctPulseContinuity(biosemiLatencies_s);
-    
-                % Final adjustment if sizes still do not match
-                if size(cameraTTLPulse, 1) ~= size(biosemiLatencies_s, 1)
-                    if size(cameraTTLPulse,1)<size(biosemiLatencies_s,1)
-                        cameraTTLPulse = feedbackEvents.cameraTimestamps(80:80:end);
-                    end
-                    x = size(cameraTTLPulse, 1) - size(biosemiLatencies_s, 1) + 1;
-                    cameraTTLPulse = cameraTTLPulse(x:end);
-                end
+            [bestSlicingInd,bestDelay] = findBestSlicingAndDelay(feedbackEvents.cameraTimestamps,biosemiLatencies_s);
+            
+            cameraTTLPulse = feedbackEvents.cameraTimestamps(bestSlicingInd:bestSlicingInd:end);
+            cameraTTLLength = length(cameraTTLPulse);
+            biosemiTTLLength = length(biosemiLatencies_s);
+
+            % Determine which array is smaller and which is larger and
+            % correct it
+            if cameraTTLLength > biosemiTTLLength
+                cameraTTLPulse = cameraTTLPulse(bestDelay:biosemiTTLLength+bestDelay-1);
+            else
+                biosemiLatencies_s = biosemiLatencies_s(bestDelay:cameraTTLLength+bestDelay-1);
             end
         end
     end
@@ -226,11 +252,14 @@ function feedbackEvents = alignCameraWithTTL(feedbackEvents,biosemiSamplingRate,
     alignedBiosemiEventTimes = polyval(p,feedbackEvents.alignedCameraTimestamps);
 
     % Get the biosemi indices of the events
-    bsSampleIndices = round(alignedBiosemiEventTimes * biosemiSamplingRate);
+    biosemiFeedbackEvents = round(alignedBiosemiEventTimes * biosemiSamplingRate);
 
-    % Ensure indices are within valid range
-    biosemiFeedbackEvents = max(1, min(length(biosemiTimes), bsSampleIndices));
-    
+    % Collect the computed event times which don't fit in the timestamps
+    % and mark them as NaNs
+    biosemiFeedbackEvents(biosemiFeedbackEvents < 0) = NaN;  % Set NaN where indices are negative
+    biosemiFeedbackEvents(biosemiFeedbackEvents > length(biosemiTimes)) = NaN;  % Set NaN where indices are outside the maximum
+    feedbackEvents.validIndices  = updateValidIndices(feedbackEvents.validIndices, find(isnan(biosemiFeedbackEvents)));
+
     %% Method 2: Finding closest TTL pulse and using its difference
     % Get the differences matrix between pulse and event times
     % differencesTTLEvent = feedbackEvents.alignedCameraTimestamps - cameraTTLPulse';
@@ -319,48 +348,233 @@ function feedbackEvents = alignPhoneToCameraTimestamps(feedbackEvents,saveName)
 
 end
 
-function EEG = applyChannelOps(EEG, type)
-    % Generalized function to apply channel operations based on type
+% function EEG = applyChannelOps(EEG, type,mastoidRereference)
+%     % Generalized function to apply channel operations based on type
+%     %
+%     % Parameters:
+%     % EEG - [struct] EEGLAB data struct
+%     % type - [string] 'reReference' or 'labelOnly'
+%     % mastoidRereference - [logical] set to false to reference to FPz
+%     % 
+%     % Returns:
+%     % EEG - [struct] updated EEGLAB data struct
+% 
+%     if nargin<3
+%         mastoidRereference = true;
+%     end
+% 
+%     % List of new channel labels
+%     labels = {'Fp1', 'AF7', 'AF3', 'F1', 'F3', 'F5', 'F7', 'FT7', 'FC5', 'FC3', 'FC1', ...
+%               'C1', 'C3', 'C5', 'T7', 'TP7', 'CP5', 'CP3', 'CP1', 'P1', 'P3', 'P5', 'P7', ...
+%               'P9', 'PO7', 'PO3', 'O1', 'Iz', 'Oz', 'POz', 'Pz', 'CPz', 'Fpz', 'Fp2', 'AF8', ...
+%               'AF4', 'AFz', 'Fz', 'F2', 'F4', 'F6', 'F8', 'FT8', 'FC6', 'FC4', 'FC2', ...
+%               'FCz', 'Cz', 'C2', 'C4', 'C6', 'T8', 'TP8', 'CP6', 'CP4', 'CP2', 'P2', ...
+%               'P4', 'P6', 'P8', 'P10', 'PO8', 'PO4', 'O2', 'VEO+', 'VEO-', 'HEOL', 'HEOR', 'M1', 'M2'};
+% 
+% 
+%     if strcmp(type, 'reReference')
+%         cmd = cell(1, numel(labels));
+% 
+%         for i = 1:numel(labels)
+%             if ~ismember(labels{i}, {'VEO+', 'VEO-', 'HEOL', 'HEOR', 'M1', 'M2'})
+%                 if mastoidRereference
+%                     cmd{i} = sprintf('nch%d = ch%d - ((ch69 + ch70)/2) Label %s', i, i, labels{i});
+%                 else
+%                     cmd{i} = sprintf('nch%d = ch%d - ch33 Label %s', i, i, labels{i});
+%                 end
+%             else
+%                 cmd{i} = sprintf('nch%d = ch%d Label %s', i, i, labels{i});
+%             end
+%         end
+%     elseif strcmp(type, 'labelOnly')
+%         cmd = cell(1, numel(labels)+2);
+% 
+%         for i = 1:numel(labels)
+%             cmd{i} = sprintf('nch%d = ch%d Label %s', i, i, labels{i});
+%         end
+%         cmd{i+1} = 'nch71 = ch65 - ch66 Label biVEOG';
+%         cmd{i+2} = 'nch72 = ch67 - ch68 Label biHEOG';
+%     end
+% 
+%     % Apply channel operation in EEGLAB
+%     EEG = pop_eegchanoperator(EEG, cmd,'Saveas','off'); % ERP Lab function
+%     EEG = eeg_checkset(EEG); % Make sure there are no errors 
+% end
+
+function EEG = applyChannelOps(EEG, type, mastoidReference)
+    % APPLYCHANNELOPS Applies channel operations (labeling, re-referencing) 
+    % 
+    % Usage:
+    %   EEG = applyChannelOps(EEG, 'reReference', 'mastoids');
+    %   EEG = applyChannelOps(EEG, 'reReference', 'fpz');
+    %   EEG = applyChannelOps(EEG, 'reReference', 'ipsilateral');
+    %   EEG = applyChannelOps(EEG, 'labelOnly');
     %
     % Parameters:
-    % EEG - [struct] EEGLAB data struct
-    % type - [string] 'reReference' or 'labelOnly'
+    %   EEG - [struct] EEGLAB data structure
+    %   type - [string] 'reReference' or 'labelOnly'
+    %   mastoidReference - [string] 'mastoids', 'fpz', or 'ipsilateral'
     %
     % Returns:
-    % EEG - [struct] updated EEGLAB data struct
+    %   EEG - [struct] updated EEGLAB data structure
+
+    % Default to 'mastoids' if not specified:
+    if nargin < 3 || isempty(mastoidReference)
+        mastoidReference = 'mastoids';
+    end
+
+    % Validate mastoidReference input:
+    validRefs = {'mastoids','fpz','ipsilateral'};
+    if ~ismember(lower(mastoidReference), validRefs)
+        error('mastoidReference must be one of: %s', strjoin(validRefs, ', '));
+    end
+
+    % List of new channel labels in the dataset (1-based indexing):
+    labels = { ...
+        'Fp1','AF7','AF3','F1','F3','F5','F7','FT7','FC5','FC3','FC1', ...
+        'C1','C3','C5','T7','TP7','CP5','CP3','CP1','P1','P3','P5','P7', ...
+        'P9','PO7','PO3','O1','Iz','Oz','POz','Pz','CPz','Fpz','Fp2','AF8', ...
+        'AF4','AFz','Fz','F2','F4','F6','F8','FT8','FC6','FC4','FC2', ...
+        'FCz','Cz','C2','C4','C6','T8','TP8','CP6','CP4','CP2','P2', ...
+        'P4','P6','P8','P10','PO8','PO4','O2','VEO+','VEO-','HEOL','HEOR','M1','M2'};
     
-    % List of new channel labels
-    labels = {'Fp1', 'AF7', 'AF3', 'F1', 'F3', 'F5', 'F7', 'FT7', 'FC5', 'FC3', 'FC1', ...
-              'C1', 'C3', 'C5', 'T7', 'TP7', 'CP5', 'CP3', 'CP1', 'P1', 'P3', 'P5', 'P7', ...
-              'P9', 'PO7', 'PO3', 'O1', 'Iz', 'Oz', 'POz', 'Pz', 'CPz', 'Fpz', 'Fp2', 'AF8', ...
-              'AF4', 'AFz', 'Fz', 'F2', 'F4', 'F6', 'F8', 'FT8', 'FC6', 'FC4', 'FC2', ...
-              'FCz', 'Cz', 'C2', 'C4', 'C6', 'T8', 'TP8', 'CP6', 'CP4', 'CP2', 'P2', ...
-              'P4', 'P6', 'P8', 'P10', 'PO8', 'PO4', 'O2', 'VEO+', 'VEO-', 'HEOL', 'HEOR', 'M1', 'M2'};
 
+    % Define sets of left, right, and midline scalp labels for ipsilateral reference
+    [leftChLabels, rightChLabels, midlineChLabels] = categorizeLabels({labels{1:64}});
 
-    if strcmp(type, 'reReference')
+    % Build the "cmd" cell array that will be passed to pop_eegchanoperator
+    if strcmpi(type, 'reReference')
+
         cmd = cell(1, numel(labels));
 
         for i = 1:numel(labels)
-            if ~ismember(labels{i}, {'VEO+', 'VEO-', 'HEOL', 'HEOR', 'M1', 'M2'})
-                cmd{i} = sprintf('nch%d = ch%d - ((ch69 + ch70)/2) Label %s', i, i, labels{i});
-            else
-                cmd{i} = sprintf('nch%d = ch%d Label %s', i, i, labels{i});
+            currentLabel = labels{i};
+
+            % Skip re-referencing for special channels
+            if ismember(currentLabel, {'VEO+','VEO-','HEOL','HEOR','M1','M2'})
+                % Just relabel these channels without any referencing
+                cmd{i} = sprintf('nch%d = ch%d Label %s', i, i, currentLabel);
+                continue;
+            end
+
+            switch lower(mastoidReference)
+                case 'mastoids'
+                    % Reference to the average of M1 (ch69) and M2 (ch70)
+                    cmd{i} = sprintf('nch%d = ch%d - ((ch69 + ch70)/2) Label %s', ...
+                                     i, i, currentLabel);
+
+                case 'fpz'
+                    % Reference to Fpz (ch33)
+                    cmd{i} = sprintf('nch%d = ch%d - ch33 Label %s', ...
+                                     i, i, currentLabel);
+
+                case 'ipsilateral'
+                    % Reference to M1 if left, M2 if right, (M1+M2)/2 if midline
+                    if ismember(currentLabel, leftChLabels)
+                        % Left channels -> reference to M1 (ch69)
+                        cmd{i} = sprintf('nch%d = ch%d - ch69 Label %s', ...
+                                         i, i, currentLabel);
+                    elseif ismember(currentLabel, rightChLabels)
+                        % Right channels -> reference to M2 (ch70)
+                        cmd{i} = sprintf('nch%d = ch%d - ch70 Label %s', ...
+                                         i, i, currentLabel);
+                    elseif ismember(currentLabel, midlineChLabels)
+                        % Midline channels -> reference to average(M1, M2)
+                        cmd{i} = sprintf('nch%d = ch%d - ((ch69 + ch70)/2) Label %s', ...
+                                         i, i, currentLabel);
+                    else
+                        % If a label is not found in the sets 
+                        error('Unknown location of label');
+                    end
             end
         end
-    elseif strcmp(type, 'labelOnly')
-        cmd = cell(1, numel(labels)+2);
 
+    elseif strcmpi(type, 'labelOnly')
+        % Simply rename channels without re-referencing
+        % + add bipolars for VEOG and HEOG
+        cmd = cell(1, numel(labels) + 2);
+
+        % Label each channel according to the list
         for i = 1:numel(labels)
             cmd{i} = sprintf('nch%d = ch%d Label %s', i, i, labels{i});
         end
-        cmd{i+1} = 'nch71 = ch65 - ch66 Label biVEOG';
-        cmd{i+2} = 'nch72 = ch67 - ch68 Label biHEOG';
+
+        % Add extra channels for VEOG and HEOG
+        cmd{numel(labels)+1} = 'nch71 = ch65 - ch66 Label biVEOG';
+        cmd{numel(labels)+2} = 'nch72 = ch67 - ch68 Label biHEOG';
+    else
+        error('Unknown type: %s. Must be ''reReference'' or ''labelOnly''.', type);
     end
 
-    % Apply channel operation in EEGLAB
-    EEG = pop_eegchanoperator(EEG, cmd,'Saveas','off'); % ERP Lab function
-    EEG = eeg_checkset(EEG); % Make sure there are no errors 
+    % Apply channel operation in EEGLAB (from ERPLAB plugin)
+    EEG = pop_eegchanoperator(EEG, cmd, 'Saveas','off');
+    EEG = eeg_checkset(EEG); % Double-check for consistency
+    
+end
+
+function [leftChLabels, rightChLabels, midlineChLabels] = categorizeLabels(labels)
+    % CATEGORIZELABELS Vectorized categorization of EEG channel labels.
+    % 
+    % Inputs:
+    %   labels - Cell array of EEG channel labels
+    %
+    % Outputs:
+    %   leftChLabels - Cell array of left hemisphere channels (odd numbered)
+    %   rightChLabels - Cell array of right hemisphere channels (even numbered)
+    %   midlineChLabels - Cell array of midline channels (ending with 'z')
+    
+    % Find midline channels (labels ending with 'z')
+    midlineChLabels = labels(endsWith(labels, 'z'));
+
+    % Extract numeric endings from labels and convert them to numbers
+    numericEndings = regexp(labels, '\d+$', 'match');
+    numericEndings = cellfun(@(x) str2double(x), numericEndings, 'UniformOutput', false);
+    emptyIdx = cellfun(@isempty, numericEndings);
+    numericEndings(emptyIdx)={NaN};
+
+    % Identify labels with valid numeric endings
+    % hasNumeric = ~isnan(numericEndings);
+    
+    % Determine even and odd channel numbers
+    evenIdx = mod([numericEndings{:}], 2) == 0;
+    oddIdx = mod([numericEndings{:}], 2) == 1;
+
+    % Assign even and odd labels to right and left channels respectively
+    rightChLabels = labels(evenIdx);
+    leftChLabels = labels(oddIdx);
+end
+
+function x_filtered = bandpassFilterEEG(x, fs, lowFreq,highFreq)
+    % Apply bandpass filter on all channels of x 
+    %
+    % Parameters:
+    % x - [double] EEG signal dimensions: (samples,channels)
+    % fs - [double] sampling frequency
+    %
+    % Returns:
+    % EEG - [struct] updated EEGLAB data struct
+
+    % Normalize the frequencies by the Nyquist frequency
+    nyquist = fs / 2;
+    lowCutoff = lowFreq / nyquist;
+    highCutoff = highFreq / nyquist;
+
+    % Define the filter order
+    filterOrder = 4; 
+
+    % Design the Butterworth bandpass filter
+    [b, a] = butter(filterOrder, [lowCutoff, highCutoff], 'bandpass');
+
+    % Initialize the filtered data matrix
+    x_filtered = zeros(size(x));
+
+    % Apply the filter to each channel
+    for i = 1:size(x, 2) 
+        x_filtered(:, i) = filtfilt(b, a, x(:, i));
+    end
+
+    % Return the filtered data
+    return
 end
 
 function eegEvent = buildEEGevent(feedbackEvents)
@@ -379,16 +593,29 @@ function eegEvent = buildEEGevent(feedbackEvents)
     eventTypes = repmat({0}, length(feedbackEvents.feedbackType), 1); 
     eventTypes(feedbackEvents.feedbackType==1) = {1}; 
 
+    % Keep track of the missing trials (marked with NaNs)
+    nanTrials = isnan(feedbackEvents.alignedBiosemiEvents);
+    eventTypes(nanTrials) = {-1}; % Will get deleted but are still flagged 
+    
     % Build the struct for the biosemi using the aligned events
     eegEvent = struct('type', eventTypes, 'latency', num2cell(feedbackEvents.alignedBiosemiEvents), 'duration', num2cell(0*ones(size(feedbackEvents.alignedBiosemiEvents))));
 
 end
 
 function TFdataConcatenated = concatenateBiosemiSessions(TFdata)
+    % Concatenates the biosemi sessions into a single array across the time
+    % dimension
+    %
+    % Parameters:
+    % TFdata - [cell array] Contains the biosemi sessions in separate cells
+    %
+    % Returns:
+    % TFdataConcatenated - [4D array] Contains all the concatenated
+    %                       sessions
     
-    TFdataConcatenated = TFdata.biosemi{1}; % All sessions share the same fields except the data
+    TFdataConcatenated = TFdata{1}; % All sessions share the same fields except the data
     TFdataConcatenated = rmfield(TFdataConcatenated, 'data');
-    TFdataConcatenated.data = cat(1,cell2mat(TFdata.biosemi).data);
+    TFdataConcatenated.data = cat(1,cell2mat(TFdata).data);
 
 end
 
@@ -527,6 +754,45 @@ function filteredTable = filterByBlock(inputTable,targetBlock)
     filteredTable = inputTable(rowIndices, :);
 end
 
+function [bestSlicingInd,bestMinInd] = findBestSlicingAndDelay(cameraTimestamps,biosemiLatencies_s)
+    % Finds the best way to slice the camera TTL pulse array to match it to
+    % the received biosemi array. It tries different slicing indices and
+    % with the extracted signal finds the shift that best matches both
+    % pulses.
+    % 
+    % Parameters:
+    % cameraTimestamps - [Array] The raw camera timestamps.
+    % biosemiLatencies_s - [Array] The recorded biosemi events in seconds
+    %
+    % Returns: 
+    % bestSlicingInd - [scalar] The value of the camera slicing index that has the
+    %                       best match to the biosemi.
+    % bestMinInd - [scalar] The position or delay to shift the small array
+    %           forward to best match the larger array in the slicing index.
+    %           Note: a value of 1 indicates no shift. 
+
+    % Initialize arrays to store the results
+    slicingInds = 75:85;
+    numSlices = length(slicingInds);
+    minVals = zeros(1, numSlices);
+    minInds = zeros(1, numSlices);
+    
+    for idx = 1:numSlices
+        slicingInd = slicingInds(idx);
+        cameraTTLPulse = cameraTimestamps(slicingInd:slicingInd:end);
+        [minVal, minInd] = findMinimalDelay(cameraTTLPulse, biosemiLatencies_s);
+        
+        % Accumulate the minVal and minInd
+        minVals(idx) = minVal;
+        minInds(idx) = minInd;
+    end
+    
+    % Find the slicingInd with the smallest minVal
+    [overallMinVal, minIdx] = min(minVals);
+    bestSlicingInd = slicingInds(minIdx);
+    bestMinInd = minInds(minIdx);
+end
+
 function closestIndex = findClosestValue(targetValue, searchArray)
     % Find the corresponding index in the array nearest to targetvalue
     % 
@@ -581,9 +847,7 @@ function fullPathToFile = findFileByParticipantId(participantId, rootDir, extens
 
     % Define the directory path based on the integer
     % directoryPath = fullfile(rootDir,'Data_Raw',participantId);
-    %directoryPath = fullfile(rootDir,'mat_files_csv_and_MUSE_db',participantId);
-    tempDir = ""; %OSiller: path containing the mat,csv files as subdirs of each participant
-    directoryPath = fullfile(tempDir,participantId);
+    directoryPath = fullfile(rootDir,'mat_files_csv_and_MUSE_db',participantId);
     
     % Construct the file name based on the presence of an optional modifier
     fileName = strjoin([num2str(participantId), '-', sessionNb, '.', extension],'');
@@ -603,6 +867,57 @@ function fullPathToFile = findFileByParticipantId(participantId, rootDir, extens
         disp('No file found matching the criteria.');
         fullPathToFile = [];
     end
+end
+
+function [minVal, minInd] = findMinimalDelay(array1, array2)
+    % Takes 2 arrays' differences and finds the shift the smaller array needs to fit 
+    %  inside the longer array to minimize the euclidean distance. It's
+    %  similar to a correlation where it finds the best delay one of the
+    %  array needs to make the best match, except is not in absolute values
+    %  but in the distance between consecutive datapoints.
+    %
+    % Parameters: 
+    % array1 and array2 - [array] Arrays to be matched
+    %
+    % Returns:
+    % minVal - [scalar] The value of the lowest norm found
+    % minInd - [scalar] The position or delay to shift the small array
+    %           forward to best match the larger array. Note: a value of 1 indicates
+    %           no shift.
+    
+    % Ensure input arrays are column vectors
+    array1 = array1(:);
+    array2 = array2(:);
+
+    % Determine which array is smaller and which is larger
+    if length(array1) < length(array2)
+        smallArray = array1;
+        bigArray = array2;
+    else
+        smallArray = array2;
+        bigArray = array1;
+    end
+
+    n_s = length(smallArray);
+    n_b = length(bigArray);
+    possibleDelays = n_b - n_s + 1;
+
+    % Precompute differences
+    diffSmall = diff(smallArray); % (n_s - 1) x 1
+    diffBig = diff(bigArray);     % (n_b - 1) x 1
+
+    % Generate indices for vectorized extraction
+    indices = bsxfun(@plus, (1:n_s - 1)', 0:possibleDelays - 1);
+
+    % Extract windows and compute differences
+    D = diffBig(indices);         % (n_s - 1) x possibleDelays
+    E = D - diffSmall;            % Broadcasting diffSmall across columns
+
+    % Compute norms for each possible delay
+    norms = sqrt(sum(E.^2, 1));   % 1 x possibleDelays
+
+    % Find the minimum norm and its index
+    [minVal, minInd] = min(norms);
 end
 
 function  blockNumber = getBlockNumber(participantId, sessionNb)
@@ -720,7 +1035,7 @@ function feedbackEvents = getPhoneCameraScoredTimestamps(name,rootDir,sessionNb,
         
 end
 
-function  rejica = getRejectedICA(EEG)
+function rejica = getRejectedICA(EEG)
     % Get ICA to be rejected 
     % 
     % Parameters:
@@ -793,8 +1108,8 @@ function [TFdata] = prepareTFAnalysis(EEG, eegSource, scenario,TFwindow)
     %                        time-frequency analysis
     %
     % Returns:
-    % TFdataCollection - [Cell array] The TF analysis results for each
-    %                               channel of the EEG
+    % TFdataCollection - [array] The TF analysis results for each
+    %                               channel of the EEG Dimensions: Trials x frequency bins x Timepoints x Channels
     
     if strcmp(eegSource,'muse')
         % Define channels and sampling rate
@@ -848,7 +1163,7 @@ function [TFdata] = prepareTFAnalysis(EEG, eegSource, scenario,TFwindow)
 
 end
 
-function [EEG,feedbackEvents] = preprocessBiosemiData(name,rootDir,sessionNb,feedbackEvents,epochWindow,saveDir)
+function [EEG,feedbackEvents] = preprocessBiosemiSession(name,rootDir,sessionNb,feedbackEvents,epochWindow,saveDir)
     % Preprocess the biosemi data
     % 
     % Parameters:
@@ -882,24 +1197,33 @@ function [EEG,feedbackEvents] = preprocessBiosemiData(name,rootDir,sessionNb,fee
     % Send the biosemi times as seconds
     if ~isempty(saveDir)
         saveName = fullfile(saveDir,sprintf('%s_BSsession_%i_LinearRegressionParameters',name,sessionNb));
+    else
+        saveName = '';
     end
     feedbackEvents = alignCameraWithTTL(feedbackEvents,EEG.srate,EEG.times'/1000,saveName);
     EEG.event = buildEEGevent(feedbackEvents);
-    biosemiTimes_rel = double(feedbackEvents.alignedBiosemiEvents)/EEG.srate;
-    biosemiTimes_rel = biosemiTimes_rel- biosemiTimes_rel(1);
-    biosemiTimes_diff = diff(biosemiTimes_rel);
-    phoneTimes_diff = diff(feedbackEvents.phoneFeedbackTimes);
-    feedbackEvents.biosemiTimes_diff = biosemiTimes_diff;
-    feedbackEvents.phoneTimes_diff = phoneTimes_diff;
+    
+    % For troubleshooting
+    % biosemiTimes_rel = double(feedbackEvents.alignedBiosemiEvents)/EEG.srate;
+    % biosemiTimes_rel = biosemiTimes_rel- biosemiTimes_rel(1);
+    % biosemiTimes_diff = diff(biosemiTimes_rel);
+    % phoneTimes_diff = diff(feedbackEvents.phoneFeedbackTimes);
+    % feedbackEvents.biosemiTimes_diff = biosemiTimes_diff;
+    % feedbackEvents.phoneTimes_diff = phoneTimes_diff;
     
     %% Stage 2 - ICA
-    % EEG = preprocessBiosemiStage2(EEG);
-    
+    EEG = preprocessBiosemiStage2(EEG);
+   
     %% Stage 3 - EOGcalcs, Epoching, ArtDet, NoBCorr
-    EEG = preprocessBiosemiStage3(EEG,epochWindow);
-    
+    [EEG,omittedTrials] = preprocessBiosemiStage3(EEG,epochWindow);
+    feedbackEvents.validIndices = updateValidIndices(feedbackEvents.validIndices, omittedTrials); % If the resampling step rejects trials due to nan values, then pop_epoch will return the wrong index of the omitted trials. This function takes care of that.
+
     %% Stage 4 - ICA removal, Final ArtifactReview
-    % EEG = preprocessBiosemiStage4(EEG);
+    EEG = preprocessBiosemiStage4(EEG);
+
+    %% Stage 5 - Artifact removal
+    % EEG = preprocessBiosemiArtifactRemoval(EEG);
+
 end
 
 function EEG = preprocessBiosemiStage1(fullFilePath,subjectId)
@@ -919,10 +1243,12 @@ function EEG = preprocessBiosemiStage1(fullFilePath,subjectId)
     EEG = pop_editset(EEG, 'setname',subjectId);
         
     % Re reference
-    EEG = applyChannelOps(EEG, 'reReference');
+    EEG = applyChannelOps(EEG, 'reReference','ipsilateral');
 
     % Filtering 
     % EEG  = pop_basicfilter( EEG,  1:70 , 'Boundary', 'boundary', 'Cutoff',  30, 'Design', 'butter', 'Filter', 'lowpass', 'Order',  2 );
+    EEG = pop_basicfilter( EEG,  1:70 , 'Boundary', 'boundary', 'Cutoff', [0.1 50], 'Design', 'butter', 'Filter', 'bandpass', 'Order',  2 );
+
     % EEG = eeg_checkset( EEG );
             
     % Trimming skipped
@@ -950,7 +1276,7 @@ function EEG = preprocessBiosemiStage2(EEG)
     % EEG = pop_saveset( EEG,  'filename', [subjectId 'ICA.set']); % save ICA file
 end
 
-function EEG = preprocessBiosemiStage3(EEG,epochWindow)
+function [EEG,omittedTrials] = preprocessBiosemiStage3(EEG,epochWindow)
     % Resamples to 512Hz. 
     % Filter EOG channels
     % Epoching to the desired window 
@@ -962,6 +1288,10 @@ function EEG = preprocessBiosemiStage3(EEG,epochWindow)
     % 
     % Returns: 
     % EEG - [EEGLab object] Object after the steps mentioned above
+    % omittedTrials - [array] Contains the trial indices ignored during the
+    %                           epoching. Note that other trials ignored
+    %                           during resampling are not accounted for and
+    %                           indices may change.
     
     %% Stage 3
    
@@ -996,30 +1326,25 @@ function EEG = preprocessBiosemiStage3(EEG,epochWindow)
     EEG = eeg_checkset( EEG );
    
     % Adding new channels
-    EEG = applyChannelOps(EEG, 'labelOnly');
+    EEG = applyChannelOps(EEG, 'labelOnly','ipsilateral'); % third argument is unimportant 
     
     % Epoching
     EEG = pop_creabasiceventlist( EEG ,'AlphanumericCleaning', 'on', 'BoundaryNumeric', { -99 }, 'BoundaryString', { 'boundary' }, 'Warning', 'off' );
     EEG.EVENTLIST.INFO=INFOHOLD ;% Re-add EEG.EVENTLIST.INFO (is wiped by ERPLAB)
-    EEG = pop_epoch( EEG, {},epochWindow);
-
-    % Overview: Runs artifact detection on Eye blinks and Eye movements using only
-    % the new bipolar VEOG and HEOG channels 
-    % Detail: the code below only looks for eye artifacts around stimulus
-    % presentation [e.g., -50ms before to 100ms after presentation]
-    % Notes: This processing stage ensures all trials used for analysis were properly encoded by visual attention.
-    %
-    % Threshold is set at a typical level (100) for detection of large eye blinks
-    % and eye movements. Window size for detection is auto set to the
-    % detection window . A small step size is slightly more likely to catch artifacts, so is set low by default
+    nbOriginalEvents = size(EEG.event,2);
     
-    % eyep=epoch_window;
-    % eye_threshold = 10; %uV
-    % ws = (abs(eyep(1,1)) + eyep(1,2));    
-    % 
-    % % Det for eye arts
-    % EEG  = pop_artstep( EEG , 'Channel', [ 41 42], 'Flag', [ 1 2], 'Review', 'off', 'Threshold',  eye_threshold, 'Twindow', eyep, 'Windowsize',  ws, 'Windowstep',  10 );
-    % EEG = eeg_checkset( EEG );
+    %% Using EEGLab's function
+    [EEG,acceptedEventIndices] = pop_epoch( EEG, {},epochWindow);
+    omittedTrials = setdiff((1:nbOriginalEvents),acceptedEventIndices); % Collect which trials were ignored during epoching
+
+    %% Using epoch3
+    % tol = 4; % 4ms tolerance of alignment
+    
+    % Get the time intervals around the event in ms
+    % pre_window = -1000 * epochWindow(1);
+    % post_window = 1000 * epochWindow(2);
+    % Outputs events x time x channels:  
+    % [EEG,gap_feedback] = epoch3(EEG.times', EEG.data', [EEG.event.latency]', pre_window, post_window, EEG.srate,tol);
 
 
 end
@@ -1054,6 +1379,48 @@ function EEG = preprocessBiosemiStage4(EEG)
 
     % Syncs any changes to detected trials between EEGLAB and ERPLAB
     EEG = pop_syncroartifacts(EEG,'Direction','eeglab2erplab'); % 
+end
+
+% function EEG = preprocessBiosemiArtifactRemoval(EEG)
+%     EEG  = pop_artmwppth( EEG , 'Channel', [1:32 39 40], 'Flag', [ 1 8], 'Review', 'off', 'Threshold',  200, 'Windowsize',  200, 'Windowstep',  100 );
+%     EEG = eeg_checkset( EEG );
+%     artifact_proportion = getardetection(EEG); % Tells how many trials are selected for rejection
+%     EEG = pop_syncroartifacts(EEG,'Direction','eeglab2erplab'); %
+% end
+
+function EEG = preprocessBiosemiArtifactRemoval(EEG)
+    % 1) Mark artifacts in ERPLAB
+    EEG = pop_artmwppth( EEG, ...
+                         'Channel', [1:32 39 40], ...  % channels to check
+                         'Flag', [1 8], ...           % which artifact flags to use
+                         'Review', 'off', ...
+                         'Threshold', 200, ...
+                         'Windowsize', 200, ...
+                         'Windowstep', 100 );
+    
+    % 2) Check EEG consistency
+    EEG = eeg_checkset(EEG);
+
+    % 3) Get proportion of trials flagged for artifact
+    artifact_proportion = getardetection(EEG);
+    fprintf('Proportion of flagged trials: %.2f%%\n', artifact_proportion*100);
+
+    % 4) Sync artifact flags from ERPLAB -> EEGLAB
+    EEG = pop_syncroartifacts(EEG, 'Direction', 'erplab2eeglab');
+    
+    % 5) Actually remove the epochs flagged by the detection.
+    %    For instance, pop_artmwppth with 'Flag',[1 8] often sets "rejmanual" 
+    %    or "rejmanualE" in EEG.reject. Double-check which field is set
+    %    in your data, but typically it's `EEG.reject.rejmanual`.
+    flagged_epochs = find(EEG.reject.rejmanual == 1);
+    fprintf('Number of epochs flagged for removal: %d\n', length(flagged_epochs));
+    
+    if ~isempty(flagged_epochs)
+        EEG = pop_rejepoch(EEG, flagged_epochs, 0);
+    end
+
+    % 6) Final consistency check
+    EEG = eeg_checkset(EEG);
 end
 
 function results = preprocessMuseEEG(Trial, EEG, sampling_rate,epochWindow,rootDir,name)
@@ -1182,6 +1549,9 @@ function museData = preprocessMuseData(name,epochWindow,rootDir)
     Trial.stimTimes = temp(:,2);
     Trial.choiceTimes = temp(:,3);
     Trial.feedback = temp(:,4);
+    
+    %% Bandpass Filter between 0.1-50Hz
+    EEG.data = bandpassFilterEEG(EEG.data, EEG.sampling_rate, 0.1,50);
 
     %% read EEG and remove trials with NaN
 	museData = preprocessMuseEEG(Trial,EEG,sampling_rate,epochWindow,rootDir,name);
@@ -1221,9 +1591,8 @@ function data = readScheduleFile(name,rootDir)
     % Parameters:
     % data - [Table] Table containing the schedule file feedback events
 
-    %filename = dir(strcat(fullfile(rootDir,'mat_files_csv_and_MUSE_db',name),'/*schedule.db'));
-    pathToSched = '';% OSiller path to dir with participants subdirs with the sched file
-    filename = dir(strcat(fullfile(rootDir,pathToSched,name),'/*schedule.db'));
+    filename = dir(strcat(fullfile(rootDir,'mat_files_csv_and_MUSE_db',name),'/*schedule.db'));
+
     
     if length(filename) > 1
         error(sprintf('multiple schedule files found for subject',name,'%s'));
@@ -1273,8 +1642,56 @@ function [cleanData, outlierLogic] = removeOutliers(data)
     cleanData = data(~outlierLogic);
 end
 
-function saveTFData(TFdata, rootDir, participantId, eegSource, channelNames, scenario, samplingRate)
+function  runMuseAnalysis(name,rootDir,scenario,epochWindow,TFwindow,itemsToSave,saveEEGDir)
+    % Run the muse Pipeline
+    % 
+    % Parameters:
+    % name -        [char] Participant Id
+    % rootDir -     [string] Directory where the raw data will be taken from.    TFdata = struct();
+    % scenario -    [string] The event type one of {'feedback','choice','stimuli'}
+    % epochWindow - [array] Contains the epoching window in seconds e.g. [-1.600, 3]
+    % TFwindow    - [array]  Contains the window for the TF analysis in ms e.g. [-1000,2500]
+    % itemsToSave - [string array] Contains the strings of the steps to run
+    %               and save. Can contain any of: {"EEG","alignment","TF"}    
+    % 
     
+    % Preprocess, align and segment data
+    EEGData.muse = preprocessMuseData(name,epochWindow,rootDir);
+
+    if any(strcmp('EEG', itemsToSave))
+        % Define the saving directory
+        saveEEGDir = makeEEGSaveDir(name,rootDir);
+        
+        % Save the EEGdata
+        EEGMuse = EEGData.muse;
+        saveName = fullfile(saveEEGDir,'museEEG.mat');
+        save(saveName,'EEGMuse','-v7.3');
+        clear 'EEGMuse'
+    end
+
+    if any(strcmp('TF', itemsToSave))
+        % TF analysis
+        TFdata.muse = prepareTFAnalysis(EEGData.muse, 'muse', scenario,TFwindow);
+        museChannelNames = {'left_temp', 'left_front', 'right_front', 'right_temp'}; % Confirmed order on physio files
+
+        % Save the processed data
+        saveTFData(TFdata.muse, rootDir, name, 'muse', museChannelNames, scenario, EEGData.muse.sampling_rate)
+    end
+
+end
+
+function saveTFData(TFdata, rootDir, participantId, eegSource, channelNames, scenario, samplingRate)
+    % Saves the processed TF data in a directory dependent of the source.
+    %
+    % Parameters:
+    % TFdata - [4D array] The data to be saved.
+    % participantId - [string] The id of the participant being processed
+    % eegSource - [string] The device source of the data {muse,biosemi}
+    % channelNames - [array] The name of the channels 
+    % scenario - [string] The epoch being processed {feedback, choice, stim}
+    % sampligRate - [scalar] The sampling rate of the signal
+   
+
     % Prepare additional information about the data
     freqs = TFdata.freqs;
     times = TFdata.times;
@@ -1302,4 +1719,29 @@ function saveTFData(TFdata, rootDir, participantId, eegSource, channelNames, sce
         % Save the data
         save(fullFilePath, 'data', 'samplingRate', 'scenarioTime', 'freqs', 'times', '-v7.3');
     end
+end
+
+function newValidIndices = updateValidIndices(validIndices, omittedTrials)
+    % Updates the validIndices array by setting to zero
+    % the elements corresponding to omittedTrials after accounting for
+    % the zeros (invalid indices) that were removed before processing.
+    %
+    % Parameters:
+    %   validIndices - [array] Original array of 0's and 1's 
+    %   omittedTrials - [array] Indices of trials omitted by the function after zeros were removed
+    %
+    % Returns:
+    %   newValidIndices - [array] Updated array of valid indices 
+
+    % Find the indices of valid (non-zero) entries
+    indicesOfOnes = find(validIndices == 1);
+    
+    % Map omittedTrials back to indices in the original validIndices array
+    indicesToSetZero = indicesOfOnes(omittedTrials);
+    
+    % Create a copy of validIndices to update
+    newValidIndices = validIndices;
+    
+    % Set the corresponding indices to zero
+    newValidIndices(indicesToSetZero) = 0;
 end
