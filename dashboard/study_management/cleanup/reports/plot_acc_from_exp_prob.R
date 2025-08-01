@@ -18,6 +18,6 @@ try({
     geom_text(aes(0,overall_relative_with_feedback_mean,label =round(overall_relative_with_feedback_mean, digits = 1), vjust = -0.4), size = 2.8, color="cyan4")+
     geom_text(aes(0,overall_relative_no_feedback_mean,label =round(overall_relative_no_feedback_mean, digits = 1), vjust = -0.4), size = 2.8, color="firebrick2")
   png(paste0(plots_path, "/", fig_name), res=300, width=9, height=5, units="in")
-  print(acc_from_exp_prob_graph)
+  print(acc_from_exp_prob_graph) 
+  dev.off() # 2025-03-03 moved dev.off() into the try block
 })
-dev.off()
