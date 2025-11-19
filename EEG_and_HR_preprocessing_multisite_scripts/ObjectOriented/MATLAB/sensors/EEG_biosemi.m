@@ -43,7 +43,7 @@ classdef EEG_biosemi < EEGSensor
         processedTFDirName
 
         rawDataExtension
-        
+        timestampAligner
     end
     
     methods (Access=public)
@@ -52,28 +52,25 @@ classdef EEG_biosemi < EEGSensor
             obj.databasePath = databasePath;
             [obj.mainDataDir,obj.fileName,obj.rawDataExtension] = fileparts(obj.databasePath);
             [~,obj.participantId,~] = fileparts(obj.mainDataDir);
-            % obj.intermediateICADirName = MINDSETParticipant.processedEEGDirName;
-            % obj.processedEEGDirName = MINDSETParticipant.processedEEGDirName;
             obj.readData();
         end
         
-        function preprocess(obj)
+        function preprocessData(obj)
             %% Stage 1
             obj.EEGLabObject = pop_editset(obj.EEGLabObject, 'setname',obj.participantId);
-            obj.reReferenceToMastoids();
+            % obj.reReferenceToMastoids();
+            obj.reReferenceToCAR();
             obj.filter();
             obj.addChannelLocations();
             obj.EEGLabObject.event = obj.alignedEvents;
             
-            % OS: TEMPORARY:
-            obj.runICA();
+            % obj.runICA();
 
             %% Stage 3
             obj.resample();
             obj.epoch();
             
-            % OS: TEMPORARY
-            obj.runArtifactRejection();
+            % obj.runArtifactRejection();
 
             %% Verification
             obj.verifyPreprocessing();
@@ -119,6 +116,21 @@ classdef EEG_biosemi < EEGSensor
             obj.isTrimmed = true;
         end
 
+        function align(obj,opts)
+            arguments
+                opts.mainDataDir = ""          % Path to data
+                opts.sessionNb = 0             % Current Biosemi session [1,4]
+                opts.schedule = []             % Timings of schedule file
+            end
+
+            obj.timestampAligner = TimestampAligner(id              = obj.participantId, ...
+                                                mainDataDir         = obj.pathToData,...
+                                                sessionNb           = opts.sessionNb, ...
+                                                schedule            = opts.schedule, ...
+                                                biosemi = obj.EEGLabObject);
+            obj.timestampAligner.align();
+            obj.alignedEvents = obj.timestampAligner.EEGEvents;
+        end
     end
     
     methods (Access= private)
@@ -187,7 +199,7 @@ classdef EEG_biosemi < EEGSensor
             [obj.EEGLabObject,acceptedEventIndices]  = pop_epoch( obj.EEGLabObject, obj.eventMarker, obj.epochWindow );
             
             if isempty(obj.EEGLabObject.event)
-                disp("No events found for this session");
+                disp("No events found for this block");
                 return;
             end
             allTypesAsStrings = cellfun(@num2str, {obj.EEGLabObject.event.type}, 'UniformOutput', false);
@@ -330,6 +342,48 @@ classdef EEG_biosemi < EEGSensor
 
             obj.applyChannelOperation(formulas);
 
+        end
+        
+        function reReferenceToCAR(obj)
+
+            numberChannels = numel(obj.biosemiChannels);
+            formulas = cell(1, numberChannels);
+        
+            % Labels to exclude from the average (non-EEG / references)
+            excludeLabels = {'VEO+','VEO-','HEOL','HEOR','M1','M2','CMS','DRL'};
+        
+            labels = obj.biosemiChannels(:);
+            isExcluded = ismember(labels, excludeLabels);
+        
+        
+            % Indices to include in the CAR pool
+            includeIdx = find(~isExcluded);
+            if numel(includeIdx) < 2
+                error('Not enough EEG channels to compute CAR (need >= 2).');
+            end
+        
+            % (ch1 + ch2 + ... + chN) / N
+            avgExprAll = sprintf('( %s ) / %d', ...
+                strjoin(arrayfun(@(k) sprintf('ch%d', k), includeIdx, 'UniformOutput', false), ' + '), ...
+                numel(includeIdx));
+        
+            for i = 1:numberChannels
+                currentLabel = labels{i};
+        
+                if isExcluded(i)
+                    % Pass-through unchanged for excluded channels
+                    formulas{i} = sprintf('nch%d = ch%d Label %s', i, i, currentLabel);
+                    continue;
+                end
+        
+                % Standard CAR: subtract the same global average for everyone
+                avgExpr = avgExprAll;
+                
+        
+                formulas{i} = sprintf('nch%d = ch%d - %s Label %s', i, i, avgExpr, currentLabel);
+            end
+        
+            obj.applyChannelOperation(formulas);
         end
 
         function reReferenceToMastoids(obj)

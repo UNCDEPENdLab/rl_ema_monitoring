@@ -4,7 +4,7 @@ classdef MomentumParticipant < handle
         virtualSources = {'Polar_RRIfromECG'}
         % Sibling to the main raw data dir containing the participants data
         generalProcessedSaveDirectoryName = "DataProcessed"
-        regularSessionLabels = 0:118 % Used when saving the data binned by session
+        regularBlockLabels = 0:118 % Used when saving the data binned by block
     end
     
     properties (Access=public)
@@ -28,6 +28,7 @@ classdef MomentumParticipant < handle
         mainProcessedDirectoryPath
         EEGsaveDirectoryPath
         TFsaveDirectoryPath
+        TFInducedSaveDirectoryPath
         RRIsaveDirectoryPath
         scheduleSaveDirectoryPath
 
@@ -74,8 +75,8 @@ classdef MomentumParticipant < handle
             end
             %% Split non-continuous data
             threshold = 1; %seconds
-            sessionData = SessionSplitter(obj.sources.Polar_accelerometer.rawData);
-            sessionData.split(threshold); 
+            blockData = SessionSplitter(obj.sources.Polar_accelerometer.rawData);
+            blockData.split(threshold); 
 
             delete(obj.sources.Polar_accelerometer);
             
@@ -89,12 +90,17 @@ classdef MomentumParticipant < handle
         function runTFAnalysis(obj,opts)
             arguments
               obj
-              opts.byFrequencyBand    = false
-              opts.source             = "EEG_muse" %EEG_+{muse,biosemi}
+              opts.source             = "EEG_muse" %EEG_{muse,biosemi}
+              opts.subtractERP        = false % {false,[],"block","block_condition"} % 26.09.25 Subtract session-wise average from every trial data
+              opts.getInducedTF       = false % false, "block", "block_condition"
+              opts.TFWindow           = [] % The window to keep around the TF, if empty keeps whatever epoch is in the EEG
             end
 
-            obj.validateTFSource(opts.source);            
-            obj.TFanalyzers.(obj.EEGSourceToRunTF).getTF(opts.byFrequencyBand);
+            obj.validateTFSource(opts.source);
+            obj.TFanalyzers.(obj.EEGSourceToRunTF).referenceEEG(opts.subtractERP);
+            obj.TFanalyzers.(obj.EEGSourceToRunTF).getTF();
+            obj.TFanalyzers.(obj.EEGSourceToRunTF).trimTF(opts.TFWindow);
+            obj.TFanalyzers.(obj.EEGSourceToRunTF).getInducedTF(opts.getInducedTF);
 
         end
         
@@ -102,11 +108,10 @@ classdef MomentumParticipant < handle
 
             arguments
                 obj
-                opts.source = "Polar_RRIfromECG" 
-                opts.saveMode = "asParquet" %{"asMat","asCSV","asParquet"} Note: "asCSV" will save it as .csv then further compress it to .csv.gz and delete the .csv
-                opts.timeBinningMode   = "byTimepoints" %{"byTimepoints","byTime"}
-                opts.sessionsPerBin = 0 % saves the files by binning the session 
-
+                opts.source             = "Polar_RRIfromECG" 
+                opts.saveMode           = "asParquet" %{"asMat","asCSV","asParquet"} Note: "asCSV" will save it as .csv then further compress it to .csv.gz and delete the .csv
+                opts.timeBinningMode    = "byTimepoints" %{"byTimepoints","byTime"}
+                opts.blocksPerBin       = 0 % saves the files by binning the block 
             end
             
             saveMode = MomentumParticipant.validateSavingMode(opts.saveMode);
@@ -123,18 +128,19 @@ classdef MomentumParticipant < handle
                                               saveDir = saveDir, ...
                                               saveMode = saveMode, ...
                                               timeBinningMode = timeBinningMode, ...
-                                              sessionsPerBin = opts.sessionsPerBin);
+                                              blocksPerBin = opts.blocksPerBin);
         end
 
         function saveEEG(obj, opts)
 
             arguments
                 obj
-                opts.source = "EEG_muse" % EEG_+{muse,biosemi}
-                opts.saveMode = "asParquet" %{"asMat","asCSV","asParquet"} Note: "asCSV" will save it as .csv then further compress it to .csv.gz and delete the .csv
-                opts.timeBinningMode   = "byTimepoints" %{"byTimepoints","byTime"}
-                opts.sessionsPerBin = 0 % saves the files by binning the session 
-                opts.binByChannel = false % Splits the files by channel
+                opts.source             = "EEG_muse" % EEG_+{muse,biosemi}
+                opts.saveMode           = "asParquet" %{"asMat","asCSV","asParquet"} Note: "asCSV" will save it as .csv then further compress it to .csv.gz and delete the .csv
+                opts.timeBinningMode    = "byTimepoints" %{"byTimepoints","byTime"}
+                opts.blocksPerBin       = 0 % saves the files by binning the block 
+                opts.binByChannel       = false % Splits the files by channel
+                opts.tPerBin            = 0 % Time or timepoints per bin when saving. In ms if opts.timeBinningMode== "byTime", else in datapoints
             end
             
             saveMode = MomentumParticipant.validateSavingMode(opts.saveMode);
@@ -148,20 +154,22 @@ classdef MomentumParticipant < handle
             if ~isfolder(saveDir); mkdir(saveDir); end
             
             obj.sources.(opts.source).save(saveDir = saveDir, ...
-                                              saveMode = saveMode, ...
-                                              timeBinningMode = timeBinningMode, ...
-                                              sessionsPerBin = opts.sessionsPerBin,...
-                                              binByChannel = opts.binByChannel);
+                                              saveMode          = saveMode, ...
+                                              timeBinningMode   = timeBinningMode, ...
+                                              blocksPerBin      = opts.blocksPerBin,...
+                                              binByChannel      = opts.binByChannel,...
+                                              tPerBin           = opts.tPerBin);
         end
 
         function saveTFAnalysis(obj,opts)
             arguments
               obj
-              opts.source = "EEG_muse" % EEG_+{muse,biosemi}
-              opts.saveMode = "asParquet" %{"asMat","asCSV","asParquet"}
-              opts.timeBinningMode   = "byTimepoints" %{"byTimepoints","byTime"}
-              opts.sessionsPerBin = 0 % saves the files by binning the session 
-              opts.binByChannel = false % Splits the TF files by channel
+              opts.source           = "EEG_muse" % EEG_{muse,biosemi}
+              opts.saveMode         = "asParquet" %{"asMat","asCSV","asParquet"}
+              opts.timeBinningMode  = "byTimepoints" %{"byTimepoints","byTime"}
+              opts.blocksPerBin     = 0 % saves the files by binning the block 
+              opts.binByChannel     = false % Splits the TF files by channel
+              opts.tPerBin          = 0 % Time or timepoints per bin when saving. In ms if opts.timeBinningMode== "byTime", else in datapoints
             end
 
             saveMode = MomentumParticipant.validateSavingMode(opts.saveMode);
@@ -174,21 +182,35 @@ classdef MomentumParticipant < handle
 
             if ~isfolder(saveDir);mkdir(saveDir);end
 
-            obj.TFanalyzers.(opts.source).saveTF(saveDir = saveDir, ...
-                                                    saveMode = saveMode, ...
+            obj.TFanalyzers.(opts.source).saveTF(saveDir            = saveDir, ...
+                                                    saveMode        = saveMode, ...
                                                     timeBinningMode = timeBinningMode, ...
-                                                    sessionsPerBin = opts.sessionsPerBin,...
-                                                    binByChannel = opts.binByChannel);
+                                                    blocksPerBin    = opts.blocksPerBin,...
+                                                    binByChannel    = opts.binByChannel,...
+                                                    tPerBin         = opts.tPerBin);
+            
+            if obj.TFanalyzers.(opts.source).hasInducedTF
+                saveDir = fullfile(obj.TFInducedSaveDirectoryPath, obj.eventName,"ByParticipant",obj.id);
+                if ~isfolder(saveDir);mkdir(saveDir);end
+
+                obj.TFanalyzers.(opts.source).saveInduced(saveDir   = saveDir, ...
+                                                    saveMode        = saveMode, ...
+                                                    timeBinningMode = timeBinningMode, ...
+                                                    blocksPerBin    = opts.blocksPerBin,...
+                                                    binByChannel    = opts.binByChannel,...
+                                                    tPerBin         = opts.tPerBin);
+            end
+            
             
         end
         
         function runValidation(obj)
             
             obj.eventName = "feedback_time";
-            saveEEG = true;
+            saveEEG = true; 
             obj.getScheduleFile();
             obj.schedule.getEventTimes(obj.eventName);
-            saveMode = "byTimepoints";
+            saveMode = "byTimepoints"; % Normally DataWriter set to 0 timepoints to save all together
 
             %% EEG_muse
             obj.runMuseValidation(saveEEG,saveMode);
@@ -203,6 +225,7 @@ classdef MomentumParticipant < handle
               opts.eventName                = 'RestingState'% {RestingEpoch,ITI,{feedback,stim,choice}+_time}
               opts.windowToEpoch            = [-1.5,2]      % Necessary for {x}_time events  
               opts.channelsToRemove         = {} 
+              opts.padForTF                 = false % If true, computes extra padding, epochs at new padding but saves original window in time domain. If false, it uses same window for TF. 
               opts.verbose                  = true
             end
 
@@ -210,13 +233,23 @@ classdef MomentumParticipant < handle
 
             obj.getScheduleFile(opts.verbose);
             obj.schedule.getEventTimes(obj.eventName);
-
+            
             if opts.verbose; fprintf("Extracted %s times. \n",obj.eventName); end
             
             if ~isfield(obj.sources,"EEG_muse")
                 obj.getData("EEG_muse");
             end
             
+            if opts.padForTF 
+                windowToKeep = opts.windowToEpoch;
+                margin = TimeFrequencyAnalyzer.getMarginFromRunParameters();
+                windowToEpoch =  [opts.windowToEpoch(1)-margin, opts.windowToEpoch(2)+margin];
+                fprintf("WindowToEpoch: %d \n",windowToEpoch);
+            else
+                windowToEpoch = opts.windowToEpoch;
+                windowToKeep = [];
+            end
+
             switch obj.eventName
                 case "RestingEpoch"
                     obj.sources.EEG_muse.epochToRestingEpochs(obj.schedule.restingTimes,opts.channelsToRemove);
@@ -225,7 +258,11 @@ classdef MomentumParticipant < handle
                 case "ITI"
                     obj.sources.EEG_muse.epochToITI(obj.eventName,obj.schedule.itiTimes,opts.channelsToRemove);
                 otherwise
-                    obj.sources.EEG_muse.epochToTable(obj.schedule.trials,obj.eventName,opts.windowToEpoch);
+                    % n = height(obj.schedule.trials);    
+                    % idx = randperm(n, 300);
+                    % obj.schedule.trials = obj.schedule.trials(idx, :);   
+                    
+                    obj.sources.EEG_muse.epochToTable(obj.schedule.trials,obj.eventName,windowToEpoch,windowToKeep);
                     % nan_mask = isnan(obj.sources.EEG_muse.EEGLabObject.data);                 % chan × time × epoch
                     % epochs_with_nan = squeeze(any(nan_mask,[1 2]));   % 1 × epoch logical
                     % epochsWithNaNs = sum(epochs_with_nan);
@@ -301,6 +338,7 @@ classdef MomentumParticipant < handle
             obj.schedule = [];
 
         end
+        
         function getScheduleFile(obj,verbose)
             if nargin<2; verbose = false; end
             if isempty(obj.schedule)
@@ -336,7 +374,7 @@ classdef MomentumParticipant < handle
                 obj.saveEEG(source = dataSourceName,...
                         saveMode ="asParquet", ...
                         timeBinningMode =saveMode, ...
-                        sessionsPerBin=0, ...
+                        blocksPerBin=0, ...
                         binByChannel = binByChannel);
 
             end
@@ -344,7 +382,7 @@ classdef MomentumParticipant < handle
                                 source=dataSourceName);
             obj.saveTFAnalysis(source=dataSourceName,...
                                 saveMode="asParquet", ...
-                                sessionsPerBin=0, ...
+                                blocksPerBin=0, ...
                                 binByChannel = binByChannel,...
                                 timeBinningMode=saveMode); % By timepoint binning
 
@@ -358,15 +396,8 @@ classdef MomentumParticipant < handle
                             fullfile(obj.biosemiDirectoryPath,obj.id+"-"+string(sessionInd)+".bdf")));
             obj.getData(dataSourceName);
                 
-            timestampAligner = TimestampAligner(id = obj.id, ...
-                                                mainDataDir=obj.pathToData,...
-                                                sessionNb = sessionInd, ...
-                                                schedule = obj.schedule.trials, ...
-                                                biosemi = obj.sources.EEG_biosemi);
-            timestampAligner.align();
-            obj.sources.EEG_biosemi.alignedEvents = timestampAligner.EEGEvents;
-
-            obj.sources.EEG_biosemi.preprocess();
+            obj.sources.EEG_biosemi.align();
+            obj.sources.EEG_biosemi.preprocessData();
 
             if obj.sources.EEG_biosemi.isPreprocessedCorrectly
                 [obj.allBiosemi, ~, ~] = eeg_store(obj.allBiosemi, ...
@@ -389,13 +420,13 @@ classdef MomentumParticipant < handle
                 obj.saveEEG(source = dataSourceName,...
                             saveMode ="asParquet", ...
                             timeBinningMode = saveMode, ...
-                            sessionsPerBin=0);
+                            blocksPerBin=0);
             end
             obj.runTFAnalysis(byFrequencyBand=false, ...
                                 source=dataSourceName);
             obj.saveTFAnalysis( source=dataSourceName,...
                                 saveMode="asParquet", ...
-                                sessionsPerBin=0, ...
+                                blocksPerBin=0, ...
                                 timeBinningMode=saveMode); 
         end
 
@@ -408,10 +439,7 @@ classdef MomentumParticipant < handle
             end
 
             if ~isfield(obj.TFanalyzers, obj.EEGSourceToRunTF) || isempty(obj.TFanalyzers.(obj.EEGSourceToRunTF))
-                obj.TFanalyzers.(obj.EEGSourceToRunTF) = TimeFrequencyAnalyzer(obj.sources.(obj.EEGSourceToRunTF));
-    
-                delete(obj.sources.(obj.EEGSourceToRunTF));
-                obj.sources.(obj.EEGSourceToRunTF) = [];
+                obj.TFanalyzers.(obj.EEGSourceToRunTF) = TimeFrequencyAnalyzer(obj.sources.(obj.EEGSourceToRunTF));    
             end
 
         end
@@ -429,7 +457,6 @@ classdef MomentumParticipant < handle
                 obj.pathToScheduleFile = fullfile(obj.pathToData,"schedule");
             end
         end
-
 
         function readRawData(obj, givenDataTypes)
             toLoad = obj.validateSensorInput(givenDataTypes);
@@ -509,6 +536,7 @@ classdef MomentumParticipant < handle
 
             obj.EEGsaveDirectoryPath = fullfile(obj.parentDirToData,MomentumParticipant.generalProcessedSaveDirectoryName,analysisName,"EEG");
             obj.TFsaveDirectoryPath = fullfile(obj.parentDirToData,MomentumParticipant.generalProcessedSaveDirectoryName,analysisName,"TF");
+            obj.TFInducedSaveDirectoryPath = fullfile(obj.parentDirToData,MomentumParticipant.generalProcessedSaveDirectoryName,analysisName,"TF_Induced");
             obj.RRIsaveDirectoryPath = fullfile(obj.parentDirToData,MomentumParticipant.generalProcessedSaveDirectoryName,analysisName,"RRI");
             obj.scheduleSaveDirectoryPath = fullfile(obj.parentDirToData,MomentumParticipant.generalProcessedSaveDirectoryName,analysisName,"Schedule");
         end
@@ -621,7 +649,7 @@ classdef MomentumParticipant < handle
                 opts.freqLabel       = []               % (band name or bin string)
                 opts.binningMode     = "byTimepoints"   % {byTimepoints, byTime}
                 opts.timeBinIdx      = 0                % Numeric time‐bin index
-                opts.sessionBinIdx   = 0                % If not 0, insert “sessionBin_%03d” expects numeric
+                opts.blockBinIdx   = 0                % If not 0, insert "blockBin_%03d" expects numeric
                 opts.channelLabel    = ""
                 opts.extension       = ".parquet"
                 opts.asPattern       = false            % Drop participantId if true
@@ -660,10 +688,10 @@ classdef MomentumParticipant < handle
                 end
             end
         
-            %─── 3) Insert sessionBin piece if provided ────────────────────────────────
-            if opts.sessionBinIdx > 0
-                fmt = fmt + "_sessionBin_%03d";
-                args{end+1} = opts.sessionBinIdx;
+            %─── 3) Insert blockBin piece if provided ────────────────────────────────
+            if opts.blockBinIdx > 0
+                fmt = fmt + "_blockBin_%03d";
+                args{end+1} = opts.blockBinIdx;
             end
             
             %─── 4) Insert freqBin if dataType == TF ─────────────────────────────────
@@ -673,7 +701,7 @@ classdef MomentumParticipant < handle
             end
 
             %─── 5) Insert freqBin if dataType == TF ─────────────────────────────────
-            if strcmp(opts.dataType, "TF")
+            if startsWith(opts.dataType, "TF")
                 % Only for TF: validate and append frequency label
                 frequencyString = MomentumParticipant.validateFrequencyLabel(opts.freqLabel);
                 fmt = fmt + "_freqBin_%s";

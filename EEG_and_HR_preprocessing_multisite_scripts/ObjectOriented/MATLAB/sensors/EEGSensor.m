@@ -3,6 +3,7 @@ classdef EEGSensor < MomentumSensor
         EEGLabObject
         participantId
         eventName
+        windowToKeep = [] % in seconds e.g. [-0.2,3.0]
     end
     
     methods
@@ -22,30 +23,44 @@ classdef EEGSensor < MomentumSensor
             end
         end
                 
-        function preprocessData(obj)
+        function preprocessData(~)
             % Each subclass implements its own
         end
         
         function save(obj,opts)
             arguments
                 obj
-                opts.saveDir = ""
-                opts.saveMode = "asParquet" %{asMat,asParquet,asCSV}
-                opts.timeBinningMode = "byTime" % {byTime,byTimepoints}
-                opts.sessionsPerBin = 0
-                opts.binByChannel = false % Splits the files by channel
+                opts.saveDir            = ""
+                opts.saveMode           = "asParquet" %{asMat,asParquet,asCSV}
+                opts.timeBinningMode    = "byTime" % {byTime,byTimepoints}
+                opts.blocksPerBin       = 0
+                opts.binByChannel       = false % Splits the files by channel
+                opts.tPerBin            = 0 % Defines the timeBinning. In ms if opts.timeBinningMode== "byTime", else in datapoints
             end
+            
+            obj.trimEEGToWindowToKeep();
 
             dataWriter = NDDataWriter(ndData = obj.EEGLabObject.data, ...
                                       dataType="EEG", ...
-                                      id = obj.participantId,...
-                                      eventName = obj.eventName,...
-                                      timeLabels = obj.EEGLabObject.times, ...
-                                      trialLabels = vertcat(obj.EEGLabObject.event.trial),... % Formerly in: obj.EEGLabObject.etc.trialLabels
-                                      sessionLabels = vertcat(obj.EEGLabObject.event.session),...% Formerly in: obj.EEGLabObject.etc.epochLabels
-                                      channelLabels={obj.EEGLabObject.chanlocs.labels});
+                                      id            = obj.participantId,...
+                                      eventName     = obj.eventName,...
+                                      timeLabels    = obj.EEGLabObject.times, ...
+                                      trialLabels   = obj.EEGLabObject.etc.trialLabels,... % Formerly in: obj.EEGLabObject.event.trial
+                                      blockLabels   = obj.EEGLabObject.etc.blockLabels,... % Formerly in: obj.EEGLabObject.event.session
+                                      channelLabels ={obj.EEGLabObject.chanlocs.labels},...
+                                      outcomeLabels = obj.EEGLabObject.etc.outcomeLabels);
             nv = Utils.packStructAsNameValuePairs(opts);
             dataWriter.save(nv{:});
+        end
+
+    end
+    
+    methods(Access=private)
+        
+        function trimEEGToWindowToKeep(obj)
+            if ~isempty(obj.windowToKeep)
+                obj.EEGLabObject = pop_select(obj.EEGLabObject,'time',obj.windowToKeep);
+            end
         end
 
     end

@@ -43,7 +43,7 @@ classdef ScheduleDatabase < handle
                     obj.getRestingTimes();
                     obj.prepareRestingTimes();
                 otherwise
-                    obj.readTrials(true);
+                    obj.readTrials(true,true);
             end
         end
 
@@ -233,12 +233,11 @@ classdef ScheduleDatabase < handle
                     "VariableNames", expected);
             end
         end
-        
+
         function findParticipantsScheduleFile(obj)
-            
             % List directory contents
             files = dir(obj.pathToScheduleDir);
-            
+        
             % Convert to table if needed
             if ~istable(files)
                 files = struct2table(files);
@@ -247,22 +246,79 @@ classdef ScheduleDatabase < handle
             % Exclude folders
             files = files(~files.isdir, :);
         
+            % Filter names by suffix (case-insensitive)
+            suffix = 'schedule.db';
+            if ismember('IgnoreCase', string(methods('endsWith')))
+                mask = endsWith(files.name, suffix, 'IgnoreCase', true);
+            else
+                % Fallback for older MATLAB: lowercase compare
+                mask = endsWith(lower(files.name), lower(suffix));
+            end
+            matches = files(mask, :);
+        
+            if isempty(matches)
+                error('No file ending with ''%s'' found in %s.', suffix, obj.pathToScheduleDir);
+            end
+        
+            % Ensure we have a sortable timestamp (support older/newer MATLAB)
+            if ~ismember('datenum', matches.Properties.VariableNames) || all(isnan(matches.datenum))
+                % Build datenum from the 'date' string if needed
+                matches.datenum = datenum(matches.date);
+            end
+        
+            % Sort by most recent first
+            [~, order] = sort(matches.datenum, 'descend');
+            matches = matches(order, :);
+        
+            % Pick the first non-empty (bytes > 0). If all empty, error.
+            idx = find(matches.bytes > 0, 1, 'first');
+            if isempty(idx)
+                error('Found %d schedule.db file(s) in %s, but all are empty.', ...
+                      height(matches), obj.pathToScheduleDir);
+            end
+        
+            % Build full path to the chosen file
+            chosen = matches(idx, :);
+            obj.scheduleFilePath = fullfile(obj.pathToScheduleDir, chosen.name{1});
+        end
+
+
+        function findParticipantsScheduleFile_legacy(obj)
+
+            % List directory contents
+            files = dir(obj.pathToScheduleDir);
+
+            % Convert to table if needed
+            if ~istable(files)
+                files = struct2table(files);
+            end
+
+            % Exclude folders
+            files = files(~files.isdir, :);
+
             % Filter names by suffix
             suffix = 'schedule.db';
             mask   = endsWith(files.name, suffix);
-        
-            nMatch = sum(mask);
-            if nMatch == 0
+
+            matches = files(mask, :);
+
+            if isempty(matches)
                 error('No file ending with ''%s'' found in %s.', suffix, obj.pathToScheduleDir);
-            elseif nMatch > 1
-                error('Multiple files ending with ''%s'' found in %s.', suffix, obj.pathToScheduleDir);
             end
-        
-            % Grab the matching row
-            row = files(mask, :);
-        
+
+            % If multiple, pick the most recently modified (max datenum)
+            if height(matches) > 1
+
+                [~, idx] = max(matches.datenum);
+                row = matches(idx, :);
+            else
+                row = matches;
+            end
+
             % Build full path
             obj.scheduleFilePath = fullfile(obj.pathToScheduleDir, row.name{1});
         end
+
+        
     end
 end

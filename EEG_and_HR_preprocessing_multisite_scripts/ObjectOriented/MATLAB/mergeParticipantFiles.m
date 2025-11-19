@@ -1,8 +1,8 @@
 
-function mergeParticipantFiles(participantsDir, eventName, timeBinIdx, binningMode, freqIdx, sessionIdx, sectionsToMerge)
+function mergeParticipantFiles(participantsDir, eventName, timeBinIdx, binningMode, freqIdx, blockIdx, sectionsToMerge)
    
     if nargin < 5; freqIdx = NaN; end
-    if nargin< 6; sessionIdx = 0; end
+    if nargin< 6; blockIdx = 0; end
     if nargin<7; sectionsToMerge = {''}; end
     fprintf("Processing started %s \n",datetime());
     tic;
@@ -15,7 +15,7 @@ function mergeParticipantFiles(participantsDir, eventName, timeBinIdx, binningMo
         freqLabel      = freqIdx, ...
         binningMode    = binningMode, ...
         timeBinIdx     = timeBinIdx, ...
-        sessionBinIdx  = sessionIdx, ...
+        blockBinIdx  = blockIdx, ...
         extension      = ".parquet" ...
     );
     fprintf("Processing finished %s \n",datetime());

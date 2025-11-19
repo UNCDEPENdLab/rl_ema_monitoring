@@ -57,7 +57,7 @@ classdef Polar_RRIfromECG < handle
                 opts.saveDir = saveDir
                 opts.saveMode = "asParquet"
                 opts.timeBinningMode = "byTime"
-                opts.sessionsPerBin = 0
+                opts.blocksPerBin = 0
             end
 
             participantId = opts.id;
@@ -75,7 +75,7 @@ classdef Polar_RRIfromECG < handle
 
         end
 
-        function Tres = resample(obj)
+        function Tres = resample_legacy(obj)
               % pull in the table
               T = obj.data;
             
@@ -88,7 +88,7 @@ classdef Polar_RRIfromECG < handle
               % 2) define new 1.5 Hz timestep
               dt = seconds(1/1.5);
             
-              % 3) group by session, trial, id
+              % 3) group by block, trial, id
               [G, sessList, trialList, idList] = findgroups(TT.session, TT.trial, TT.id);
             
               % 4) prepare an empty timetable for output
@@ -148,7 +148,7 @@ classdef Polar_RRIfromECG < handle
                                 repmat(1e3*seconds(timeVector)',nbEvents,1), ...
                                 obj.data, ...
                                 'VariableNames', ...
-                                {'session','trial','timeBin','signal'});
+                                {'block','trial','timeBin','signal'});
         end
 
         function epochToAllEvents(obj,eventTimestamps,preEventWindow,postEventWindow)
@@ -219,15 +219,10 @@ classdef Polar_RRIfromECG < handle
 
             plottingNeeded = false;
             disp("Running Pan Tompkins algorithm to find QRS peaks")
-            [~,ind_locs,delay] = pan_tompkin(ecg_data,Polar_ECG.fs,plottingNeeded);
+            [~,ind_locs,~] = pan_tompkin(ecg_data,Polar_ECG.fs,plottingNeeded);
             disp("Peaks found");
 
             clear ecg_data
-
-            % Correct filtering delay
-            ind_locs = ind_locs - delay;    
-            % drop any that underflow index 1
-            ind_locs(ind_locs < 1) = [];
 
             rriData = Polar_RRIfromECG.getRRITableFromPeakLocations(timestamps,ind_locs);
         end

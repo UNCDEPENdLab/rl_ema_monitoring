@@ -190,7 +190,7 @@ classdef MomentumSensor <handle
             db = sqlite(filepath);
             % Older versions of matlab import as cell array without column
             % names
-            if isMATLABReleaseOlderThan("R2024a")
+            if isMATLABReleaseOlderThan("R2023a")
                 dataCell = fetch(db,sprintf('SELECT * FROM %s',tableName));
                 colNames   = fetch(db, sprintf('SELECT name FROM pragma_table_info(''%s'')',tableName ));
                 varNames    = colNames(:)';                     

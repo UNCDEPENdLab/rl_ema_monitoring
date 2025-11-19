@@ -71,11 +71,17 @@ classdef EEG_muse < EEGSensor
 
         end
            
-        function epochToTable(obj,eventTable,eventName,windowToEpoch)
+        function epochToTable(obj,eventTable,eventName,windowToEpoch,windowToKeep)
+            if nargin<5 
+                windowToKeep = []; % or windowToEpoch
+            end
+
             obj.eventName = eventName;
             newEvent = obj.generateEvents(eventTable);
             obj.updateEvents(newEvent);
 
+            obj.windowToKeep = windowToKeep;
+            
             % Add padding of one sample windowToEpoch in seconds
             windowToEpoch(1)=windowToEpoch(1)-1/obj.fs;
             windowToEpoch(2)=windowToEpoch(2)+2/obj.fs;
@@ -85,7 +91,6 @@ classdef EEG_muse < EEGSensor
 
         function preprocessData(obj,verbose)
             if nargin<2; verbose = false; end
-            
             if obj.isPreprocessed
                 obj.readPreprocessedFile(verbose);
             else
@@ -156,26 +161,11 @@ classdef EEG_muse < EEGSensor
                 end
             
                 % Process columns 2 to 5 for EEG.data
-                for colIdx = 2:5
-                    currCol = DATA{:,colIdx};
-                    if iscellstr(currCol) || isstring(currCol)
-                        % Convert using str2double
-                        EEG.data(:,colIdx-1) = cellfun(@str2double, cellstr(currCol));
-                    else
-                        EEG.data(:,colIdx-1) = double(currCol);
-                    end
-                end
-            
+                EEG.data(:,1:4) = str2double(DATA{:,2:5});  
+
                 % Process columns 6 to 9 for EEG.isgood
-                for colIdx = 6:9
-                    currCol = DATA{:,colIdx};
-                    if iscellstr(currCol) || isstring(currCol)
-                        EEG.isgood(:,colIdx-5) = cellfun(@str2double, cellstr(currCol));
-                    else
-                        EEG.isgood(:,colIdx-5) = double(currCol);
-                    end
-                end
-            
+                EEG.isgood(:,1:4) = str2double(DATA{:,6:9});  
+
             else
                 % Assume DATA is a cell array
                 if any(ischar(DATA{1,1}))
@@ -311,13 +301,14 @@ classdef EEG_muse < EEGSensor
 
             nEpochs = numel(latencies); 
             
-            % obj.EEGLabObject.etc.epochLabels = eventTimes.block;
+            obj.EEGLabObject.etc.blockLabels = eventTimes.block;
             obj.EEGLabObject.etc.trialLabels = eventTimes.trial;
+            obj.EEGLabObject.etc.outcomeLabels = eventTimes.outcome;
 
             newEvent = struct('type',    repmat({obj.eventName},1,nEpochs)', ...
                           'latency', num2cell(latencies), ...
                           'trial',num2cell(eventTimes.trial), ...
-                          'session',num2cell(eventTimes.block));
+                          'block',num2cell(eventTimes.block));
         end
 
         function [idxStart,idxEnd] = getStartEndLatencies(obj,startEndBlockTimesTable)
@@ -352,7 +343,7 @@ classdef EEG_muse < EEGSensor
             % Create events
             newEvent = struct('type',    repmat({obj.eventName},1,nEpochs), ...
                           'latency', num2cell(onsetLatencies), ...
-                          'session',num2cell(epochLabels));
+                          'block',num2cell(epochLabels));
 
         end
         
@@ -380,9 +371,9 @@ classdef EEG_muse < EEGSensor
         end
 
         function epochToEvent(obj,windowToEpoch)
-
             obj.EEGLabObject = pop_epoch( obj.EEGLabObject, {obj.eventName}, windowToEpoch, 'epochinfo','yes' );
             obj.EEGLabObject = eeg_checkset(obj.EEGLabObject);
+            % obj.EEGLabObject.data with dimensions [channels x time x epochs]
             
         end
 
@@ -428,7 +419,7 @@ classdef EEG_muse < EEGSensor
             obj.EEGLabObject.subject   = obj.participantId;
             obj.EEGLabObject.group     = '';
             obj.EEGLabObject.condition = '';
-            obj.EEGLabObject.session   = [];
+            obj.EEGLabObject.block   = [];
             obj.EEGLabObject.history = [];
             obj.EEGLabObject.comments  = 'Events with resting state';
             obj.EEGLabObject.etc.remove = EEGin.remove;

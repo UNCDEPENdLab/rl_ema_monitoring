@@ -1,12 +1,13 @@
 classdef DataWriter < handle
     properties (Constant)
-        timepointsPerBin = 0 % with 0 it means all timepoints in one bin
     end
 
     properties
         saveDir
         dataType
         timeBinnedData
+        timepointsPerBin = 0 % with 0 it means all timepoints in one bin
+        timePerBin = 25 %ms
     end
 
     properties (Access=protected)
@@ -21,7 +22,6 @@ classdef DataWriter < handle
         
         % Time binning
         timeBinningMode
-        timePerBin = 25 %ms
         timeToBinMapping
         numberOfTimeBins
         timeLabels
@@ -32,14 +32,14 @@ classdef DataWriter < handle
         sectionBinnedData
         currentSection
         
-        % Session binning
-        sessionLabels
-        sessionsPerBin
-        uniqueSessions
-        sessionToBinMapping
-        numberOfSessionBins        
-        expectedSessions
-        sessionBinnedData
+        % Block binning
+        blockLabels
+        blocksPerBin
+        uniqueBlocks
+        blockToBinMapping
+        numberOfBlockBins        
+        expectedBlocks
+        blockBinnedData
 
         % Frequency binning
         frequencyBinLabel =[]
@@ -50,6 +50,9 @@ classdef DataWriter < handle
         numberOfChannelBins
         channelBinnedData
         currentChannelLabel
+
+        % outcome labels
+        outcomeLabels
     end
 
     methods (Access=public)
@@ -73,16 +76,17 @@ classdef DataWriter < handle
         function save(obj,opts)
             arguments 
                 obj
-                opts.saveDir = saveDir
-                opts.saveMode = "asParquet"
-                opts.timeBinningMode = "byTime"
-                opts.sessionsPerBin = 0
-                opts.binByChannel = false
+                opts.saveDir            = saveDir
+                opts.saveMode           = "asParquet"
+                opts.timeBinningMode    = "byTime"
+                opts.blocksPerBin       = 0
+                opts.binByChannel       = false
+                opts.tPerBin            = 0 % Updates either timepointsPerBin or timePerBin properties depending on opts.timeBinningMode 
             end
 
             obj.saveDir =opts.saveDir;
             obj.timeBinningMode = opts.timeBinningMode;
-            obj.sessionsPerBin = opts.sessionsPerBin;
+            obj.blocksPerBin = opts.blocksPerBin;
             obj.binByChannel = opts.binByChannel;
 
             if ~exist(obj.saveDir, 'dir'); mkdir(obj.saveDir);end
@@ -95,8 +99,8 @@ classdef DataWriter < handle
                     save(obj.saveDir, data, "-v7.3");
                     fprintf("Data has been saved to: %s \n",obj.saveDir);
                 case {".csv",".parquet"}
-                    obj.calculateTimeBinning();
-                    obj.calculateSessionBinning();
+                    obj.calculateTimeBinning(opts.tPerBin);
+                    obj.calculateBlockBinning();
                     obj.iterateTimeBins();
             end
 
@@ -132,7 +136,7 @@ classdef DataWriter < handle
                 if isscalar(1:obj.numberOfTimeBins); timeBinIdx = 0; end
                 obj.iterateSectionBin(timeBinIdx);
 
-                Utils.updateProgress(10,timeBinIdx,obj.numberOfTimeBins,"Saved", "files");
+                Utils.updateProgress(round(obj.numberOfTimeBins/10),timeBinIdx,obj.numberOfTimeBins,"Saved", "files");
             end
         end
 
@@ -158,7 +162,7 @@ classdef DataWriter < handle
                 
                 if obj.numberOfSectionBins==1; sectionIdx = 0; end
 
-                obj.iterateSessionBin(timeBinIdx,sectionIdx)
+                obj.iterateBlocksBin(timeBinIdx,sectionIdx)
             end 
         end
 
@@ -172,21 +176,21 @@ classdef DataWriter < handle
             end
         end
 
-        function iterateSessionBin(obj, timeBinIdx,section)
+        function iterateBlocksBin(obj, timeBinIdx,section)
 
-            for sessionBinIdx = 1:obj.numberOfSessionBins
+            for blockBinIdx = 1:obj.numberOfBlockBins
                 
-                obj.getThisSessionBinData(sessionBinIdx);
+                obj.getThisBlockBinData(blockBinIdx);
                 
-                if all(isnan(obj.sessionBinnedData.signal))
+                if all(isnan(obj.blockBinnedData.signal))
                     continue
                 end
 
-                % Lets the function below know there is just one session bin
-                if obj.numberOfSessionBins==1; sessionBinIdx = 0; end
+                % Lets the function below know there is just one block bin
+                if obj.numberOfBlockBins==1; blockBinIdx = 0; end
                 
-                obj.iterateChannels(timeBinIdx,section,sessionBinIdx);
-                % obj.writeBinnedData(timeBinIdx,section,sessionBinIdx);
+                obj.iterateChannels(timeBinIdx,section,blockBinIdx);
+                % obj.writeBinnedData(timeBinIdx,section,blockBinIdx);
             end
 
         end
@@ -201,11 +205,11 @@ classdef DataWriter < handle
 
         end
         
-        function iterateChannels(obj,timeBinIdx,section,sessionBinIdx)
+        function iterateChannels(obj,timeBinIdx,section,blockBinIdx)
             obj.calculateChannelBinning();
             for channelIdx = 1:obj.numberOfChannelBins
                 obj.getThisChannelBinData(channelIdx);
-                obj.writeBinnedData(timeBinIdx,section,sessionBinIdx)
+                obj.writeBinnedData(timeBinIdx,section,blockBinIdx)
             end
         
         end
@@ -213,15 +217,15 @@ classdef DataWriter < handle
         function getThisChannelBinData(obj,channelIdx)
             if obj.binByChannel
                 obj.currentChannelLabel = obj.channelLabels{channelIdx};
-                obj.channelBinnedData = obj.sessionBinnedData(ismember(obj.sessionBinnedData.channel,obj.currentChannelLabel),:);
+                obj.channelBinnedData = obj.blockBinnedData(ismember(obj.blockBinnedData.channel,obj.currentChannelLabel),:);
                 obj.channelBinnedData.channel = [];
             else
                 obj.currentChannelLabel = "";
-                obj.channelBinnedData = obj.sessionBinnedData;
+                obj.channelBinnedData = obj.blockBinnedData;
             end
         end
 
-        function writeBinnedData(obj,timeBinIdx,section,sessionBin)
+        function writeBinnedData(obj,timeBinIdx,section,blockBin)
                                     
             fileSaveName = MomentumParticipant.getFileName(participantId=obj.participantId, ...
                                             eventName = obj.eventName, ...
@@ -229,7 +233,7 @@ classdef DataWriter < handle
                                             freqLabel = obj.frequencyBinLabel, ...
                                             binningMode = obj.timeBinningMode, ...
                                             timeBinIdx = timeBinIdx, ...
-                                            sessionBinIdx = sessionBin,...
+                                            blockBinIdx = blockBin,...
                                             channelLabel = obj.currentChannelLabel,...
                                             extension = obj.saveExtension, ...
                                             dataType=obj.dataType);
@@ -245,9 +249,9 @@ classdef DataWriter < handle
             end
         end
 
-        function getThisSessionBinData(obj,sessionBinIdx)
-            sessionsInThisBin = obj.expectedSessions(obj.sessionToBinMapping==sessionBinIdx);
-            obj.sessionBinnedData = obj.sectionBinnedData(ismember(obj.sectionBinnedData.session,categorical(sessionsInThisBin)),:);
+        function getThisBlockBinData(obj,blockBinIdx)
+            blocksInThisBin = obj.expectedBlocks(obj.blockToBinMapping==blockBinIdx);
+            obj.blockBinnedData = obj.sectionBinnedData(ismember(obj.sectionBinnedData.block,categorical(blocksInThisBin)),:);
         end
 
         function getThisTimeBinData(obj,timeBin)
@@ -255,10 +259,10 @@ classdef DataWriter < handle
             obj.timeBinnedData = obj.data(mask,:);
         end
 
-        function calculateTimeBinning(obj)
+        function calculateTimeBinning(obj,tPerBin)
             switch obj.timeBinningMode
                 case "byTimepoints"
-                    
+                    obj.timepointsPerBin = tPerBin;
                     timeDatapoints = obj.getTimeDatapoints();
                     if obj.timepointsPerBin ==0
                         obj.timeToBinMapping = ones(timeDatapoints,1);
@@ -267,6 +271,7 @@ classdef DataWriter < handle
                     end
 
                 case "byTime"
+                    obj.timePerBin = tPerBin;
                     % tMin = min(obj.timeLabels);
                     % obj.timeToBinMapping = floor((obj.timeLabels - tMin)/obj.timePerBin)+1;
                     tMin = min(obj.timeLabels);
@@ -287,23 +292,55 @@ classdef DataWriter < handle
             timeDatapoints = numel(obj.timeLabels);
         end
         
-        function getExpectedSessions(obj)
-            obj.expectedSessions = MomentumParticipant.regularSessionLabels;
+        function getExpectedBlocks(obj)
+            obj.expectedBlocks = MomentumParticipant.regularBlockLabels;
         end
 
-        function calculateSessionBinning(obj)
-            obj.getExpectedSessions();
+        function calculateBlockBinning(obj)
+            obj.getExpectedBlocks();
             
-            nbSessions = numel(obj.expectedSessions);
-            if isnumeric(obj.sessionsPerBin) && isscalar(obj.sessionsPerBin) && obj.sessionsPerBin >= 1
-                obj.sessionToBinMapping = ceil((1:nbSessions)/obj.sessionsPerBin);
+            nbBlocks = numel(obj.expectedBlocks);
+            if isnumeric(obj.blocksPerBin) && isscalar(obj.blocksPerBin) && obj.blocksPerBin >= 1
+                obj.blockToBinMapping = ceil((1:nbBlocks)/obj.blocksPerBin);
             else
                 % When set to zero, we want all mappings to be in the same
                 % group
-                obj.sessionToBinMapping = ones(1,nbSessions);
+                obj.blockToBinMapping = ones(1,nbBlocks);
             end
 
-            obj.numberOfSessionBins = max(obj.sessionToBinMapping);
+            obj.numberOfBlockBins = max(obj.blockToBinMapping);
+        end
+    end
+    
+    
+    methods (Static)
+    
+        function tOut = sortTableByCardinality(tIn)
+
+            % If empty or no rows, just return as-is
+            if isempty(tIn) || height(tIn) == 0
+                tOut = tIn;
+                return;
+            end
+
+            varNames = tIn.Properties.VariableNames;
+            nRows    = height(tIn);
+
+            % Preallocate cardinality ratio array
+            cardRatio = zeros(1, numel(varNames));
+
+            % Compute #unique / #rows for each variable
+            for k = 1:numel(varNames)
+                v = tIn.(varNames{k});
+                cardRatio(k) = numel(unique(v)) / nRows;
+            end
+
+            % Sort variables by ascending cardinality (low → high)
+            [~, idx] = sort(cardRatio, 'ascend');
+            sortVars = varNames(idx);
+
+            % Sort the table rows using that variable order
+            tOut = sortrows(tIn, sortVars);
         end
     end
 

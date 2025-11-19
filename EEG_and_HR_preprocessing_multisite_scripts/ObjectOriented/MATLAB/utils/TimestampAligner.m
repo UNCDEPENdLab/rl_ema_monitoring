@@ -142,7 +142,7 @@ classdef TimestampAligner <handle
                               'latency', num2cell(obj.feedbackEvents.alignedBiosemiEvents), ...
                               'duration', num2cell(0*ones(size(obj.feedbackEvents.alignedBiosemiEvents))), ...
                               'trial',num2cell(obj.feedbackEvents.trialLabels), ...
-                              'session',num2cell(obj.feedbackEvents.blockLabels));
+                              'block',num2cell(obj.feedbackEvents.blockLabels));
         
         end
 
@@ -154,7 +154,7 @@ classdef TimestampAligner <handle
             cameraTTLPulse = obj.feedbackEvents.cameraTimestamps(80:80:end);
             
             % Convert the biosemi latencies to s
-            biosemiLatencies_s = double( vertcat(obj.biosemi.EEGLabObject.event.latency))/obj.biosemi.EEGLabObject.srate;
+            biosemiLatencies_s = double( vertcat(obj.biosemi.event.latency))/obj.biosemi.srate;
             
             % Verify that sizes match and correct if there are repeated points
             if size(cameraTTLPulse, 1) ~= size(biosemiLatencies_s, 1)
@@ -243,12 +243,12 @@ classdef TimestampAligner <handle
             alignedBiosemiEventTimes = polyval(p,obj.feedbackEvents.alignedCameraTimestamps);
         
             % Get the biosemi indices of the events
-            biosemiFeedbackEvents = round(alignedBiosemiEventTimes * obj.biosemi.EEGLabObject.srate);
+            biosemiFeedbackEvents = round(alignedBiosemiEventTimes * obj.biosemi.srate);
         
             % Collect the computed event times which don't fit in the timestamps
             % and mark them as NaNs
             biosemiFeedbackEvents(biosemiFeedbackEvents < 0) = NaN;  % Set NaN where indices are negative
-            biosemiFeedbackEvents(biosemiFeedbackEvents > length( obj.biosemi.EEGLabObject.times'/1000)) = NaN;  % Set NaN where indices are outside the maximum
+            biosemiFeedbackEvents(biosemiFeedbackEvents > length( obj.biosemi.times'/1000)) = NaN;  % Set NaN where indices are outside the maximum
             obj.updateValidIndices(find(isnan(biosemiFeedbackEvents)));
             obj.feedbackEvents.alignedBiosemiEvents = biosemiFeedbackEvents;
         end

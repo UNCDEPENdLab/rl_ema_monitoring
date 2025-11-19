@@ -27,8 +27,9 @@ classdef NDDataWriter < DataWriter
                 opts.eventName = ""
                 opts.timeLabels = [] 
                 opts.trialLabels = []
-                opts.sessionLabels = []
+                opts.blockLabels = []
                 opts.channelLabels = {}
+                opts.outcomeLabels = []
                 opts.byFrequencyBand = false % defines the frequency labels
             end
 
@@ -38,8 +39,9 @@ classdef NDDataWriter < DataWriter
             obj.eventName = opts.eventName;
             obj.timeLabels = opts.timeLabels;
             obj.trialLabels= opts.trialLabels;
-            obj.sessionLabels = opts.sessionLabels;
+            obj.blockLabels = opts.blockLabels;
             obj.channelLabels = opts.channelLabels;
+            obj.outcomeLabels = opts.outcomeLabels;
             obj.byFrequencyBand = opts.byFrequencyBand;
 
             obj.checkIfValidationMode();
@@ -48,16 +50,18 @@ classdef NDDataWriter < DataWriter
         function save(obj,opts)
             arguments
                 obj
-                opts.saveDir = ""
-                opts.saveMode = "asParquet" %{asMat,asParquet,asCSV}
-                opts.timeBinningMode = "byTime" % {byTime,byTimepoints}
-                opts.sessionsPerBin = 0
-                opts.binByChannel = false 
+                opts.saveDir            = ""
+                opts.saveMode           = "asParquet" %{asMat,asParquet,asCSV}
+                opts.timeBinningMode    = "byTime" % {byTime,byTimepoints}
+                opts.blocksPerBin       = 0
+                opts.binByChannel       = false
+                opts.tPerBin            = 0 % Updates either timepointsPerBin or timePerBin properties depending on opts.timeBinningMode 
+ 
             end
 
             obj.saveDir =opts.saveDir;
             obj.timeBinningMode = opts.timeBinningMode;
-            obj.sessionsPerBin = opts.sessionsPerBin;
+            obj.blocksPerBin = opts.blocksPerBin;
             obj.binByChannel = opts.binByChannel;
 
             if ~exist(obj.saveDir, 'dir'); mkdir(obj.saveDir);end
@@ -72,12 +76,12 @@ classdef NDDataWriter < DataWriter
                     fprintf("Data has been saved to: %s \n",obj.saveDir);
                 case {".csv",".parquet"}
     
-                    obj.calculateTimeBinning();
-                    obj.calculateSessionBinning();
+                    obj.calculateTimeBinning(opts.tPerBin);
+                    obj.calculateBlockBinning();
                     
                     switch obj.dataType
                         case "TF"
-                            obj.createTrialLabels(); 
+                            % obj.createTrialLabels(); 
                             obj.iterateFrequencyBins();
                         case "EEG"
                             obj.iterateTimeBins()
@@ -91,31 +95,31 @@ classdef NDDataWriter < DataWriter
     methods(Access=protected)
         
         function checkIfValidationMode(obj)
-            % We want to have the same session numbers in each bin file for
+            % We want to have the same block numbers in each bin file for
             % all participants. So we need to consider that not all
-            % sessions may be present in the data (through the
-            % sessionLabels).
-            %  When doing validation it doesn't matter because the sessions
+            % blocks may be present in the data (through the
+            % blockLabels).
+            %  When doing validation it doesn't matter because the blocks
             %  are different between participants anyways, even if it's the same system.
-            % To distinguish, validation has session numbers >=500
-            obj.uniqueSessions = unique(obj.sessionLabels);
-            obj.isValidation = obj.uniqueSessions(1)>=500; % validation starts 
+            % To distinguish, validation has block numbers >=500
+            obj.uniqueBlocks = unique(obj.blockLabels);
+            obj.isValidation = obj.uniqueBlocks(1)>=500; % validation starts 
 
         end
 
         function createTrialLabels(obj)
             if ~isempty(obj.trialLabels); return; end
-            [~,~,uniqueSessionId] = unique(obj.sessionLabels(:),'stable');
+            [~,~,uniqueBlockId] = unique(obj.blockLabels(:),'stable');
            
-            nTrials = numel(uniqueSessionId);
+            nTrials = numel(uniqueBlockId);
 
-            [sortedSession, sortIdx] = sort(uniqueSessionId);
-            trialsPerSession = accumarray(sortedSession, 1);
-            sessionStartIdx = cumsum([0; trialsPerSession]);    % length = #sessions+1
+            [sortedBlock, sortIdx] = sort(uniqueBlockId);
+            trialsPerBlock = accumarray(sortedBlock, 1);
+            blockStartIdx = cumsum([0; trialsPerBlock]);    % length = #blocks+1
             
-            % Within the sorted list, trial k belongs to session sortedSession(k),
-            %    whose block starts at sessionStartIdx(sortedSession(k)).  So its 1…N index is:
-            trialsSorted = (1:nTrials).' - sessionStartIdx(sortedSession);
+            % Within the sorted list, trial k belongs to block sortedBlocks(k),
+            %    whose block starts at blockStartIdx(sortedBlock(k)).  So its 1…N index is:
+            trialsSorted = (1:nTrials).' - blockStartIdx(sortedBlock);
 
             % Undo the sort to get back to original trial order
             obj.trialLabels = zeros(nTrials,1);
@@ -134,12 +138,12 @@ classdef NDDataWriter < DataWriter
 
         end
         
-        function getExpectedSessions(obj)
+        function getExpectedBlocks(obj)
             if obj.isValidation
-                obj.expectedSessions = obj.uniqueSessions; 
+                obj.expectedBlocks = obj.uniqueBlocks; 
             else
                 % See obj.checkIfValidationMode()
-                obj.expectedSessions = MomentumParticipant.regularSessionLabels;
+                obj.expectedBlocks = MomentumParticipant.regularBlockLabels;
             end
         end
         
@@ -157,7 +161,7 @@ classdef NDDataWriter < DataWriter
             end
         end
                 
-        function writeBinnedData(obj,timeBinIdx,section,sessionBin)
+        function writeBinnedData(obj,timeBinIdx,section,blockBin)
     
             
             fileSaveName = MomentumParticipant.getFileName(participantId=obj.participantId, ...
@@ -166,7 +170,7 @@ classdef NDDataWriter < DataWriter
                                             freqLabel = obj.frequencyBinLabel, ...
                                             binningMode = obj.timeBinningMode, ...
                                             timeBinIdx = timeBinIdx, ...
-                                            sessionBinIdx = sessionBin,...
+                                            blockBinIdx = blockBin,...
                                             channelLabel=obj.currentChannelLabel,...
                                             extension = obj.saveExtension, ...
                                             dataType=obj.dataType);
@@ -178,6 +182,7 @@ classdef NDDataWriter < DataWriter
                 gzip(fileSavePath);            % compress it 
                 delete(fileSavePath); 
             elseif strcmp(obj.saveExtension,".parquet")
+                % obj.channelBinnedData = DataWriter.sortTableByCardinality(obj.channelBinnedData);
                 parquetwrite(fileSavePath,obj.channelBinnedData);
             end
          end
@@ -207,15 +212,24 @@ classdef NDDataWriter < DataWriter
             obj.timeBinnedData = renamevars(obj.timeBinnedData, 'Value', 'signal');
             
             %% Time bins
-            timepointsIdx = find(obj.timeToBinMapping == timeBinIdx)';
+            timepointsIdx = find(obj.timeToBinMapping == timeBinIdx);
             % obj.timeBinnedData.timeBin = timepointsIdx(obj.timeBinnedData.timeBin); % Continuous datapoint numbering across bins/files
-            obj.timeBinnedData.timeBin = obj.timeLabels(timepointsIdx(obj.timeBinnedData.timeBin)')'; % Continuous datapoint value across bins/files
+            obj.timeBinnedData.timeBin = obj.timeLabels(timepointsIdx(obj.timeBinnedData.timeBin)).'; % Continuous datapoint value across bins/files
 
-            %% Trial and session numbers
-            % trial column is used to map session number and its trial number 
+            %% Trial and block numbers
+            % trial column is used to map block number and its trial number 
             % from the schedule file 
-            obj.timeBinnedData.session    = categorical( obj.sessionLabels( obj.timeBinnedData.trial ) );
-            obj.timeBinnedData.trial      = obj.trialLabels   ( obj.timeBinnedData.trial );
+            obj.timeBinnedData.block    = categorical( obj.blockLabels( obj.timeBinnedData.trial ) );
+            if ~isempty(obj.outcomeLabels)
+                obj.timeBinnedData.outcome      = obj.outcomeLabels(obj.timeBinnedData.trial);
+            end
+
+            if ~isempty(obj.trialLabels)
+                obj.timeBinnedData.trial      = obj.trialLabels   ( obj.timeBinnedData.trial );
+            else
+                obj.timeBinnedData.trial = [];
+            end
+
             obj.timeBinnedData.id         = repmat( obj.participantId, height(obj.timeBinnedData), 1 );
             
             %% Channel and side + section
@@ -234,15 +248,17 @@ classdef NDDataWriter < DataWriter
                 obj.timeBinnedData.channel = [];
 
                 % Reordering
-                obj.timeBinnedData = obj.timeBinnedData(:, {'session','trial','timeBin','signal','side','id','section'});
-
+                % obj.timeBinnedData = obj.timeBinnedData(:, {'block','trial','timeBin','signal','side','id','section','outcome'});
+                desiredOrder = {'block','trial','timeBin','signal','side','id','section','outcome'};                
+                existingColumnNames = intersect(desiredOrder, obj.timeBinnedData.Properties.VariableNames, 'stable');
+                obj.timeBinnedData = obj.timeBinnedData(:, existingColumnNames);
             else
                 % Biosemi has no side or section, so the channel column is kept
                 obj.timeBinnedData.channel       = splits(:,1); 
                 obj.timeBinnedData.section = repmat("", height(obj.timeBinnedData), 1);
                 
                 % Reordering
-                obj.timeBinnedData = obj.timeBinnedData(:, {'session','trial','timeBin','signal','channel','id','section'});
+                obj.timeBinnedData = obj.timeBinnedData(:, {'block','trial','timeBin','signal','channel','id','section','outcome'});
 
             end
         end

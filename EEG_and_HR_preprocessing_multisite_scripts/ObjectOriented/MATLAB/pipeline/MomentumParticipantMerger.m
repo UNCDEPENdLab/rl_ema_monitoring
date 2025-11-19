@@ -14,7 +14,7 @@ classdef MomentumParticipantMerger < handle
         saveFileName
         sqliteFilePath
         sqliteTableName
-        sessionsPerBin = 20 % Resting state data has sessions ~30% density (one resting period every ~3 sessions) so this number is accounting for that
+        blocksPerBin = 20 % Resting state data has blocks ~30% density (one resting period every ~3 blocks) so this number is accounting for that
         inputSplitFilePattern
         opts
         validationMode = false
@@ -27,8 +27,11 @@ classdef MomentumParticipantMerger < handle
         function obj = MomentumParticipantMerger(rawDataDir)    
             obj.rawDataDir    = rawDataDir; %Contains all participants dirs
             obj.verifyValidationMode();
+            disp("Validation check");
             obj.prepareSaveDir();
-            obj.getAllSplitFiles();
+            disp("Prepared save directory");
+            % obj.getAllSplitFiles();
+            % disp("Got all split files");
 
         end
         
@@ -41,7 +44,7 @@ classdef MomentumParticipantMerger < handle
                 opts.binningMode  = "byTimepoints" % {byTimepoints,byTime}
                 opts.timeBinIdx   = 0 % Numeric time bin idx
                 opts.extension    = ".parquet" 
-                opts.sessionBinIdx = 0 % 0 = expects no session
+                opts.blockBinIdx = 0 % 0 = expects no block
             end
             obj.opts = opts;
 
@@ -69,15 +72,60 @@ classdef MomentumParticipantMerger < handle
                                                     freqLabel = obj.opts.freqLabel, ...
                                                     binningMode = obj.opts.binningMode,...
                                                     timeBinIdx = obj.opts.timeBinIdx, ...
-                                                    sessionBinIdx = obj.opts.sessionBinIdx,...
+                                                    blockBinIdx = obj.opts.blockBinIdx,...
                                                     extension = obj.opts.extension, ...
                                                     asPattern = true, ...
                                                     dataType = obj.dataType);
-                obj.mergeSessionFiles(mainSaveDir);
+                disp(obj.inputSplitFilePattern);
+                obj.mergeBlockFiles(mainSaveDir);
             end
 
         end
+
+        function filesWithPatternFound = getFilesWithPattern(obj)
+
+            % List only immediate subdirectories of obj.rawDataDir
+            d = dir(obj.rawDataDir);
+            isSubdir = [d.isdir] & ~ismember({d.name}, {'.','..'});
+            subdirNames = {d(isSubdir).name};
         
+            % Split the input pattern into name + extension
+            % Example: obj.inputSplitFilePattern = 'myPattern.parquet'
+            [~, basePattern, extPattern] = fileparts(obj.inputSplitFilePattern);
+        
+            % If no extension was given, default to '.parquet' (optional)
+            if isempty(extPattern)
+                extPattern = '.parquet';
+            end
+        
+            nSub = numel(subdirNames);
+            candidateFiles = cell(nSub,1);
+        
+            % Build the full path:
+            % {rawDataDir}/{subdirName}/{subdirName}_{basePattern}{extPattern}
+            for k = 1:nSub
+                subdir = subdirNames{k};
+        
+                filename = sprintf('%s_%s%s', subdir, basePattern, extPattern);
+                candidateFiles{k} = fullfile(obj.rawDataDir, subdir, filename);
+            end
+        
+            % Keep only the ones that actually exist
+            existsMask = cellfun(@isfile, candidateFiles);
+            filesWithPatternFound = candidateFiles(existsMask);
+            
+            % Print the ones that do NOT exist
+            missingFiles = candidateFiles(~existsMask);
+            if ~isempty(missingFiles)
+                fprintf('The following expected files were NOT found:\n');
+                for i = 1:numel(missingFiles)
+                    fprintf('  %s\n', missingFiles{i});
+                end
+            else
+                fprintf('All expected files were found.\n');
+            end
+        end
+
         function mergeBiosemiValidation(obj)
             % Assumes biosemi validation is split by channel so we iterate over them
             for channelIdx = 1:numel(EEG_biosemi.biosemiChannels)
@@ -86,16 +134,16 @@ classdef MomentumParticipantMerger < handle
                                                     freqLabel = obj.opts.freqLabel, ...
                                                     binningMode = obj.opts.binningMode,...
                                                     timeBinIdx = obj.opts.timeBinIdx, ...
-                                                    sessionBinIdx = obj.opts.sessionBinIdx,...
+                                                    blockBinIdx = obj.opts.blockBinIdx,...
                                                     extension = obj.opts.extension, ...
                                                     channelLabel =  obj.opts.section,...
                                                     asPattern = true, ...
                                                     dataType = obj.dataType);
-                obj.mergeSessionFiles(obj.biosemiValidationDir);
+                obj.mergeBlockFiles(obj.biosemiValidationDir);
             end
         end
 
-        function mergeSessionFiles(obj,mainSaveDir)
+        function mergeBlockFiles(obj,mainSaveDir)
             
             obj.mergedFileName = obj.inputSplitFilePattern;
             obj.saveFileName = fullfile(mainSaveDir, obj.mergedFileName);
@@ -114,7 +162,7 @@ classdef MomentumParticipantMerger < handle
         function verifyValidationMode(obj)
             % Validate input
             if ~isfolder(obj.rawDataDir)
-                error('"%s" is not a valid folder.', basePath);
+                error('"%s" is not a valid folder.', obj.rawDataDir);
             end
         
             % List only the immediate subfolders of basePath
@@ -125,15 +173,19 @@ classdef MomentumParticipantMerger < handle
             % Initialize as false
             obj.validationMode = false;
         
-            % Loop through each participant folder
-            for k = 1:numel(participants)
-                currentParticipantDir = fullfile(obj.rawDataDir, participants(k).name);
+            % Loop through some participant folders
+            for participantDirectoryInd = 1:numel(participants)
+                currentParticipantDir = fullfile(obj.rawDataDir, participants(participantDirectoryInd).name);
                 % List its subfolders
                 currentParticipantDirContents = dir(currentParticipantDir);
                 isInnerDir = [currentParticipantDirContents.isdir] & ~ismember({currentParticipantDirContents.name}, {'.','..'});
                 if any(isInnerDir)
                     obj.validationMode = true;
                     return;    % stop at the first match
+                end
+
+                if participantDirectoryInd>=2
+                    return;
                 end
             end
         end
@@ -165,10 +217,13 @@ classdef MomentumParticipantMerger < handle
                             'ReadFcn',           @(x)x);
 
             obj.allFiles = dsObject.Files;    % cell array of full paths
+            % d = dir(fullfile(obj.rawDataDir, '**', '*.parquet'));
+            % obj.allFiles = fullfile({d.folder}, {d.name})';
+
         end
 
-        function filesWithPatternFound = getFilesWithPattern(obj)
-            % allFiles = obj.getAllSplitFiles();
+        function filesWithPatternFound = getFilesWithPattern_legacy(obj)
+            obj.allFiles = obj.getAllSplitFiles();
             [~,inputFilePattern,~] =fileparts(obj.inputSplitFilePattern); 
             filesFoundMask = contains(obj.allFiles, inputFilePattern);
             filesWithPatternFound = obj.allFiles(filesFoundMask);
@@ -176,7 +231,7 @@ classdef MomentumParticipantMerger < handle
         
         function getAccumulatedTable(obj)
             filesWithPatternFound = obj.getFilesWithPattern();
-            
+
             if isempty(filesWithPatternFound)
                 fprintf('No files for timeBinIdx: %d. Skipping. \n', obj.opts.timeBinIdx);
                 return;
@@ -206,7 +261,7 @@ classdef MomentumParticipantMerger < handle
         
             if strcmp(obj.dataType,"TF")
                 obj.frequencyString = MomentumParticipant.validateFrequencyLabel(obj.opts.freqLabel);
-                fprintf("section: %s freqBin: %s timeBin: %03d sessionBin %03d \n",obj.opts.section,obj.frequencyString,obj.opts.timeBinIdx,obj.opts.sessionBinIdx);
+                fprintf("section: %s freqBin: %s timeBin: %03d blockBin %03d \n",obj.opts.section,obj.frequencyString,obj.opts.timeBinIdx,obj.opts.blockBinIdx);
             else
                 fprintf("section: %s timeBin: %03d \n",obj.opts.section,obj.opts.timeBinIdx);
             end
@@ -219,10 +274,11 @@ classdef MomentumParticipantMerger < handle
         end
         
         function getMergedDirName(obj)
-            if strcmp(obj.dataType,"TF")
+            %if strcmp(obj.dataType,"TF")
+            if startsWith(obj.dataType, "TF")
                 obj.mergedDirName = "ByFreqTimeBin";
             elseif strcmp(obj.dataType,"EEG")
-                obj.mergedDirName = "ByTimeBin";
+                obj.mergedDirName = "ByTimepoints";
             elseif strcmp(obj.dataType,"RRI")
                 obj.mergedDirName = "ByTimeBin";
             end 
