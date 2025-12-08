@@ -9,6 +9,7 @@ classdef MomentumParticipantMerger < handle
     properties (Access=private)
         mergedDirName
         frequencyString
+        eventName
         mergedFileName
         accumulatedTable =[]
         saveFileName
@@ -18,6 +19,7 @@ classdef MomentumParticipantMerger < handle
         inputSplitFilePattern
         opts
         validationMode = false
+        validationDevice
         museValidationDir
         biosemiValidationDir
         allFiles = {}
@@ -38,7 +40,6 @@ classdef MomentumParticipantMerger < handle
         function merge(obj,opts)
             arguments
                 obj
-                opts.eventName    = "RestingState" 
                 opts.sectionsToMerge = {"temp","frontal"} % {''} if not considered
                 opts.freqLabel    = [] % {alpha,beta,...,1,2,3,..}
                 opts.binningMode  = "byTimepoints" % {byTimepoints,byTime}
@@ -67,7 +68,7 @@ classdef MomentumParticipantMerger < handle
         function mergeMuseFiles(obj,sections,mainSaveDir)
             for sectionIdx = 1:numel(sections)
                 obj.opts.section = sections{sectionIdx};
-                obj.inputSplitFilePattern = MomentumParticipant.getFileName(eventName=obj.opts.eventName, ...
+                obj.inputSplitFilePattern = MomentumParticipant.getFileName(eventName=obj.eventName, ...
                                                     section = obj.opts.section, ...
                                                     freqLabel = obj.opts.freqLabel, ...
                                                     binningMode = obj.opts.binningMode,...
@@ -107,7 +108,11 @@ classdef MomentumParticipantMerger < handle
                 subdir = subdirNames{k};
         
                 filename = sprintf('%s_%s%s', subdir, basePattern, extPattern);
-                candidateFiles{k} = fullfile(obj.rawDataDir, subdir, filename);
+                if obj.validationMode
+                    candidateFiles{k} = fullfile(obj.rawDataDir, subdir,obj.validationDevice, filename);
+                else
+                    candidateFiles{k} = fullfile(obj.rawDataDir, subdir, filename);
+                end 
             end
         
             % Keep only the ones that actually exist
@@ -130,7 +135,7 @@ classdef MomentumParticipantMerger < handle
             % Assumes biosemi validation is split by channel so we iterate over them
             for channelIdx = 1:numel(EEG_biosemi.biosemiChannels)
                 obj.opts.section = EEG_biosemi.biosemiChannels{channelIdx};
-                obj.inputSplitFilePattern = MomentumParticipant.getFileName(eventName=obj.opts.eventName, ...
+                obj.inputSplitFilePattern = MomentumParticipant.getFileName(eventName=obj.eventName, ...
                                                     freqLabel = obj.opts.freqLabel, ...
                                                     binningMode = obj.opts.binningMode,...
                                                     timeBinIdx = obj.opts.timeBinIdx, ...
@@ -147,6 +152,9 @@ classdef MomentumParticipantMerger < handle
             
             obj.mergedFileName = obj.inputSplitFilePattern;
             obj.saveFileName = fullfile(mainSaveDir, obj.mergedFileName);
+            if obj.validationMode
+                [~,obj.validationDevice,~] = fileparts(mainSaveDir);
+            end
             obj.displayProgress();
             
             %% Checking if already exists
@@ -269,7 +277,7 @@ classdef MomentumParticipantMerger < handle
 
         function getDataType(obj)
             [parentDir,~] = fileparts(obj.rawDataDir);
-            [grandParentDir,~]= fileparts(parentDir);
+            [grandParentDir,obj.eventName,~]= fileparts(parentDir);
             [~,obj.dataType ]= fileparts(grandParentDir); 
         end
         

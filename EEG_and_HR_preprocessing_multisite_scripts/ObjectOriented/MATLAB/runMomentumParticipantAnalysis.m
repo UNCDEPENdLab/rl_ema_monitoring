@@ -9,7 +9,7 @@ function participant = runMomentumParticipantAnalysis(participantId,rawDataDir,p
     preprocStruct = MomentumExperiment.buildPreprocessedDirStruct(participantDir,preprocessedEEGDir);
     participant = MomentumParticipant(pathToData=participantDir, ...
                                        preprocessedDirs=preprocStruct);
-    mode="stim";
+    mode="validation";
     switch mode 
         case "trialDf"
             
@@ -68,12 +68,14 @@ function participant = runMomentumParticipantAnalysis(participantId,rawDataDir,p
                                        windowToEpoch = [-1.0,10]);
             participant.saveRRI();
         case "validation"
+            eventName = "feedback_time";
+            windowToEpoch = [-0.5,2.0]; %stim [-0.2,2.0];%Choice= [-2.0,0.5]; % feedbackWindow= [-0.5,2]
             %-------- Validation ------------
             % Sending the preprocessed as the raw here:
             participant = MomentumParticipant(id=participantId, ...
                                             pathToData=preprocessedEEGDir, ...
                                                 validation=true);
-            participant.runValidation();
+            participant.runValidation(eventName,windowToEpoch);
     end
 	% ----- End-----
 	fprintf("Processing finished %s \n",datetime());

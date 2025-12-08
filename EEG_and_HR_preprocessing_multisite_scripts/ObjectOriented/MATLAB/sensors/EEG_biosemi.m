@@ -7,7 +7,7 @@ classdef EEG_biosemi < EEGSensor
         firFilterPassHighFreq = 50 %Hz
         
         eventMarker = {'1','0'} % {'30'} Feedback onset
-        epochWindow = [-0.5,2]%[-1.6,3];
+        % epochWindow = [-0.5,2]%[-1.6,3];
         icaRejectionThreshold = 0.9;
         TFwindow = [-1500,1500]; %ms
 
@@ -25,7 +25,7 @@ classdef EEG_biosemi < EEGSensor
     properties
         alignedEvents
         isPreprocessedCorrectly = false
-
+        epochWindow
     end
 
     properties (Access=private)
@@ -55,11 +55,12 @@ classdef EEG_biosemi < EEGSensor
             obj.readData();
         end
         
-        function preprocessData(obj)
+        function preprocessData(obj,windowToEpoch)
+            obj.epochWindow = windowToEpoch; %= [-0.5,2]%[-1.6,3];
             %% Stage 1
             obj.EEGLabObject = pop_editset(obj.EEGLabObject, 'setname',obj.participantId);
-            % obj.reReferenceToMastoids();
-            obj.reReferenceToCAR();
+            obj.reReferenceToMastoids();
+            % obj.reReferenceToCAR(); 
             obj.filter();
             obj.addChannelLocations();
             obj.EEGLabObject.event = obj.alignedEvents;
@@ -118,15 +119,19 @@ classdef EEG_biosemi < EEGSensor
 
         function align(obj,opts)
             arguments
+                obj
+                opts.id          = ""
                 opts.mainDataDir = ""          % Path to data
-                opts.sessionNb = 0             % Current Biosemi session [1,4]
-                opts.schedule = []             % Timings of schedule file
+                opts.sessionNb   = 0             % Current Biosemi session [1,4]
+                opts.schedule    = []             % Timings of schedule file
+                opts.eventName   = ""            % 
             end
 
-            obj.timestampAligner = TimestampAligner(id              = obj.participantId, ...
-                                                mainDataDir         = obj.pathToData,...
+            obj.timestampAligner = TimestampAligner(id              = opts.id, ...
+                                                mainDataDir         = opts.mainDataDir,...
                                                 sessionNb           = opts.sessionNb, ...
                                                 schedule            = opts.schedule, ...
+                                                eventName           = opts.eventName, ...
                                                 biosemi = obj.EEGLabObject);
             obj.timestampAligner.align();
             obj.alignedEvents = obj.timestampAligner.EEGEvents;
@@ -206,7 +211,9 @@ classdef EEG_biosemi < EEGSensor
             nbOriginalEvents = sum( ismember(allTypesAsStrings, obj.eventMarker) );
 
             obj.EEGLabObject.etc.omittedTrials = setdiff((1:nbOriginalEvents),acceptedEventIndices); % Collect which trials were ignored during epoching
-            obj.EEGLabObject.etc.trialLabels =[obj.EEGLabObject.event.trial]';
+            % obj.EEGLabObject.etc.trialLabels = [obj.EEGLabObject.event.trial]';
+            % obj.EEGLabObject.etc.blockLabels =  [obj.EEGLabObject.event.block]';
+            % obj.EEGLabObject.etc.outcomeLabels = obj.timestampAligner.schedule.trials.outcome(obj.timestampAligner.thisBlockRowIndices);
             obj.isEpoched=true;
         end
 
@@ -229,8 +236,8 @@ classdef EEG_biosemi < EEGSensor
         end
 
         function filter(obj)
-            % obj.EEGLabObject = pop_eegfiltnew(obj.EEGLabObject, obj.firFilterPassLowFreq, obj.firFilterPassHighFreq);
-            obj.EEGLabObject = pop_basicfilter( obj.EEGLabObject,  1:70 , 'Boundary', 'boundary', 'Cutoff', [obj.firFilterPassLowFreq, obj.firFilterPassHighFreq], 'Design', 'butter', 'Filter', 'bandpass', 'Order',  2 );
+            obj.EEGLabObject = pop_eegfiltnew(obj.EEGLabObject, obj.firFilterPassLowFreq, obj.firFilterPassHighFreq);
+            % obj.EEGLabObject = pop_basicfilter( obj.EEGLabObject,  1:70 , 'Boundary', 'boundary', 'Cutoff', [obj.firFilterPassLowFreq, obj.firFilterPassHighFreq], 'Design', 'butter', 'Filter', 'bandpass', 'Order',  2 );
         end
 
         function getRejectedICA(obj)        
@@ -379,7 +386,6 @@ classdef EEG_biosemi < EEGSensor
                 % Standard CAR: subtract the same global average for everyone
                 avgExpr = avgExprAll;
                 
-        
                 formulas{i} = sprintf('nch%d = ch%d - %s Label %s', i, i, avgExpr, currentLabel);
             end
         

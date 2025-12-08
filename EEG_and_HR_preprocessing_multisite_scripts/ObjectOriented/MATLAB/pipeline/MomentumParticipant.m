@@ -204,19 +204,20 @@ classdef MomentumParticipant < handle
             
         end
         
-        function runValidation(obj)
+        function runValidation(obj,eventName,windowToEpoch)
             
-            obj.eventName = "feedback_time";
-            saveEEG = true; 
+            obj.eventName = eventName;
+            saveEEG = true;
+            runTF = false; 
             obj.getScheduleFile();
             obj.schedule.getEventTimes(obj.eventName);
             saveMode = "byTimepoints"; % Normally DataWriter set to 0 timepoints to save all together
 
             %% EEG_muse
-            obj.runMuseValidation(saveEEG,saveMode);
+            obj.runMuseValidation(windowToEpoch, saveEEG,saveMode,runTF);
 
             %% EEG_biosemi
-            obj.runBiosemiValidation(saveEEG,saveMode);
+            obj.runBiosemiValidation(windowToEpoch, saveEEG,saveMode,runTF);
         end
 
         function getEEGEpochedEvent(obj,opts)
@@ -313,7 +314,9 @@ classdef MomentumParticipant < handle
                 sourceName = preprocessedList{preprocessedIdx};
 
                 obj.sources.(sourceName) = feval(sourceName, obj.preprocessedDirs.(sourceName));
-                obj.sources.(sourceName).preprocessData();
+                if ~strcmp(sourceName,'EEG_biosemi')
+                    obj.sources.(sourceName).preprocessData();
+                end
             end
         
             if ~isempty(rawList)
@@ -350,7 +353,7 @@ classdef MomentumParticipant < handle
 
     methods (Access=private)
         
-        function runBiosemiValidation(obj,saveEEG,saveMode)
+        function runBiosemiValidation(obj,windowToEpoch, saveEEG,saveMode,runTF)
             if nargin<2; saveEEG = false; end
             binByChannel  = true; 
 
@@ -360,15 +363,17 @@ classdef MomentumParticipant < handle
             nbSessions = 4;
 
             for sessionInd = 1:nbSessions 
-                obj.runSingleBiosemiSessionAlignment(sessionInd);
+                obj.runSingleBiosemiSessionAlignment(windowToEpoch,sessionInd);
             end
             
             [obj.sources.(dataSourceName), ~] = pop_mergeset(obj.allBiosemi, 1:numel(obj.allBiosemi), 0);
             obj.allBiosemi = [];
             obj.sources.(dataSourceName) = EEGSensor(obj.sources.(dataSourceName), ...
                                                 obj.id, ...
-                                                "feedback_time");
+                                                obj.eventName);
             obj.sources.(dataSourceName).EEGLabObject.etc.trialLabels =[obj.sources.(dataSourceName).EEGLabObject.event.trial]';
+            obj.sources.(dataSourceName).EEGLabObject.etc.blockLabels =[obj.sources.(dataSourceName).EEGLabObject.event.block]';
+            obj.sources.(dataSourceName).EEGLabObject.etc.outcomeLabels =[obj.sources.(dataSourceName).EEGLabObject.event.outcome]';
 
             if saveEEG
                 obj.saveEEG(source = dataSourceName,...
@@ -378,17 +383,19 @@ classdef MomentumParticipant < handle
                         binByChannel = binByChannel);
 
             end
-            obj.runTFAnalysis(byFrequencyBand=false, ...
-                                source=dataSourceName);
-            obj.saveTFAnalysis(source=dataSourceName,...
-                                saveMode="asParquet", ...
-                                blocksPerBin=0, ...
-                                binByChannel = binByChannel,...
-                                timeBinningMode=saveMode); % By timepoint binning
-
+            
+            if runTF
+                obj.runTFAnalysis(byFrequencyBand=false, ...
+                                    source=dataSourceName);
+                obj.saveTFAnalysis(source=dataSourceName,...
+                                    saveMode="asParquet", ...
+                                    blocksPerBin=0, ...
+                                    binByChannel = binByChannel,...
+                                    timeBinningMode=saveMode); % By timepoint binning
+            end
         end
         
-        function runSingleBiosemiSessionAlignment(obj,sessionInd)
+        function runSingleBiosemiSessionAlignment(obj,windowToEpoch, sessionInd)
             dataSource = "biosemi";
             dataSourceName = "EEG_"+dataSource;
 
@@ -396,8 +403,12 @@ classdef MomentumParticipant < handle
                             fullfile(obj.biosemiDirectoryPath,obj.id+"-"+string(sessionInd)+".bdf")));
             obj.getData(dataSourceName);
                 
-            obj.sources.EEG_biosemi.align();
-            obj.sources.EEG_biosemi.preprocessData();
+            obj.sources.EEG_biosemi.align(mainDataDir   = obj.pathToData, ...
+                                          id = obj.id, ...
+                                          sessionNb     = sessionInd, ...
+                                          schedule      = obj.schedule, ...
+                                          eventName     = obj.eventName);
+            obj.sources.EEG_biosemi.preprocessData(windowToEpoch);
 
             if obj.sources.EEG_biosemi.isPreprocessedCorrectly
                 [obj.allBiosemi, ~, ~] = eeg_store(obj.allBiosemi, ...
@@ -407,14 +418,14 @@ classdef MomentumParticipant < handle
             obj.sources = rmfield(obj.sources, dataSourceName);
         end
 
-        function runMuseValidation(obj,saveEEG,saveMode)
+        function runMuseValidation(obj,windowToEpoch, saveEEG,saveMode,runTF)
             dataSource = "muse";
             dataSourceName = "EEG_"+dataSource;
 
             obj.getData(dataSourceName);
             obj.sources.EEG_muse.setParticipantId(obj.id);
-            obj.getEEGEpochedEvent(eventName='feedback_time',...
-                            windowToEpoch = [-0.5, 2]);
+            obj.getEEGEpochedEvent(eventName=obj.eventName,...
+                            windowToEpoch =windowToEpoch);
             if saveEEG
                 % If intermediate save is needed:
                 obj.saveEEG(source = dataSourceName,...
@@ -422,12 +433,15 @@ classdef MomentumParticipant < handle
                             timeBinningMode = saveMode, ...
                             blocksPerBin=0);
             end
-            obj.runTFAnalysis(byFrequencyBand=false, ...
-                                source=dataSourceName);
-            obj.saveTFAnalysis( source=dataSourceName,...
-                                saveMode="asParquet", ...
-                                blocksPerBin=0, ...
-                                timeBinningMode=saveMode); 
+
+            if runTF
+                obj.runTFAnalysis(byFrequencyBand=false, ...
+                                    source=dataSourceName);
+                obj.saveTFAnalysis( source=dataSourceName,...
+                                    saveMode="asParquet", ...
+                                    blocksPerBin=0, ...
+                                    timeBinningMode=saveMode); 
+            end
         end
 
         function validateTFSource(obj,desiredEEGSource)

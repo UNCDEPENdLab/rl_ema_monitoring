@@ -3,14 +3,17 @@ classdef TimestampAligner <handle
         id
         mainDataDir
         schedule
+        feedbackTrials
         sessionNb
         eventName
-        
+
         feedbackEvents
         tau
         tauSaveName = []
         polyfitSaveName = []
         EEGEvents
+        eventLatencies
+        thisBlockRowIndices
 
     end
     
@@ -25,7 +28,7 @@ classdef TimestampAligner <handle
                 opts.mainDataDir = ""
                 opts.sessionNb = 0
                 opts.schedule = []
-                opts.eventName = "feedback_time"
+                opts.eventName = "" % 'feedback_time'
                 opts.biosemi = []
             end
 
@@ -35,6 +38,7 @@ classdef TimestampAligner <handle
             obj.schedule = opts.schedule;
             obj.eventName = opts.eventName;
             obj.biosemi = opts.biosemi;
+            obj.feedbackTrials = obj.schedule.trials;
         end
         
         function align(obj)
@@ -137,13 +141,43 @@ classdef TimestampAligner <handle
             nanTrials = isnan(obj.feedbackEvents.alignedBiosemiEvents);
             eventTypes(nanTrials) = {-1}; % Will get deleted but are still flagged 
             
+            obj.getLatencies();
+            outcomeLabels = nan(size(obj.feedbackEvents.validIndices));
+            outcomeLabels(obj.feedbackEvents.validIndices) = obj.feedbackTrials.outcome(obj.feedbackEvents.validIndices);
+
             % Build the struct for the biosemi using the aligned events
-            obj.EEGEvents = struct('type', eventTypes, ...
-                              'latency', num2cell(obj.feedbackEvents.alignedBiosemiEvents), ...
-                              'duration', num2cell(0*ones(size(obj.feedbackEvents.alignedBiosemiEvents))), ...
+             obj.EEGEvents = struct('type', eventTypes, ...
+                              'latency', obj.eventLatencies, ...
+                              'duration', num2cell(zeros(size(obj.feedbackEvents.alignedBiosemiEvents))), ...
                               'trial',num2cell(obj.feedbackEvents.trialLabels), ...
-                              'block',num2cell(obj.feedbackEvents.blockLabels));
+                              'block',num2cell(obj.feedbackEvents.blockLabels), ...
+                              'outcome',num2cell(outcomeLabels));
         
+        end
+        
+        function getLatencies(obj)
+            if ~strcmp(obj.eventName,"feedback_time")
+                eventTimes = obj.schedule.trials.(obj.eventName);
+                eventTimes = eventTimes(obj.thisBlockRowIndices,:);
+                eventTimes = eventTimes(obj.feedbackEvents.validIndices);
+
+                alignedFeedbackLatencies = obj.feedbackEvents.alignedBiosemiEvents(obj.feedbackEvents.validIndices);
+                behavioralFeedbackTimestamps = obj.feedbackTrials.feedback_time(obj.feedbackEvents.validIndices);
+                interpolatedLatencies = interp1(behavioralFeedbackTimestamps,... 
+                                            alignedFeedbackLatencies, ...
+                                            eventTimes, ...
+                                            'linear', 'extrap');
+                interpolatedLatencies = round(interpolatedLatencies);
+                fullLatencies = nan(size(obj.feedbackEvents.validIndices));
+                fullLatencies(obj.feedbackEvents.validIndices) = interpolatedLatencies;
+        
+                obj.eventLatencies = fullLatencies;
+
+            else 
+                obj.eventLatencies = obj.feedbackEvents.alignedBiosemiEvents;
+            end
+            obj.eventLatencies = num2cell(obj.eventLatencies);
+
         end
 
         function alignCameraWithTTL(obj)
@@ -201,8 +235,8 @@ classdef TimestampAligner <handle
 
         function filterScheduleByBlock(obj)
             targetBlock = obj.getBlockNumber();
-            rowIndices = ismember(obj.schedule.block, targetBlock);        
-            obj.schedule = obj.schedule(rowIndices, :);
+            obj.thisBlockRowIndices = ismember(obj.feedbackTrials.block, targetBlock);
+            obj.feedbackTrials = obj.feedbackTrials(obj.thisBlockRowIndices, :);
         end
         
         function getBiosemiEventsByClosestTTLAndDifference(obj,cameraTTLPulse,biosemiLatencies_s,biosemiSamplingRate, biosemiTimes)
@@ -288,21 +322,21 @@ classdef TimestampAligner <handle
         end
         
         function updateFeedbackType(obj)
-            obj.feedbackEvents.feedbackType = obj.schedule.feedback;
+            obj.feedbackEvents.feedbackType = obj.feedbackTrials.feedback;
             obj.feedbackEvents.feedbackType = obj.feedbackEvents.feedbackType(obj.feedbackEvents.validIndices);
         end
         
         function getPhoneFeedbackTimes(obj)
          
-            obj.feedbackEvents.phoneFeedbackTimes = obj.schedule.(obj.eventName); 
+            obj.feedbackEvents.phoneFeedbackTimes = obj.feedbackTrials.feedback_time; 
             obj.feedbackEvents.phoneFeedbackTimes = obj.feedbackEvents.phoneFeedbackTimes(obj.feedbackEvents.validIndices);
             obj.feedbackEvents.phoneFeedbackTimes = seconds(obj.feedbackEvents.phoneFeedbackTimes-obj.feedbackEvents.phoneFeedbackTimes(1));
     
         end
         
         function updateValidScheduleEvents(obj)
-            obj.feedbackEvents.trialLabels = obj.schedule.trial(obj.feedbackEvents.validIndices);
-            obj.feedbackEvents.blockLabels = obj.schedule.block(obj.feedbackEvents.validIndices);
+            obj.feedbackEvents.trialLabels = obj.feedbackTrials.trial(obj.feedbackEvents.validIndices);
+            obj.feedbackEvents.blockLabels = obj.feedbackTrials.block(obj.feedbackEvents.validIndices);
         end
 
         function getScoredCameraFeedbackTimestamps(obj)
