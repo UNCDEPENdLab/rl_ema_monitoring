@@ -114,8 +114,8 @@ classdef MomentumParticipant < handle
                 opts.blocksPerBin       = 0 % saves the files by binning the block 
             end
             
-            saveMode = MomentumParticipant.validateSavingMode(opts.saveMode);
-            timeBinningMode = MomentumParticipant.validateBinningMode(opts.timeBinningMode);
+            saveMode = NameSchema.validateSavingMode(opts.saveMode);
+            timeBinningMode = NameSchema.validateBinningMode(opts.timeBinningMode);
             
             % sourceDirName = extractAfter(opts.source, "_");
 
@@ -143,8 +143,8 @@ classdef MomentumParticipant < handle
                 opts.tPerBin            = 0 % Time or timepoints per bin when saving. In ms if opts.timeBinningMode== "byTime", else in datapoints
             end
             
-            saveMode = MomentumParticipant.validateSavingMode(opts.saveMode);
-            timeBinningMode = MomentumParticipant.validateBinningMode(opts.timeBinningMode);
+            saveMode = NameSchema.validateSavingMode(opts.saveMode);
+            timeBinningMode = NameSchema.validateBinningMode(opts.timeBinningMode);
             
             sourceDirName = extractAfter(opts.source, "_");
 
@@ -172,8 +172,8 @@ classdef MomentumParticipant < handle
               opts.tPerBin          = 0 % Time or timepoints per bin when saving. In ms if opts.timeBinningMode== "byTime", else in datapoints
             end
 
-            saveMode = MomentumParticipant.validateSavingMode(opts.saveMode);
-            timeBinningMode = MomentumParticipant.validateBinningMode(opts.timeBinningMode);
+            saveMode = NameSchema.validateSavingMode(opts.saveMode);
+            timeBinningMode = NameSchema.validateBinningMode(opts.timeBinningMode);
             
             sourceDirName = extractAfter(opts.source, "_");
 
@@ -583,180 +583,7 @@ classdef MomentumParticipant < handle
     end
 
     methods (Static)
-
-        function participantId = validateParticipantId(fileName)
-            digitsOnly = regexprep(fileName, '[^0-9]', '');
-            
-            if numel(char(digitsOnly)) >= 5 && numel(char(digitsOnly)) <= 6
-                participantId = string(digitsOnly);
-            else
-                participantId = "";
-            end
-        end
-
-        function saveMode = validateSavingMode(saveMode)
-
-            % Convert string objects to char vector
-            if isa(saveMode, 'string')
-                saveMode = char(saveMode);
-            end
-            if ~ischar(saveMode)
-                error('validateExportMode:InvalidType', ...
-                    'exportMode must be a character vector or string scalar.');
-            end
-        
-            % Trim leading/trailing whitespace
-            saveMode = strtrim(saveMode);
-        
-            % Check for "mat" variant (with or without 'as')
-            if ~isempty(regexp(saveMode, '^(?:as)?mat$', 'ignorecase'))
-                saveMode = 'asMat';
-        
-            % Check for "csv" variant (with or without 'as')
-            elseif ~isempty(regexp(saveMode, '^(?:as)?csv$', 'ignorecase'))
-                saveMode = 'asCSV';
-        
-            % Check for "parquet" variant (with or without 'as')
-            elseif ~isempty(regexp(saveMode, '^(?:as)?parquet$', 'ignorecase'))
-                saveMode = 'asParquet';
-        
-            else
-                error('validateExportMode:InvalidValue', ...
-                    'Invalid export mode "%s". Valid options are "asMat", "asCSV", or "asParquet" (case‐insensitive).', ...
-                    saveMode);
-            end
-        end
-
-        function binningMode = validateBinningMode(binningMode)        
-            % Convert string objects to char
-            if isa(binningMode,'string')
-                binningMode = char(binningMode);
-            end
-            if ~ischar(binningMode)
-                error('validateSavingMode:InvalidType', ...
-                    'saveMode must be a character vector or string scalar.');
-            end
-        
-            % Trim whitespace
-            binningMode = strtrim(binningMode);
-        
-            % Check for "timepoints" variant:
-            if ~isempty(regexp(binningMode, '^(?:by)?timepoints$', 'ignorecase'))
-                binningMode = 'byTimepoints';
-        
-            % Check for "time" variant:
-            elseif ~isempty(regexp(binningMode, '^(?:by)?time$', 'ignorecase'))
-                binningMode = 'byTime';
-        
-            else
-                error('validateSavingMode:InvalidValue', ...
-                    'Invalid save mode "%s". Valid options are "byTime" or "byTimepoints" (case‐insensitive).', ...
-                    binningMode);
-            end
-        end
-
-        function fileName = getFileName(opts)
-            arguments
-                opts.participantId   = "123456"
-                opts.eventName       = "RestingState"
-                opts.section         = ""               % now default is "", so it’s ignored unless specified
-                opts.freqLabel       = []               % (band name or bin string)
-                opts.binningMode     = "byTimepoints"   % {byTimepoints, byTime}
-                opts.timeBinIdx      = 0                % Numeric time‐bin index
-                opts.blockBinIdx   = 0                % If not 0, insert "blockBin_%03d" expects numeric
-                opts.channelLabel    = ""
-                opts.extension       = ".parquet"
-                opts.asPattern       = false            % Drop participantId if true
-                opts.dataType        = "TF"             % {TF, EEG,RRI}
-            end
-        
-            %─── 1) Compute the time‐bin label once ────────────────────────────────────────
-            timeBinLabel = MomentumParticipant.validateTimeBinningMode(opts.binningMode);
-        
-            %─── 2) Build the “prefix” (participantId vs. pattern), omitting section if empty ───
-            % hasSection = ~(opts.section == "" || opts.section == 0);  % true if section is nonempty or nonzero
-            hasSection = ( ...
-                         ( isstring(opts.section) && strlength(opts.section)>0 )    ... % non‐empty string
-                      || ( ischar(opts.section)   && ~isempty(opts.section)     )    ... % non‐empty char
-                      || ( isnumeric(opts.section)&& opts.section~=0            ) );  % non‐zero number
-
-            if opts.asPattern
-                if hasSection
-                    % "<event>_<section>"
-                    fmt  = "%s_%s";
-                    args = { opts.eventName, opts.section };
-                else
-                    % "<event>" (omit underscore and section)
-                    fmt  = "%s";
-                    args = { opts.eventName };
-                end
-            else
-                if hasSection
-                    % "<participant>_<event>_<section>"
-                    fmt  = "%s_%s_%s";
-                    args = { opts.participantId, opts.eventName, opts.section };
-                else
-                    % "<participant>_<event>"
-                    fmt  = "%s_%s";
-                    args = { opts.participantId, opts.eventName };
-                end
-            end
-        
-            %─── 3) Insert blockBin piece if provided ────────────────────────────────
-            if opts.blockBinIdx > 0
-                fmt = fmt + "_blockBin_%03d";
-                args{end+1} = opts.blockBinIdx;
-            end
-            
-            %─── 4) Insert freqBin if dataType == TF ─────────────────────────────────
-            if ~strcmp(opts.channelLabel,'')
-                fmt = fmt + "_%s";
-                args{end+1} = opts.channelLabel;
-            end
-
-            %─── 5) Insert freqBin if dataType == TF ─────────────────────────────────
-            if startsWith(opts.dataType, "TF")
-                % Only for TF: validate and append frequency label
-                frequencyString = MomentumParticipant.validateFrequencyLabel(opts.freqLabel);
-                fmt = fmt + "_freqBin_%s";
-                args{end+1} = frequencyString;
-            end
-        
-            %─── 6) Append the tail: include timeBinLabel & index if idx > 0, otherwise skip ──
-            if opts.timeBinIdx > 0
-                % Include time‐bin label and zero‐padded index
-                fmt = fmt + "_%s_%03d%s";
-                args{end+1} = timeBinLabel;        % e.g. "byTime" or "byTimepoints"
-                args{end+1} = opts.timeBinIdx;     % e.g. 5 → printed as “005”
-                args{end+1} = opts.extension;      % e.g. ".parquet"
-            else
-                % Skip time‐bin label/index; just append extension
-                fmt = fmt + "%s";
-                args{end+1} = opts.extension;      % e.g. ".parquet"
-            end
-        
-            %─── 7) Build the fileName ───────────────────────────────────────────────────
-            fileName = sprintf(fmt, args{:});
-        end
-
-        function frequencyString = validateFrequencyLabel(frequencyLabel)
-            if isnumeric(frequencyLabel)
-                frequencyString = sprintf('%02d', frequencyLabel);
-            else
-                frequencyString = char(frequencyLabel);
-            end
-        end
-        
-        function timeBinLabel= validateTimeBinningMode(binningMode)
-
-            if strcmp(binningMode,"byTimepoints")
-                timeBinLabel= "tpBin";
-            elseif strcmp(binningMode,"byTime")
-                timeBinLabel = "tBin";
-            end
-        
-        end
-        
+                
         function prepareSaveDirectory(saveDir)
             if ~isfolder(saveDir); mkdir(saveDir); end
         end

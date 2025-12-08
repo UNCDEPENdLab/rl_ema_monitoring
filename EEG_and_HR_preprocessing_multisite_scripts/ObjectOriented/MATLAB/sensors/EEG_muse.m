@@ -251,7 +251,7 @@ classdef EEG_muse < EEGSensor
 
         function checkTypeOfData(obj,databasePath)
             [~,fileName,ext] = fileparts(databasePath);
-            obj.participantId = MomentumParticipant.validateParticipantId(fileName);
+            obj.participantId = NameSchema.validateParticipantId(fileName);
 
             if strcmpi(ext, '.db') && isfile(databasePath)
                 obj.databasePath = databasePath;
@@ -259,6 +259,7 @@ classdef EEG_muse < EEGSensor
                 obj.isDatabaseFile = true;
                 return
             end
+            
             obj.isDatabaseFile = false;
 
             eegFile   = fullfile(databasePath, obj.participantId + "_EEG.mat");

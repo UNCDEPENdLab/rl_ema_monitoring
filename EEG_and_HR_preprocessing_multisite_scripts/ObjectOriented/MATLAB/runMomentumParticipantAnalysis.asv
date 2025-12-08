@@ -2,9 +2,7 @@ function participant = runMomentumParticipantAnalysis(participantId, rawDataDir,
     if nargin < 4 || isempty(mode)
         mode = 'feedback';
     end
-    if nargin < 5 || isempty(mode)
-        validationEvent = 'feedback_time';
-    end 
+    if nargin <
 
     experiment = MomentumExperiment(participantId, rawDataDir, preprocessedEEGDir, mode, validationEvent);
     participant = experiment.run();

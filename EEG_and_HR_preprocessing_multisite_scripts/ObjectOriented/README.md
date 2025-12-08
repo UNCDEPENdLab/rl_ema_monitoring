@@ -18,7 +18,7 @@
 
    ```matlab
    % from /ObjectOriented/
-   participant = runMomentumParticipantAnalysis(participantId,rawDataDir,preprocessedEEGDir);
+   participant = runMomentumParticipantAnalysis(participantId,rawDataDir,preprocessedEEGDir, mode, validationEvent);
    
    ```
 where:
@@ -28,6 +28,10 @@ where:
 `rawDataDir` has a directory with the `participantId`'s raw data (see [Data locations & naming](#data-locations--naming)).
 
 `preprocessedEEGDir` has a directory with `participantId`'s preprocessed data (see [Data locations & naming](#data-locations--naming)).
+
+`mode` is either of `{trialDf,restingState,feedback,stim,choice,rri,validation}`.
+
+`validationMode` is either of `{stim_time,choice_time,feedback_time}`.
 
 2. **Submit all participants on SLURM**:
 
@@ -49,8 +53,8 @@ ObjectOriented/
     │   ├── runMomentumParticipantAnalysis.m        # MATLAB entry point (single participant)
     │   ├── mergeParticipantFiles.m                 # MATLAB entry point for merging participant data
     │   ├── pipeline/
-    │   │   ├── MomentumParticipant.m               # orchestrates run for one participant
-    │   │   ├── MomentumExperiment.m                # general functions for managing directories
+    │   │   ├── MomentumParticipant.m               # runs the analysis for one participant
+    │   │   ├── MomentumExperiment.m                # orchestrates the type of run and manages directories
     │   │   └── MomentumParticipantMerger.m         # merges outputs across participants
     │   ├── sensors/
     │   │   ├── EEG_biosemi.m                       # EEG Biosemi preprocessing 
@@ -72,6 +76,9 @@ ObjectOriented/
     │   │   ├── TFPlotter.m                         # Plotting tool
     │   │   ├── TimeFrequencyAnalyzer.m             # Manages the time frequency analysis for EEG    
     │   │   ├── TimestampAligner.m                  # Takes care of the alignment of EEG Biosemi in validation
+    │   │   ├── NameSchema.m                        # Manages the naming of input and output files
+    │   │   ├── ParquetReaderBase.m                 # Base class for reading preprocessed parquet files
+    │   │   ├── EEGParquetReader.m                  # Imports preprocessed EEG data from parquet files
     │   │   └── Utils.m                             # Generic functions (database manipulation, datetime converter)
     └── bash/                 
         ├── runParticipantAnalysisJobs.sh           # slurm script to preprocess participants
@@ -231,6 +238,7 @@ classDiagram
     %% Core entity
     %% =========================
     class MomentumParticipant
+    class MomentumExperiment
 
     %% =========================
     %% Sensors
@@ -258,6 +266,9 @@ classDiagram
     class SessionSplitter
     class DataWriter
     class NDDataWriter
+    class NameSchema
+    %% class ParquetReaderBase
+    %% class EEGParquetReader
 
     %% =========================
     %% Utilities
@@ -267,6 +278,7 @@ classDiagram
     %% -------------------------
     %% MomentumParticipant composition
     %% -------------------------
+    MomentumExperiment o-- MomentumParticipant
     MomentumParticipant o-- EEG_muse
     MomentumParticipant o-- EEG_biosemi
     MomentumParticipant o-- Polar_ECG
@@ -277,6 +289,7 @@ classDiagram
     MomentumParticipant o-- TimeFrequencyAnalyzer
     MomentumParticipant o-- ScheduleDatabase
     MomentumParticipant o-- SessionSplitter
+    MomentumParticipant o-- EEGParquetReader
 
     %% -------------------------
     %% Inheritance (is-a)
@@ -290,6 +303,7 @@ classDiagram
     EEG_Sensor <|-- EEG_biosemi
 
     DataWriter <|-- NDDataWriter
+    %% ParquetReaderBase <|-- EEGParquetReader
 
     %% -------------------------
     %% Has / uses relationships
@@ -302,6 +316,8 @@ classDiagram
     Polar_RRIfromECG ..> DataWriter : uses
 
     TimeFrequencyAnalyzer ..> ErpDtwAligner : uses
+    NDDataWriter ..> NameSchema : uses
+    DataWriter ..> NameSchema : uses
 
     MomentumParticipant ..> Utils : uses
     TimeFrequencyAnalyzer ..> Utils : uses

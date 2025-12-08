@@ -9,10 +9,12 @@ sbatch --version
 # Define the directories
 # base_path="/ix1/adombrovski/ix/DNPL_DataMesh/Data/Momentum_EMA/Data_Raw"
 # preprocessedDir="/ix1/adombrovski/ix/DNPL_DataMesh/Data/Momentum_EMA"
+mode="validation" # {trialDf,restingState,feedback,stim,choice,rri,validation}
 
 # Validation only: 
 base_path="/ix1/adombrovski/DNPL_DataMesh/Data/MUSE_Validation/BIOSEMI_bdf"
 preprocessedDir="/ix1/adombrovski/DNPL_DataMesh/Data/MUSE_Validation"
+validationEvent="feedback_time" #{stim_time,choice_time,feedback_time}
 
 # Get the list of subdirectories in the mat_files_csv_and_MUSE_db directory
 subj_list=$(find $base_path -mindepth 1 -maxdepth 1 -type d)
@@ -60,7 +62,7 @@ do
     addpath(genpath(fullfile(fileparts(pwd),'MATLAB'))); \
     addpath('/ix1/adombrovski/lab_resources/rl_ema_monitoring/EEG_and_HR_preprocessing_multisite_scripts'); \
     addpath('/ix1/adombrovski/lab_resources/eeglab2024.2'); \
-    runMomentumParticipantAnalysis('$subj', '$base_path','$preprocessedDir'); \
+    runMomentumParticipantAnalysis('$subj', '$base_path','$preprocessedDir'.'$mode','$validationEvent'); \
     exit\""
     
 done
