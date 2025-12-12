@@ -2,3 +2,4 @@
 /bash/Logs
 /bash/slurm*
 *_develop.m
+*.asv

@@ -1,9 +1,0 @@
-function participant = runMomentumParticipantAnalysis(participantId, rawDataDir, preprocessedEEGDir, mode,validationEvent)
-    if nargin < 4 || isempty(mode)
-        mode = 'feedback';
-    end
-    if nargin <
-
-    experiment = MomentumExperiment(participantId, rawDataDir, preprocessedEEGDir, mode, validationEvent);
-    participant = experiment.run();
-end

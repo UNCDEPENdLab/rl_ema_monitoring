@@ -52,6 +52,8 @@ ObjectOriented/
     ├── MATLAB/                               
     │   ├── runMomentumParticipantAnalysis.m        # MATLAB entry point (single participant)
     │   ├── mergeParticipantFiles.m                 # MATLAB entry point for merging participant data
+    │   ├── runERPVerification.m                    # Prepares images to visualize the validation results
+    │   ├── browseEEGImages.m                       # ERP Visualizer entry point
     │   ├── pipeline/
     │   │   ├── MomentumParticipant.m               # runs the analysis for one participant
     │   │   ├── MomentumExperiment.m                # orchestrates the type of run and manages directories
@@ -80,6 +82,12 @@ ObjectOriented/
     │   │   ├── ParquetReaderBase.m                 # Base class for reading preprocessed parquet files
     │   │   ├── EEGParquetReader.m                  # Imports preprocessed EEG data from parquet files
     │   │   └── Utils.m                             # Generic functions (database manipulation, datetime converter)
+    │   ├── erpVerification/                 
+    │   │   ├── EEGImageBrowser.m                   # Manages the UI to display the validation image comparison results 
+    │   │   ├── ERPBatchRunner.m                    # Orchestrates combinations of Muse vs Biosemi channels to be plotted
+    │   │   ├── ERPComparison.m                     # Plots a Biosemi and Muse channels together after averaging the data
+    │   │   ├── ERPTable.m                          # Imports an EEG parquet file taking care of the metadata
+    │   │   └── ERPVerificationRunner.m             # Orchestrates a batch run for multiple validation events
     └── bash/                 
         ├── runParticipantAnalysisJobs.sh           # slurm script to preprocess participants
         └── mergeParticipantFiles.sh                # slurm script to merge all preprocessed participants files
