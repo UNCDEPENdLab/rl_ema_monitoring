@@ -63,6 +63,7 @@ ObjectOriented/
     │   │   ├── EEG_muse.m                          # EEG Muse preprocessing
     │   │   ├── EEGSensor.m                         # Base class for all EEG sensors 
     │   │   ├── MomentumSensor.m                    # Base class for all sensors
+    │   │   ├── PolarSensor.m                       # Base class for all Polar sensors
     │   │   ├── Polar_accelerometer.m               # Accelerometer preprocessing
     │   │   ├── Polar_ECG.m                         # ECG preprocessing
     │   │   ├── Polar_heartrate.m                   # Streamed heartrate preprocessing
@@ -238,21 +239,18 @@ merger.merge(eventName, sectionsToMerge,freqLabel,binningMode, timeBinIdx,blocks
                     └──{eventName}_temp_freqBin_{frequencyBinIdx}.{extension}
 ```
 ---
-## Object architecture
-
+## Pipeline usage
 ```mermaid
 classDiagram
     %% =========================
-    %% Core entity
+    %% Pipeline usage 
     %% =========================
+
     class MomentumParticipant
     class MomentumExperiment
+    class MomentumParticipanMerger
 
-    %% =========================
     %% Sensors
-    %% =========================
-    class MomentumSensor
-    class EEG_Sensor
     class EEG_muse
     class EEG_biosemi
     class Polar_ECG
@@ -260,74 +258,88 @@ classDiagram
     class Polar_RRIfromECG
     class Polar_accelerometer
 
-    %% =========================
     %% Processing / analysis
-    %% =========================
     class TimeFrequencyAnalyzer
-    class ErpDtwAligner
     class TimestampAligner
 
-    %% =========================
     %% Data & writing
-    %% =========================
     class ScheduleDatabase
     class SessionSplitter
     class DataWriter
     class NDDataWriter
-    class NameSchema
-    %% class ParquetReaderBase
-    %% class EEGParquetReader
-
-    %% =========================
-    %% Utilities
-    %% =========================
-    class Utils
 
     %% -------------------------
-    %% MomentumParticipant composition
+    %% Ownership
     %% -------------------------
-    MomentumExperiment o-- MomentumParticipant
-    MomentumParticipant o-- EEG_muse
-    MomentumParticipant o-- EEG_biosemi
-    MomentumParticipant o-- Polar_ECG
-    MomentumParticipant o-- Polar_heartrate
-    MomentumParticipant o-- Polar_RRIfromECG
-    MomentumParticipant o-- Polar_accelerometer
+    MomentumExperiment ..> MomentumParticipant:uses
 
-    MomentumParticipant o-- TimeFrequencyAnalyzer
-    MomentumParticipant o-- ScheduleDatabase
-    MomentumParticipant o-- SessionSplitter
-    MomentumParticipant o-- EEGParquetReader
+    MomentumParticipant ..> EEG_muse:uses
+    MomentumParticipant ..> EEG_biosemi:uses
+    MomentumParticipant ..> TimeFrequencyAnalyzer :uses
 
-    %% -------------------------
-    %% Inheritance (is-a)
-    %% -------------------------
-    MomentumSensor <|-- EEG_Sensor
-    MomentumSensor <|-- Polar_ECG
-    MomentumSensor <|-- Polar_heartrate
-    MomentumSensor <|-- Polar_accelerometer
+    MomentumParticipant ..> Polar_ECG:uses
+    MomentumParticipant ..> Polar_heartrate:uses
+    MomentumParticipant ..> Polar_RRIfromECG:uses
+    MomentumParticipant ..> Polar_accelerometer:uses
 
-    EEG_Sensor <|-- EEG_muse
-    EEG_Sensor <|-- EEG_biosemi
+    MomentumParticipant ..> ScheduleDatabase : uses
+    MomentumParticipant ..> SessionSplitter :uses
+    MomentumParticipant ..> NameSchema :uses
+    MomentumParticipanMerger ..> NameSchema :uses
 
-    DataWriter <|-- NDDataWriter
-    %% ParquetReaderBase <|-- EEGParquetReader
-
-    %% -------------------------
-    %% Has / uses relationships
-    %% -------------------------
-    EEG_biosemi o-- TimestampAligner
-
-    EEG_Sensor ..> NDDataWriter : uses
+    Polar_heartrate ..> DataWriter:uses
+    Polar_accelerometer ..> DataWriter:uses
+    Polar_RRIfromECG ..> DataWriter:uses
+    Polar_ECG ..> DataWriter:uses
+    
+    EEG_muse ..> NameSchema:uses
+    EEG_muse ..> NDDataWriter:uses
+    EEG_biosemi ..> NDDataWriter:uses
+    
     TimeFrequencyAnalyzer ..> NDDataWriter : uses
+    TimeFrequencyAnalyzer ..> TimestampAligner : uses
+    TimeFrequencyAnalyzer ..> ErpDtwAligner : uses 
+    
+    DataWriter ..> NameSchema :uses
+    NDDataWriter ..> NameSchema :uses
+    
+    ParquetReaderBase ..> NameSchema :uses
 
-    Polar_RRIfromECG ..> DataWriter : uses
 
-    TimeFrequencyAnalyzer ..> ErpDtwAligner : uses
-    NDDataWriter ..> NameSchema : uses
-    DataWriter ..> NameSchema : uses
+```
 
-    MomentumParticipant ..> Utils : uses
-    TimeFrequencyAnalyzer ..> Utils : uses
-    ScheduleDatabase ..> Utils : uses
+---
+## Class architecture
+
+
+```mermaid
+classDiagram
+    %% =========================
+    %% Pipeline / dependencies
+    %% =========================
+    class EEG_Sensor
+    class EEG_biosemi
+    class PolarSensor
+    class DataWriter
+    class NDDataWriter
+    class ParquetReaderBase
+    class EEGParquetReader
+
+    DataWriter o-- NDDataWriter 
+
+    ParquetReaderBase o-- EEGParquetReader 
+
+    MomentumSensor o-- EEG_Sensor
+    MomentumSensor o-- PolarSensor
+
+    EEG_Sensor o-- EEG_muse
+    EEG_Sensor o-- EEG_biosemi
+
+    PolarSensor o-- Polar_ECG 
+    PolarSensor o-- Polar_accelerometer 
+    PolarSensor o-- Polar_heartrate 
+    PolarSensor o-- Polar_RRIfromECG 
+
+
+
 ```

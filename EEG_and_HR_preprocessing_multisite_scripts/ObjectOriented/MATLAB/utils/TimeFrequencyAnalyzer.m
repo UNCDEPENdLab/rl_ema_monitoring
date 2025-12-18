@@ -319,7 +319,10 @@ classdef TimeFrequencyAnalyzer < handle
         
             % update the public timeLabels to the trimmed axis
             obj.timeLabels = timeAxis(keepByWindow);
-        
+            if iscolumn(obj.timeLabels)
+                obj.timeLabels = obj.timeLabels.';   
+            end
+
             % -------- status message --------
             fprintf('trimTF -> %s: kept %d/%d samples in [%.3f %.3f] s. Final nTime = %d.\n', ...
                 targetField, nnz(keepByWindow), numel(keepByWindow), ...

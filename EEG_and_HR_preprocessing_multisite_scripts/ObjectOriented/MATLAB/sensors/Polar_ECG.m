@@ -1,24 +1,15 @@
-classdef Polar_ECG < MomentumSensor
+classdef Polar_ECG < PolarSensor
     properties (Constant)
         dataType = "Polar_ECG"
-        fs=130
-        upsamplingPeriod = seconds(1/130)%seconds(2/3) % For precisely centering the event 
-
+        dataColumn = "ECG"
+        fs = 130 %Hz
+        optimizedAlignment = true
+        resamplingPeriod = seconds(1/130) % For precisely centering the event 
+        bufferTime = seconds(1) % To capture previous ECG datapoints before resampling
     end
 
     properties (Access=private)
         databasePath
-        dataIsPreprocessed = false
-        dataIsEpoched = false
-        bufferTime = seconds(1) % To capture previous ECG datapoints before upsampling
-
-    end
-
-    properties
-        rawData
-        data
-        eventName
-        optimizedAlignment = true
     end
     
     methods
@@ -30,9 +21,9 @@ classdef Polar_ECG < MomentumSensor
             verbose = true;
             if ~obj.dataIsPreprocessed
     
-                sessionData = MomentumSensor.readDatabase(obj.databasePath,obj.dataType);
+                sessionData = PolarSensor.readDatabase(obj.databasePath,obj.dataType);
 
-                obj.rawData = MomentumSensor.processSessions(...
+                obj.data = PolarSensor.processSessions(...
                                     sessionData, ...            % Data
                                     10, ...                      % split on gaps > X s
                                     @Polar_ECG.getECG, ...      % process the ECG
@@ -44,116 +35,12 @@ classdef Polar_ECG < MomentumSensor
             end
         end
         
-        function epochToTable(obj,eventTable,eventName,windowToEpoch)
-            if obj.dataIsEpoched; return; end
-            
-            obj.eventName = eventName;
-
-            [preEventWindow, postEventWindow] = MomentumSensor.parseWindow(windowToEpoch);
-            obj.epochToAllEvents(eventTable.(obj.eventName), ...
-                                    preEventWindow, ...
-                                    postEventWindow);
-
-            obj.buildEpochedTable(eventTable,preEventWindow,postEventWindow);
-            obj.dataIsEpoched = true;
-        end   
-
-        function save(obj,opts)
-            arguments 
-                obj
-                opts.id = ""
-                opts.saveDir = saveDir
-                opts.saveMode = "asParquet"
-                opts.timeBinningMode = "byTimepoints"
-                opts.blocksPerBin = 0
-            end
-
-            participantId = opts.id;
-            opts = rmfield(opts, 'id');
-            obj.data.id = repmat( participantId, height(obj.data), 1 );
-            
-            dataWriter = DataWriter(data = obj.data, ...
-                                    dataType = "ECG", ...
-                                    id=participantId,...
-                                    eventName = obj.eventName);
-            
-            nv = Utils.packStructAsNameValuePairs(opts);
-            dataWriter.save(nv{:});
-        end
     end
     
-    methods (Access=private)
-        function epochToAllEvents(obj,eventTimestamps,preEventWindow,postEventWindow)
-
-            timeVector = MomentumSensor.makeTimeVectorFromWindow(obj.upsamplingPeriod,preEventWindow,postEventWindow);
-            nbTimepoints = numel(timeVector);
-            nbEvents = height(eventTimestamps);
-            epochedECG = NaN(nbEvents, nbTimepoints);
-            disp("Epoching data...")
-            for eventIdx = 1:nbEvents
-                epochedECG(eventIdx,:) = obj.epochSingleEvent(eventTimestamps(eventIdx), ...
-                                                    preEventWindow, ...
-                                                    postEventWindow);  
-                Utils.updateProgress(500,eventIdx,nbEvents,"Epoched", "events");
-
-            end
-
-            % Flatten [M events x N timepoints] into a single column
-            %       [E1t1,...,E1tn,...,Emtn]'
-            obj.data = reshape(epochedECG.',[],1);
-
-        end
-
-        function ECGEventSegment= epochSingleEvent(obj,eventTimestamp,preEventWindow,postEventWindow)
-            % Look for a window slightly bigger than what's needed to
-            % better interpolate. 
-            epochStartTimestamp = eventTimestamp - preEventWindow;
-            epochEndTimestamp = eventTimestamp + postEventWindow;
-
-            eventTimeIndices = obj.rawData.Timestamp >= epochStartTimestamp - obj.bufferTime & obj.rawData.Timestamp <= epochEndTimestamp + obj.bufferTime;
-            ECGEventSegment = obj.rawData(eventTimeIndices, :);
-            newSamplingTimes = (epochStartTimestamp : obj.upsamplingPeriod : epochEndTimestamp)';
-
-            if isempty(ECGEventSegment)
-                ECGEventSegment = NaN(1,numel(newSamplingTimes));
-                return; 
-            end
-        
-            ECGEventSegment = table2timetable(ECGEventSegment, 'RowTimes','Timestamp');
-            ECGEventSegment  = retime(ECGEventSegment, newSamplingTimes, 'spline');
-            ECGEventSegment=ECGEventSegment.ECG; % Drop the timestamps
-        end
-    
-        function buildEpochedTable(obj,eventTable,preEventWindow,postEventWindow)
-            timeVector = MomentumSensor.makeTimeVectorFromWindow(obj.upsamplingPeriod,preEventWindow,postEventWindow);
-
-            nbTimepoints = numel(timeVector);
-            nbEvents = height(eventTable.(obj.eventName));
-
-            obj.data = table(categorical(repelem(eventTable.block,nbTimepoints)), ...
-                                repelem(eventTable.trial,nbTimepoints), ...
-                                repmat(1e3*seconds(timeVector)',nbEvents,1), ...
-                                obj.data, ...
-                                'VariableNames', ...
-                                {'block','trial','timeBin','signal'});
-        end
-    end
-
     methods (Static)
 
         function dataTable = extractAndConcatenateDataTable(processed_session, fieldName)
-            % Extracts the tables from a struct and concatenates them into a single
-            % table.
-            %
-            % Parameters:
-            % processed_session - [Cell Array] 1xN contains the processed sessions.
-            % source - [String] Determines whether to extract the ECG, RRI or RR
-            %                       table from the struct {'ecg_data','rri_data','rr_data'}
-            %
-            % Returns:
-            % dataTable - [Table] Mx2 Contains all the merged data from the
-            %                   sessions
-        
+
             tableList = cell(size(processed_session));  % Preallocate a cell array for tables
            
             
@@ -182,7 +69,7 @@ classdef Polar_ECG < MomentumSensor
             [ecg, datapoints_per_timestamp] = Polar_ECG.expandStringsToNumeric(rawData);
         
             % Process timestamps
-            Timestamps = MomentumSensor.processTimestamps(rawData, optimized_alignment, Polar_ECG.fs, datapoints_per_timestamp);
+            Timestamps = PolarSensor.processTimestamps(rawData, optimized_alignment, Polar_ECG.fs, datapoints_per_timestamp);
             
             if ~issorted(Timestamps)
                 disp("Found non-sorted Timestamps in getECG")
@@ -198,19 +85,7 @@ classdef Polar_ECG < MomentumSensor
         end 
 
         function filteredECG = filterECG(ecgData, fs)
-        % filterECG  Remove mains interference with a notch filter
-        %
-        %   filteredECG = filterECG(ecgData, fs) applies a zero-phase IIR notch
-        %   filter to ecgData sampled at fs (Hz), attenuating the power-line
-        %   frequency. 
-        %
-        %   Parameters:
-        %     ecgData : vector of raw ECG samples
-        %     fs      : sampling rate in Hz
-        %
-        %   Returns:
-        %     filteredECG : ECG after notch filtering at f0
-        
+
             f0 = 60;             % line frequency (Hz)
             Q  = 35;             % quality factor 
             
@@ -223,30 +98,6 @@ classdef Polar_ECG < MomentumSensor
         
             % apply zero-phase filtering to avoid phase distortion
             filteredECG = filtfilt(b, a, ecgData);
-        end
-
-        function filteredECG = filterECG_obsolete(ecgData, fs)
-            % Applies a bandpass FIR filter to ECG data to reduce noise and enhance signal quality.
-            %
-            % The filter is designed using a FIR (Finite Impulse Response) approach with a 
-            % specified filter order and cutoff frequencies calculated from the Nyquist frequency.
-            % The bandpass filter passes frequencies between 9 Hz and 50 Hz, which are typical
-            % cutoff frequencies for ECG data processing.
-            %
-            % Parameters:
-            % ecgData - [Array] Raw ECG data to be filtered.
-            % fs - [Double] Sampling frequency of the ECG data in Hz.
-            %
-            % Returns:
-            % filteredECG - [Array] ECG data after being processed by the bandpass filter.
-            %
-            Nyquist = fs / 2;                       % Calculate the Nyquist frequency
-            lowFreq = 9 / Nyquist;                  % Normalize the low cutoff frequency
-            highFreq = 50 / Nyquist;                % Normalize the high cutoff frequency
-            
-            filterOrder = 100;                      % Define the order of the FIR filter
-            b = fir1(filterOrder, [lowFreq highFreq], 'bandpass'); % Design the FIR bandpass filter
-            filteredECG = filtfilt(b, 1, ecgData);  % Apply the filter using zero-phase filtering
         end
 
         function [ECG_data_raw, datapoints_per_timestamp] = expandStringsToNumeric(raw_data)

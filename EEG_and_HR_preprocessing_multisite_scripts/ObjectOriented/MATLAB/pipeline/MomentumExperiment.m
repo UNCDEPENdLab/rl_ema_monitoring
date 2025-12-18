@@ -10,7 +10,11 @@ classdef MomentumExperiment < handle
         modeHandlerMap
         validationEvent 
     end
-
+    
+    properties (Access = private)
+        eegEnvInitialized (1,1) logical = false;
+    end
+    
     methods
         function obj = MomentumExperiment(participantId, rawDataDir, preprocessedEEGDir, mode, validationEvent)
             if nargin<5 
@@ -27,9 +31,6 @@ classdef MomentumExperiment < handle
         end
 
         function participant = run(obj)
-            eeglab;
-            close;
-            ft_defaults;
             fprintf("Processing started %s \n", datetime());
             tic;
             obj.dispatchMode();
@@ -39,15 +40,19 @@ classdef MomentumExperiment < handle
         end
 
         function modeHandlerMap = buildModeHandlerMap(obj)
-            modeHandlerMap = containers.Map('KeyType', 'char', 'ValueType', 'any');
-            modeHandlerMap('trialDf') = @() obj.runTrialDfMode();
-            modeHandlerMap('restingState') = @() obj.runRestingStateMode();
-            modeHandlerMap('feedback') = @() obj.runFeedbackMode();
-            modeHandlerMap('stim') = @() obj.runStimMode();
-            modeHandlerMap('choice') = @() obj.runChoiceMode();
-            modeHandlerMap('rri') = @() obj.runRriMode();
-            modeHandlerMap('validation') = @() obj.runValidationMode();
-            modeHandlerMap('ecg') = @() obj.ECGMode();
+            modeHandlerMap = containers.Map('KeyType','char','ValueType','any');
+
+            % Modes that need eeglab/fieldtrip:
+            modeHandlerMap('trialDf')       = @() obj.withEEGEnv(@() obj.runTrialDfMode());
+            modeHandlerMap('restingState')  = @() obj.withEEGEnv(@() obj.runRestingStateMode());
+            modeHandlerMap('feedback')      = @() obj.withEEGEnv(@() obj.runFeedbackMode());
+            modeHandlerMap('stim')          = @() obj.withEEGEnv(@() obj.runStimMode());
+            modeHandlerMap('choice')        = @() obj.withEEGEnv(@() obj.runChoiceMode());
+            modeHandlerMap('validation')    = @() obj.withEEGEnv(@() obj.runValidationMode());
+
+            % Rest of modes
+            modeHandlerMap('rri')           = @() obj.runRriMode();
+            modeHandlerMap('ecg')           = @() obj.ECGMode();
         end
 
         function dispatchMode(obj)
@@ -130,15 +135,13 @@ classdef MomentumExperiment < handle
         
         function ECGMode(obj)
             obj.ensureDefaultParticipantInitialized();
-            obj.participant.getECGEpochedEvent( ...
-                eventName = 'feedback_time', ...
-                windowToEpoch = [-1.0, 10]);
+            obj.participant.getECGEpochedEvent(eventName = 'feedback_time', ...
+                                                windowToEpoch = [-1.0, 10]);
             obj.participant.saveECG();
         end
 
         function runRriMode(obj)
             obj.ensureDefaultParticipantInitialized();
-            addpath(genpath('/ix1/adombrovski/lab_resources/PhysioNet-Cardiovascular-Signal-Toolbox-master'));
             obj.participant.getRRIEpochedEvent( ...
                 eventName = 'feedback_time', ...
                 windowToEpoch = [-1.0, 10]);
@@ -159,6 +162,25 @@ classdef MomentumExperiment < handle
                                                 pathToData = obj.preprocessedEEGDir, ...
                                                 validation = true);
             obj.participant.runValidation(obj.validationEvent, windowToEpoch);
+        end
+    end
+    
+    methods (Access = private)
+
+        function withEEGEnv(obj, fn)
+            obj.initEEGEnvironment();
+            fn();
+        end
+
+         function initEEGEnvironment(obj)
+            if obj.eegEnvInitialized
+                return;
+            end
+            eeglab;
+            close;         
+            ft_defaults;
+
+            obj.eegEnvInitialized = true;
         end
     end
 

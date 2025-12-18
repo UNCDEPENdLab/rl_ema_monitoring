@@ -14,6 +14,7 @@ classdef SessionSplitter < handle
             obj.data=data;
             
         end
+        
         function split(obj,threshold)
             if obj.isSplit; return; end
 

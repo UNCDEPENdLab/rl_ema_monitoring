@@ -1,4 +1,4 @@
-classdef Polar_heartrate < MomentumSensor
+classdef Polar_heartrate < PolarSensor
     properties (Constant)
         dataType = "Polar_heartrate"
     end
@@ -26,8 +26,8 @@ classdef Polar_heartrate < MomentumSensor
 
         function getDataFromDatabase(obj)
             verbose = true;
-            sessionData = MomentumSensor.readDatabase(obj.databasePath,obj.dataType);
-            obj.rawData = MomentumSensor.processSessions(...
+            sessionData = PolarSensor.readDatabase(obj.databasePath,obj.dataType);
+            obj.rawData = PolarSensor.processSessions(...
                                 sessionData, ...            % Data
                                 15, ...                      % split on gaps > 3 s
                                 @Polar_heartrate.cleanRawData, ...     

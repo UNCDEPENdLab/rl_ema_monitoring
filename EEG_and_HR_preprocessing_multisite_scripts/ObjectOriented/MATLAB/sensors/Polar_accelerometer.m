@@ -1,4 +1,4 @@
-classdef Polar_accelerometer <MomentumSensor
+classdef Polar_accelerometer < PolarSensor
     properties (Constant)
         dataType = "Polar_accelerometer"
         fs = 200;
@@ -22,9 +22,9 @@ classdef Polar_accelerometer <MomentumSensor
             verbose = true;
             if ~obj.dataIsPreprocessed
     
-                sessionData = MomentumSensor.readDatabase(obj.databasePath,obj.dataType);
+                sessionData = PolarSensor.readDatabase(obj.databasePath,obj.dataType);
 
-                obj.rawData = MomentumSensor.processSessions(...
+                obj.rawData = PolarSensor.processSessions(...
                                     sessionData, ...        % Data
                                     3, ...                  % split on gaps > 3 s
                                     @Polar_accelerometer.parseStringToTable, ...  % Processing function
@@ -60,7 +60,7 @@ classdef Polar_accelerometer <MomentumSensor
             datapointsPerTimestamp=size(rowData{1},1); % Assuming all datapoints have the same length
 
             % Process the timestamps
-            Timestamps = MomentumSensor.processTimestamps(rawData, false, Polar_accelerometer.fs, datapointsPerTimestamp);
+            Timestamps = PolarSensor.processTimestamps(rawData, false, Polar_accelerometer.fs, datapointsPerTimestamp);
             
             % Build into table
             accTable = array2table(numericXYZ,'VariableNames',{'x','y','z'});
