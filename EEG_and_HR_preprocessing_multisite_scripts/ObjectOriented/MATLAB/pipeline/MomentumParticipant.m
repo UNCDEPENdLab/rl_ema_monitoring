@@ -13,7 +13,7 @@ classdef MomentumParticipant < handle
         dataTypes = {}
         schedule =[]
         TFanalyzers = struct()
-        
+        eventName 
         allBiosemi =[]
     end
 
@@ -29,6 +29,7 @@ classdef MomentumParticipant < handle
         EEGsaveDirectoryPath
         TFsaveDirectoryPath
         TFInducedSaveDirectoryPath
+        ECGsaveDirectoryPath
         RRIsaveDirectoryPath
         scheduleSaveDirectoryPath
 
@@ -36,7 +37,6 @@ classdef MomentumParticipant < handle
         acceptedDataTypes = {'Polar_ECG', 'Polar_heartrate','Polar_RRIfromECG', 'Polar_accelerometer', 'EEG_muse','EEG_biosemi'};
         metrics
         epochs
-        eventName 
         validation
 
         EEGSourceToRunTF
@@ -104,6 +104,30 @@ classdef MomentumParticipant < handle
 
         end
         
+        function saveECG(obj, opts)
+
+            arguments
+                obj
+                opts.source             = "Polar_ECG" 
+                opts.saveMode           = "asParquet" %{"asMat","asCSV","asParquet"} Note: "asCSV" will save it as .csv then further compress it to .csv.gz and delete the .csv
+                opts.timeBinningMode    = "byTimepoints" %{"byTimepoints","byTime"}
+                opts.blocksPerBin       = 0 % saves the files by binning the block 
+            end
+            
+            saveMode = NameSchema.validateSavingMode(opts.saveMode);
+            timeBinningMode = NameSchema.validateBinningMode(opts.timeBinningMode);
+            
+            saveDir = fullfile(obj.ECGsaveDirectoryPath, obj.eventName,"ByParticipant",obj.id);
+
+            if ~isfolder(saveDir); mkdir(saveDir); end
+            
+            obj.sources.(opts.source).save( id = obj.id,...
+                                              saveDir = saveDir, ...
+                                              saveMode = saveMode, ...
+                                              timeBinningMode = timeBinningMode, ...
+                                              blocksPerBin = opts.blocksPerBin);
+        end
+
         function saveRRI(obj, opts)
 
             arguments
@@ -269,6 +293,29 @@ classdef MomentumParticipant < handle
                     % epochsWithNaNs = sum(epochs_with_nan);
                     % fprintf("%i - %.4f%%  of epochs \n",epochsWithNaNs,100*epochsWithNaNs/size(obj.sources.EEG_muse.EEGLabObject.data,3));
             end
+
+        end
+
+        function getECGEpochedEvent(obj,opts)
+            arguments
+              obj
+              opts.eventName                = 'feedback'% {RestingEpoch,ITI,{feedback,stim,choice}+_time}
+              opts.windowToEpoch            = [-1,10]      % Necessary for {x}_time events  
+              opts.verbose                  = true
+            end
+
+            obj.validateEventName(opts.eventName);
+
+            obj.getScheduleFile(opts.verbose);
+            obj.schedule.getEventTimes(obj.eventName);
+
+            if opts.verbose; fprintf("Extracted %s times. \n",obj.eventName); end
+
+            if ~isfield(obj.sources,"Polar_ECG")
+                obj.getData("Polar_ECG");
+            end
+            
+            obj.sources.Polar_ECG.epochToTable(obj.schedule.trials,obj.eventName,opts.windowToEpoch);
 
         end
 
@@ -551,6 +598,7 @@ classdef MomentumParticipant < handle
             obj.EEGsaveDirectoryPath = fullfile(obj.parentDirToData,MomentumParticipant.generalProcessedSaveDirectoryName,analysisName,"EEG");
             obj.TFsaveDirectoryPath = fullfile(obj.parentDirToData,MomentumParticipant.generalProcessedSaveDirectoryName,analysisName,"TF");
             obj.TFInducedSaveDirectoryPath = fullfile(obj.parentDirToData,MomentumParticipant.generalProcessedSaveDirectoryName,analysisName,"TF_Induced");
+            obj.ECGsaveDirectoryPath = fullfile(obj.parentDirToData,MomentumParticipant.generalProcessedSaveDirectoryName,analysisName,"ECG");
             obj.RRIsaveDirectoryPath = fullfile(obj.parentDirToData,MomentumParticipant.generalProcessedSaveDirectoryName,analysisName,"RRI");
             obj.scheduleSaveDirectoryPath = fullfile(obj.parentDirToData,MomentumParticipant.generalProcessedSaveDirectoryName,analysisName,"Schedule");
         end

@@ -2,15 +2,22 @@ classdef Polar_ECG < MomentumSensor
     properties (Constant)
         dataType = "Polar_ECG"
         fs=130
+        upsamplingPeriod = seconds(1/130)%seconds(2/3) % For precisely centering the event 
+
     end
 
     properties (Access=private)
         databasePath
         dataIsPreprocessed = false
+        dataIsEpoched = false
+        bufferTime = seconds(1) % To capture previous ECG datapoints before upsampling
+
     end
 
     properties
         rawData
+        data
+        eventName
         optimizedAlignment = true
     end
     
@@ -36,7 +43,100 @@ classdef Polar_ECG < MomentumSensor
                 obj.dataIsPreprocessed = true;
             end
         end
+        
+        function epochToTable(obj,eventTable,eventName,windowToEpoch)
+            if obj.dataIsEpoched; return; end
+            
+            obj.eventName = eventName;
 
+            [preEventWindow, postEventWindow] = MomentumSensor.parseWindow(windowToEpoch);
+            obj.epochToAllEvents(eventTable.(obj.eventName), ...
+                                    preEventWindow, ...
+                                    postEventWindow);
+
+            obj.buildEpochedTable(eventTable,preEventWindow,postEventWindow);
+            obj.dataIsEpoched = true;
+        end   
+
+        function save(obj,opts)
+            arguments 
+                obj
+                opts.id = ""
+                opts.saveDir = saveDir
+                opts.saveMode = "asParquet"
+                opts.timeBinningMode = "byTimepoints"
+                opts.blocksPerBin = 0
+            end
+
+            participantId = opts.id;
+            opts = rmfield(opts, 'id');
+            obj.data.id = repmat( participantId, height(obj.data), 1 );
+            
+            dataWriter = DataWriter(data = obj.data, ...
+                                    dataType = "ECG", ...
+                                    id=participantId,...
+                                    eventName = obj.eventName);
+            
+            nv = Utils.packStructAsNameValuePairs(opts);
+            dataWriter.save(nv{:});
+        end
+    end
+    
+    methods (Access=private)
+        function epochToAllEvents(obj,eventTimestamps,preEventWindow,postEventWindow)
+
+            timeVector = MomentumSensor.makeTimeVectorFromWindow(obj.upsamplingPeriod,preEventWindow,postEventWindow);
+            nbTimepoints = numel(timeVector);
+            nbEvents = height(eventTimestamps);
+            epochedECG = NaN(nbEvents, nbTimepoints);
+            disp("Epoching data...")
+            for eventIdx = 1:nbEvents
+                epochedECG(eventIdx,:) = obj.epochSingleEvent(eventTimestamps(eventIdx), ...
+                                                    preEventWindow, ...
+                                                    postEventWindow);  
+                Utils.updateProgress(500,eventIdx,nbEvents,"Epoched", "events");
+
+            end
+
+            % Flatten [M events x N timepoints] into a single column
+            %       [E1t1,...,E1tn,...,Emtn]'
+            obj.data = reshape(epochedECG.',[],1);
+
+        end
+
+        function ECGEventSegment= epochSingleEvent(obj,eventTimestamp,preEventWindow,postEventWindow)
+            % Look for a window slightly bigger than what's needed to
+            % better interpolate. 
+            epochStartTimestamp = eventTimestamp - preEventWindow;
+            epochEndTimestamp = eventTimestamp + postEventWindow;
+
+            eventTimeIndices = obj.rawData.Timestamp >= epochStartTimestamp - obj.bufferTime & obj.rawData.Timestamp <= epochEndTimestamp + obj.bufferTime;
+            ECGEventSegment = obj.rawData(eventTimeIndices, :);
+            newSamplingTimes = (epochStartTimestamp : obj.upsamplingPeriod : epochEndTimestamp)';
+
+            if isempty(ECGEventSegment)
+                ECGEventSegment = NaN(1,numel(newSamplingTimes));
+                return; 
+            end
+        
+            ECGEventSegment = table2timetable(ECGEventSegment, 'RowTimes','Timestamp');
+            ECGEventSegment  = retime(ECGEventSegment, newSamplingTimes, 'spline');
+            ECGEventSegment=ECGEventSegment.ECG; % Drop the timestamps
+        end
+    
+        function buildEpochedTable(obj,eventTable,preEventWindow,postEventWindow)
+            timeVector = MomentumSensor.makeTimeVectorFromWindow(obj.upsamplingPeriod,preEventWindow,postEventWindow);
+
+            nbTimepoints = numel(timeVector);
+            nbEvents = height(eventTable.(obj.eventName));
+
+            obj.data = table(categorical(repelem(eventTable.block,nbTimepoints)), ...
+                                repelem(eventTable.trial,nbTimepoints), ...
+                                repmat(1e3*seconds(timeVector)',nbEvents,1), ...
+                                obj.data, ...
+                                'VariableNames', ...
+                                {'block','trial','timeBin','signal'});
+        end
     end
 
     methods (Static)

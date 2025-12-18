@@ -47,6 +47,7 @@ classdef MomentumExperiment < handle
             modeHandlerMap('choice') = @() obj.runChoiceMode();
             modeHandlerMap('rri') = @() obj.runRriMode();
             modeHandlerMap('validation') = @() obj.runValidationMode();
+            modeHandlerMap('ecg') = @() obj.ECGMode();
         end
 
         function dispatchMode(obj)
@@ -125,6 +126,14 @@ classdef MomentumExperiment < handle
             obj.participant.runTFAnalysis();
             obj.participant.saveTFAnalysis(saveMode = "asParquet", ...
                                     timeBinningMode = "byTimepoints");
+        end
+        
+        function ECGMode(obj)
+            obj.ensureDefaultParticipantInitialized();
+            obj.participant.getECGEpochedEvent( ...
+                eventName = 'feedback_time', ...
+                windowToEpoch = [-1.0, 10]);
+            obj.participant.saveECG();
         end
 
         function runRriMode(obj)

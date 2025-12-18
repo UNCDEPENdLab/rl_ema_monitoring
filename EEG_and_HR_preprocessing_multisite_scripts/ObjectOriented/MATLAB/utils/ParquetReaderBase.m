@@ -1,6 +1,8 @@
 classdef (Abstract) ParquetReaderBase < handle
     properties (Access= public)
         device    string
+        participantId       string
+
     end
 
     properties (SetAccess = protected)
@@ -9,8 +11,7 @@ classdef (Abstract) ParquetReaderBase < handle
         metas               % array of per-file meta structs for chosen pattern
         patternKey          string
 
-        % Common inferred bits (if your parse supplies them)
-        participantId       string
+        % Common inferred bits
         eventName           string
         section             string
         sessionBinIdx       double

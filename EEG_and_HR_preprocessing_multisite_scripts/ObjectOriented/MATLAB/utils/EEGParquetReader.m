@@ -1,4 +1,8 @@
 classdef EEGParquetReader < ParquetReaderBase
+    properties 
+        EEG
+    end
+
     properties (SetAccess = private)
         timeBinIdxs double = []
     end
@@ -18,16 +22,33 @@ classdef EEGParquetReader < ParquetReaderBase
             obj.timeBinIdxs = sort([obj.metas.timeBinIdx]);
         end
 
-        function EEG = getEEGLabObjectFromParquet(obj)
+        function getEEGLabObjectFromParquet(obj,outcome)
+            if nargin<2
+                outcome = [];
+            end
+
             if strcmp(obj.device,"muse")
                 channelOrder = EEG_muse.museChannels;
             elseif strcmp(obj.device,"biosemi")
                 channelOrder = EEG_biosemi.biosemiChannels;
             end
-            EEG = EEGParquetReader.tableToEventChanTime3D(obj.loadAll(),channelOrder);
-            EEG.etc.eventName = obj.eventName;
-            EEG = EEGParquetReader.struct2erplab(EEG);
+            obj.EEG = EEGParquetReader.tableToEventChanTime3D(obj.loadAll(),channelOrder,outcome);
+            obj.EEG.etc.eventName = obj.eventName;
+            obj.EEG = EEGParquetReader.struct2erplab(obj.EEG);
+            obj.addChannelLocations();
         end
+        
+        function saveEEG(obj,outputDirectory)
+            if nargin<2
+                outputDirectory=pwd;
+            end
+            
+            obj.EEG = pop_saveset(obj.EEG, ...
+                        'filename',sprintf('%s_epoched.set',obj.participantId), ...
+                        'filepath',char(outputDirectory), ...
+                        'savemode','onefile');
+        end
+
     end
     
     methods (Access = protected)
@@ -41,6 +62,13 @@ classdef EEGParquetReader < ParquetReaderBase
             ok = isempty(missing);
             if ok, report = ""; else, report = "missing time bins " + mat2str(missing); end
         end
+
+        function addChannelLocations(obj)
+            if strcmp(obj.device,"biosemi")
+                obj.EEG = pop_chanedit(obj.EEG, 'lookup',EEG_biosemi.EEGchannelCapType);
+            end
+        end
+
     end
 
     methods (Static, Access = private)
@@ -88,19 +116,54 @@ classdef EEGParquetReader < ParquetReaderBase
             EEG = eeg_checkset(EEG, 'eventconsistency');
         end
 
-        function EEGLabObject = tableToEventChanTime3D(dataTable, channelOrder)   
+        function EEGLabObject = tableToEventChanTime3D(dataTable, channelOrder, outcome)
+            % tableToEventChanTime3D
+            % outcome: [] (no filtering) OR any combination of -1, 0, 1 (e.g., [-1 1])
+        
+            if nargin < 3
+                outcome = [];
+            end
+        
             EEGLabObject = struct();
-
+        
             % --- Basic checks -----------------------------------------------------
-            requiredVars = ["block","trial","timeBin","signal","id","channel"];
+            requiredVars = ["block","trial","timeBin","signal","id","channel","outcome"];
             if ~all(ismember(requiredVars, string(dataTable.Properties.VariableNames)))
                 missing = requiredVars(~ismember(requiredVars, string(dataTable.Properties.VariableNames)));
                 error('tableToEventChanTime3D:MissingVars', ...
                     'Input table is missing required variables: %s', strjoin(missing, ', '));
             end
         
-            timeCol    = dataTable.timeBin;
-            chanCol    = dataTable.channel;
+            % --- Optional outcome filtering ---------------------------------------
+            if ~isempty(outcome)
+                outcome = unique(outcome(:)');  % normalize shape + remove dups
+                validOutcomes = [-1 0 1];
+                if ~all(ismember(outcome, validOutcomes))
+                    error('tableToEventChanTime3D:InvalidOutcome', ...
+                        'Outcome must be any combination of -1, 0, 1. Got: %s', mat2str(outcome));
+                end
+        
+                outCol = dataTable.outcome;
+                if ~isnumeric(outCol)
+                    outColNum = str2double(string(outCol));
+                    if any(isnan(outColNum))
+                        error('tableToEventChanTime3D:OutcomeType', ...
+                            'dataTable.outcome must be numeric or convertible to numeric (-1/0/1).');
+                    end
+                    outCol = outColNum;
+                end
+        
+                keepMask = ismember(outCol, outcome);
+                dataTable = dataTable(keepMask, :);
+        
+                if height(dataTable) == 0
+                    error('tableToEventChanTime3D:NoRowsAfterOutcomeFilter', ...
+                        'No rows remain after filtering for outcome(s): %s', mat2str(outcome));
+                end
+            end
+        
+            timeCol = dataTable.timeBin;
+            chanCol = dataTable.channel;
         
             % --- ID: check that it is constant -----------------------------------
             idUnique = unique(dataTable.id);
@@ -110,10 +173,9 @@ classdef EEGParquetReader < ParquetReaderBase
             end
             EEGLabObject.subject = idUnique(1);
         
-            % --- Event dimension: group by (block, trial) -----------------------
-            %   G_events: group index per row
-            %   blockLabels, trialLabels, outcomeLabels: unique combos, sorted lexicographically
-            [G_events, blockLabels, trialLabels, outcomeLabels] = findgroups(dataTable.block, dataTable.trial,dataTable.outcome);
+            % --- Event dimension: group by (block, trial, outcome) ----------------
+            [G_events, blockLabels, trialLabels, outcomeLabels] = findgroups( ...
+                dataTable.block, dataTable.trial, dataTable.outcome);
             nEvents = numel(blockLabels);
         
             % --- Channel dimension: map channels to indices in channelOrder -------
@@ -130,7 +192,6 @@ classdef EEGParquetReader < ParquetReaderBase
             nChannels = numel(chanOrderStr);
         
             % --- Time dimension: sorted unique time bins --------------------------
-            % Assumes timeBin is numeric / datetime / duration; unique sorts ascending.
             timeBins = unique(timeCol);
             nTime    = numel(timeBins);
         
@@ -140,32 +201,32 @@ classdef EEGParquetReader < ParquetReaderBase
                     'Unexpected error mapping timeBin values to indices.');
             end
         
-            % --- Build 3D array: events x channels x time -------------------------
+            % --- Build 3D array: channels x time x events -------------------------
             nRows = height(dataTable);
         
-            % Linear indices into the 3D array
-            linIdx = sub2ind([nChannels, nTime,nEvents], ...
-                             chanIdx, timeIdx,G_events);
+            linIdx = sub2ind([nChannels, nTime, nEvents], ...
+                             chanIdx, timeIdx, G_events);
         
             if numel(unique(linIdx)) ~= nRows
                 error('tableToEventChanTime3D:DuplicateSamples', ...
-                    ['There are duplicate (session, trial, channel, timeBin) combinations ', ...
+                    ['There are duplicate (block, trial, channel, timeBin, outcome) combinations ', ...
                      'in the table. Cannot uniquely fill 3D array.']);
             end
-            EEGLabObject.data = nan(nChannels, nTime,nEvents);
         
-            % Fill in one vectorized assignment
+            EEGLabObject.data = nan(nChannels, nTime, nEvents);
             EEGLabObject.data(linIdx) = dataTable.signal;
-
+        
             EEGLabObject.etc = struct();
-            EEGLabObject.etc.epochLabels = blockLabels;
-            EEGLabObject.etc.trialLabels = trialLabels;
+            EEGLabObject.etc.epochLabels   = blockLabels;
+            EEGLabObject.etc.trialLabels   = trialLabels;
             EEGLabObject.etc.outcomeLabels = outcomeLabels;
-            EEGLabObject.chanlocs= struct('labels', channelOrder);
-            EEGLabObject.times = timeBins(:)'; 
-            EEGLabObject.srate = 1000/median(diff(timeBins));
-           
+        
+            EEGLabObject.chanlocs = struct('labels', channelOrder);
+            EEGLabObject.times = timeBins(:)';
+        
+            EEGLabObject.srate = 1000 / median(diff(timeBins));
         end
+
     end
 
     methods(Static)
