@@ -62,7 +62,7 @@ do
     addpath(genpath(fullfile(fileparts(pwd),'MATLAB'))); \
     addpath('/ix1/adombrovski/lab_resources/rl_ema_monitoring/EEG_and_HR_preprocessing_multisite_scripts'); \
     addpath('/ix1/adombrovski/lab_resources/eeglab2024.2'); \
-    runMomentumParticipantAnalysis('$subj', '$base_path','$preprocessedDir'.'$mode','$validationEvent'); \
+    runMomentumParticipantAnalysis('$subj', '$base_path','$preprocessedDir','$mode','$validationEvent'); \
     exit\""
     
 done
